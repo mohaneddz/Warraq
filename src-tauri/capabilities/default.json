@@ -1,0 +1,32 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Capability for the main window",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "core:window:allow-minimize",
+    "core:window:allow-toggle-maximize",
+    "core:window:allow-close",
+    "core:window:allow-start-dragging",
+    "core:window:allow-set-focus",
+    "core:window:allow-show",
+    "core:window:allow-unminimize",
+    "opener:default",
+    "sql:default",
+    "sql:allow-load",
+    "sql:allow-select",
+    "sql:allow-execute",
+    "sql:allow-close",
+    "store:default",
+    "stronghold:default",
+    "autostart:default",
+    "global-shortcut:default",
+    "notification:default",
+    "dialog:default",
+    "fs:default",
+    "window-state:default",
+    "clipboard-manager:default",
+    "log:default"
+  ]
+}
