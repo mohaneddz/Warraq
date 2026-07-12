@@ -1,0 +1,373 @@
+import { database } from "../database";
+import type Database from "@tauri-apps/plugin-sql";
+import { dueDate, today } from "../../utils/dates";
+import type { Book, Copy, DashboardMetrics, Loan, Member, Reservation } from "../../types";
+
+const id = () => crypto.randomUUID();
+const timestamp = () => new Date().toISOString();
+
+export async function dashboard(): Promise<DashboardMetrics> {
+  const db = await database();
+  const rows = await db.select<{ titles: number; copies: number; on_loan: number; members: number; overdue: number; ready: number }[]>(`SELECT
+    (SELECT COUNT(*) FROM books WHERE archived_at IS NULL) titles,
+    (SELECT COUNT(*) FROM copies WHERE status != 'archived') copies,
+    (SELECT COUNT(*) FROM loans WHERE returned_at IS NULL) on_loan,
+    (SELECT COUNT(*) FROM members WHERE status = 'active') members,
+    (SELECT COUNT(*) FROM loans WHERE returned_at IS NULL AND due_at < date('now')) overdue,
+    (SELECT COUNT(*) FROM reservations WHERE status = 'ready') ready`);
+  
+  const recentLoans = await db.select<Loan[]>(`
+    SELECT l.*, b.title, m.full_name as member_name 
+    FROM loans l 
+    JOIN copies c ON l.copy_id = c.id 
+    JOIN books b ON c.book_id = b.id 
+    JOIN members m ON l.member_id = m.id 
+    ORDER BY l.borrowed_at DESC LIMIT 5`);
+
+  const overdueLoans = await db.select<Loan[]>(`
+    SELECT l.*, b.title, m.full_name as member_name 
+    FROM loans l 
+    JOIN copies c ON l.copy_id = c.id 
+    JOIN books b ON c.book_id = b.id 
+    JOIN members m ON l.member_id = m.id 
+    WHERE l.returned_at IS NULL AND l.due_at < date('now')
+    ORDER BY l.due_at ASC LIMIT 5`);
+
+  const activityRaw = await db.select<{ date: string; count: number }[]>(`
+    SELECT date(borrowed_at) as date, COUNT(*) as count 
+    FROM loans 
+    WHERE borrowed_at >= date('now', '-6 days') 
+    GROUP BY date(borrowed_at) 
+    ORDER BY date ASC`);
+    
+  const activityMap = new Map<string, number>();
+  activityRaw.forEach(r => activityMap.set(r.date, r.count));
+  const activity = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const dateStr = d.toISOString().split('T')[0];
+    activity.push({ date: dateStr, count: activityMap.get(dateStr) || 0 });
+  }
+
+  const row = rows[0] ?? { titles: 0, copies: 0, on_loan: 0, members: 0, overdue: 0, ready: 0 };
+  return { 
+    titles: row.titles, copies: row.copies, onLoan: row.on_loan, members: row.members, overdue: row.overdue, readyReservations: row.ready,
+    recentLoans, overdueLoans, activity
+  };
+}
+
+export async function books(query = ""): Promise<Book[]> {
+  const db = await database();
+  const term = `%${query.trim()}%`;
+  return db.select<Book[]>(
+    `SELECT b.*, p.name publisher, c.name category, 
+     (SELECT GROUP_CONCAT(a.name, ', ') FROM book_authors ba JOIN authors a ON a.id=ba.author_id WHERE ba.book_id=b.id) author 
+     FROM books b 
+     LEFT JOIN publishers p ON p.id=b.publisher_id 
+     LEFT JOIN categories c ON c.id=b.category_id 
+     WHERE b.archived_at IS NULL 
+     AND (?='' OR b.title LIKE ? OR b.isbn13 LIKE ? OR b.isbn10 LIKE ? OR EXISTS (SELECT 1 FROM book_authors ba JOIN authors a ON a.id=ba.author_id WHERE ba.book_id=b.id AND a.name LIKE ?)) 
+     ORDER BY b.title`,
+    [query.trim(), term, term, term, term]
+  );
+}
+
+export async function saveBook(input: Omit<Book, "id" | "created_at"> & { author?: string; barcode?: string; accession?: string }): Promise<void> {
+  const db = await database(); const bookId = id(); const now = timestamp();
+  await db.execute("BEGIN IMMEDIATE");
+  try {
+    let publisherId: string | null = null;
+    if (input.publisher?.trim()) { const existing = await db.select<{ id: string }[]>("SELECT id FROM publishers WHERE name=?", [input.publisher.trim()]); publisherId = existing[0]?.id ?? id(); if (!existing[0]) await db.execute("INSERT INTO publishers (id,name,created_at,updated_at) VALUES (?,?,?,?)", [publisherId, input.publisher.trim(), now, now]); }
+    let categoryId: string | null = null;
+    if (input.category?.trim()) { const existing = await db.select<{ id: string }[]>("SELECT id FROM categories WHERE name=?", [input.category.trim()]); categoryId = existing[0]?.id ?? id(); if (!existing[0]) await db.execute("INSERT INTO categories (id,name) VALUES (?,?)", [categoryId, input.category.trim()]); }
+    await db.execute("INSERT INTO books (id,isbn10,isbn13,title,subtitle,description,language,publication_year,publisher_id,category_id,call_number,source,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)", [bookId, input.isbn10 ?? null, input.isbn13 ?? null, input.title, input.subtitle ?? null, input.description ?? null, input.language, input.publication_year ?? null, publisherId, categoryId, input.call_number ?? null, "manual", now, now]);
+    if (input.author?.trim()) { const normalized = input.author.trim().toLocaleLowerCase(); const existing = await db.select<{ id: string }[]>("SELECT id FROM authors WHERE normalized_name=?", [normalized]); const authorId = existing[0]?.id ?? id(); if (!existing[0]) await db.execute("INSERT INTO authors (id,name,normalized_name,created_at,updated_at) VALUES (?,?,?,?,?)", [authorId, input.author.trim(), normalized, now, now]); await db.execute("INSERT INTO book_authors (book_id,author_id,author_order) VALUES (?,?,0)", [bookId, authorId]); }
+    if (input.barcode?.trim()) await db.execute("INSERT INTO copies (id,book_id,accession_number,barcode,status,condition,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?)", [id(), bookId, input.accession?.trim() || `ACC-${Date.now()}`, input.barcode.trim(), "available", "good", now, now]);
+    await audit(db, "create", "book", bookId, null, JSON.stringify({ title: input.title })); await db.execute("COMMIT");
+  } catch (error) { await db.execute("ROLLBACK"); throw error; }
+}
+
+export async function updateBook(bookId: string, input: Partial<Book> & { author?: string }): Promise<void> {
+  const db = await database();
+  const now = timestamp();
+  await db.execute("BEGIN IMMEDIATE");
+  try {
+    let publisherId: string | null | undefined = undefined;
+    if (input.publisher !== undefined) {
+      if (input.publisher?.trim()) {
+        const existing = await db.select<{ id: string }[]>("SELECT id FROM publishers WHERE name=?", [input.publisher.trim()]);
+        publisherId = existing[0]?.id ?? id();
+        if (!existing[0]) {
+          await db.execute("INSERT INTO publishers (id,name,created_at,updated_at) VALUES (?,?,?,?)", [publisherId, input.publisher.trim(), now, now]);
+        }
+      } else {
+        publisherId = null;
+      }
+    }
+
+    let categoryId: string | null | undefined = undefined;
+    if (input.category !== undefined) {
+      if (input.category?.trim()) {
+        const existing = await db.select<{ id: string }[]>("SELECT id FROM categories WHERE name=?", [input.category.trim()]);
+        categoryId = existing[0]?.id ?? id();
+        if (!existing[0]) {
+          await db.execute("INSERT INTO categories (id,name) VALUES (?,?)", [categoryId, input.category.trim()]);
+        }
+      } else {
+        categoryId = null;
+      }
+    }
+
+    const fields: string[] = [];
+    const params: any[] = [];
+    if (input.title !== undefined) { fields.push("title = ?"); params.push(input.title); }
+    if (input.subtitle !== undefined) { fields.push("subtitle = ?"); params.push(input.subtitle); }
+    if (input.description !== undefined) { fields.push("description = ?"); params.push(input.description); }
+    if (input.language !== undefined) { fields.push("language = ?"); params.push(input.language); }
+    if (input.publication_year !== undefined) { fields.push("publication_year = ?"); params.push(input.publication_year); }
+    if (input.call_number !== undefined) { fields.push("call_number = ?"); params.push(input.call_number); }
+    if (input.isbn10 !== undefined) { fields.push("isbn10 = ?"); params.push(input.isbn10); }
+    if (input.isbn13 !== undefined) { fields.push("isbn13 = ?"); params.push(input.isbn13); }
+    if (publisherId !== undefined) { fields.push("publisher_id = ?"); params.push(publisherId); }
+    if (categoryId !== undefined) { fields.push("category_id = ?"); params.push(categoryId); }
+    
+    fields.push("updated_at = ?");
+    params.push(now);
+
+    if (fields.length > 0) {
+      params.push(bookId);
+      await db.execute(`UPDATE books SET ${fields.join(", ")} WHERE id = ?`, params);
+    }
+
+    if (input.author !== undefined) {
+      await db.execute("DELETE FROM book_authors WHERE book_id = ?", [bookId]);
+      if (input.author.trim()) {
+        const normalized = input.author.trim().toLowerCase();
+        const existing = await db.select<{ id: string }[]>("SELECT id FROM authors WHERE normalized_name=?", [normalized]);
+        const authorId = existing[0]?.id ?? id();
+        if (!existing[0]) {
+          await db.execute("INSERT INTO authors (id,name,normalized_name,created_at,updated_at) VALUES (?,?,?,?,?)", [authorId, input.author.trim(), normalized, now, now]);
+        }
+        await db.execute("INSERT INTO book_authors (book_id,author_id,author_order) VALUES (?,?,0)", [bookId, authorId]);
+      }
+    }
+
+    await audit(db, "update", "book", bookId, null, JSON.stringify(input));
+    await db.execute("COMMIT");
+  } catch (error) {
+    await db.execute("ROLLBACK");
+    throw error;
+  }
+}
+
+export async function deleteBook(bookId: string): Promise<void> {
+  const db = await database();
+  const now = timestamp();
+  await db.execute("UPDATE books SET archived_at = ?, updated_at = ? WHERE id = ?", [now, now, bookId]);
+  await db.execute("UPDATE copies SET status = 'archived', updated_at = ? WHERE book_id = ?", [now, bookId]);
+}
+
+export async function getCopiesForBook(bookId: string): Promise<Copy[]> {
+  const db = await database();
+  return db.select<Copy[]>(`
+    SELECT c.*, s.code as shelf 
+    FROM copies c 
+    LEFT JOIN shelves s ON s.id=c.shelf_id 
+    WHERE c.book_id = ? AND c.status != 'archived'
+  `, [bookId]);
+}
+
+export async function addCopy(bookId: string, barcode: string, accessionNumber: string, condition: string, shelfCode?: string | null): Promise<void> {
+  const db = await database();
+  const now = timestamp();
+  
+  let shelfId: string | null = null;
+  if (shelfCode?.trim()) {
+    const existing = await db.select<{ id: string }[]>("SELECT id FROM shelves WHERE code = ?", [shelfCode.trim()]);
+    shelfId = existing[0]?.id ?? id();
+    if (!existing[0]) {
+      await db.execute("INSERT INTO shelves (id, code, capacity, created_at, updated_at) VALUES (?, ?, 50, ?, ?)", [shelfId, shelfCode.trim(), now, now]);
+    }
+  }
+
+  await db.execute("INSERT INTO copies (id,book_id,accession_number,barcode,shelf_id,status,condition,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?)", 
+    [id(), bookId, accessionNumber.trim() || `ACC-${Date.now()}`, barcode.trim(), shelfId, "available", condition, now, now]);
+}
+
+export async function updateCopy(copyId: string, updates: Partial<Copy>): Promise<void> {
+  const db = await database();
+  const now = timestamp();
+  const fields: string[] = [];
+  const params: any[] = [];
+  
+  if (updates.status !== undefined) { fields.push("status = ?"); params.push(updates.status); }
+  if (updates.condition !== undefined) { fields.push("condition = ?"); params.push(updates.condition); }
+  
+  fields.push("updated_at = ?");
+  params.push(now);
+  
+  params.push(copyId);
+  await db.execute(`UPDATE copies SET ${fields.join(", ")} WHERE id = ?`, params);
+}
+
+export async function deleteCopy(copyId: string): Promise<void> {
+  const db = await database();
+  const now = timestamp();
+  await db.execute("UPDATE copies SET status = 'archived', updated_at = ? WHERE id = ?", [now, copyId]);
+}
+
+export async function members(query = ""): Promise<Member[]> {
+  const db = await database();
+  const term = `%${query.trim()}%`;
+  return db.select<Member[]>("SELECT * FROM members WHERE archived_at IS NULL AND (?='' OR full_name LIKE ? OR member_number LIKE ? OR email LIKE ? OR department LIKE ?) ORDER BY full_name", [query.trim(), term, term, term, term]);
+}
+
+export async function saveMember(input: Omit<Member, "id" | "member_number" | "joined_at">): Promise<void> {
+  const db = await database();
+  const now = timestamp();
+  const memberNumber = `MB-${String(Date.now()).slice(-6)}`;
+  await db.execute("INSERT INTO members (id,member_number,full_name,email,phone,department,role,status,expiry_date,joined_at,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)", [id(), memberNumber, input.full_name, input.email ?? null, input.phone ?? null, input.department ?? null, input.role ?? null, input.status, input.expiry_date ?? null, today(), now, now]);
+}
+
+export async function updateMember(memberId: string, updates: Partial<Member>): Promise<void> {
+  const db = await database();
+  const now = timestamp();
+  const fields: string[] = [];
+  const params: any[] = [];
+  
+  if (updates.full_name !== undefined) { fields.push("full_name = ?"); params.push(updates.full_name); }
+  if (updates.email !== undefined) { fields.push("email = ?"); params.push(updates.email); }
+  if (updates.phone !== undefined) { fields.push("phone = ?"); params.push(updates.phone); }
+  if (updates.department !== undefined) { fields.push("department = ?"); params.push(updates.department); }
+  if (updates.role !== undefined) { fields.push("role = ?"); params.push(updates.role); }
+  if (updates.status !== undefined) { fields.push("status = ?"); params.push(updates.status); }
+  if (updates.expiry_date !== undefined) { fields.push("expiry_date = ?"); params.push(updates.expiry_date); }
+  
+  fields.push("updated_at = ?");
+  params.push(now);
+  
+  params.push(memberId);
+  await db.execute(`UPDATE members SET ${fields.join(", ")} WHERE id = ?`, params);
+}
+
+export async function deleteMember(memberId: string): Promise<void> {
+  const db = await database();
+  const now = timestamp();
+  await db.execute("UPDATE members SET archived_at = ?, status = 'archived', updated_at = ? WHERE id = ?", [now, now, memberId]);
+}
+
+export async function copies(query = ""): Promise<(Copy & { title: string })[]> {
+  const db = await database();
+  const term = `%${query.trim()}%`;
+  return db.select<(Copy & { title: string })[]>("SELECT c.*,b.title, s.code as shelf FROM copies c JOIN books b ON b.id=c.book_id LEFT JOIN shelves s ON s.id=c.shelf_id WHERE (?='' OR c.barcode LIKE ? OR c.accession_number LIKE ? OR b.title LIKE ?) ORDER BY b.title", [query.trim(), term, term, term]);
+}
+
+export async function loans(openOnly = false): Promise<Loan[]> {
+  const db = await database();
+  return db.select<Loan[]>(`SELECT l.*, b.title, c.barcode, m.full_name member_name FROM loans l JOIN copies c ON c.id=l.copy_id JOIN books b ON b.id=c.book_id JOIN members m ON m.id=l.member_id ${openOnly ? "WHERE l.returned_at IS NULL" : ""} ORDER BY l.borrowed_at DESC`);
+}
+
+export async function getLoansForMember(memberId: string): Promise<Loan[]> {
+  const db = await database();
+  return db.select<Loan[]>("SELECT l.*, b.title, c.barcode FROM loans l JOIN copies c ON c.id=l.copy_id JOIN books b ON b.id=c.book_id WHERE l.member_id = ? ORDER BY l.borrowed_at DESC", [memberId]);
+}
+
+export async function getReservationsForMember(memberId: string): Promise<Reservation[]> {
+  const db = await database();
+  return db.select<Reservation[]>("SELECT r.*, b.title FROM reservations r JOIN books b ON b.id=r.book_id WHERE r.member_id = ? ORDER BY r.reserved_at DESC", [memberId]);
+}
+
+export async function checkout(memberId: string, copyIds: string[], limit: number, days: number): Promise<void> {
+  const db = await database();
+  const now = timestamp();
+  await db.execute("BEGIN IMMEDIATE");
+  try {
+    const member = await db.select<Member[]>("SELECT * FROM members WHERE id=?", [memberId]);
+    if (member[0]?.status !== "active") throw new Error("Only active members can borrow.");
+    const active = await db.select<{ count: number }[]>("SELECT COUNT(*) count FROM loans WHERE member_id=? AND returned_at IS NULL", [memberId]);
+    if ((active[0]?.count ?? 0) + copyIds.length > limit) throw new Error(`Loan limit of ${limit} would be exceeded.`);
+    for (const copyId of copyIds) {
+      const copy = await db.select<Copy[]>("SELECT * FROM copies WHERE id=?", [copyId]);
+      if (copy[0]?.status !== "available") throw new Error("Each selected copy must be available.");
+      await db.execute("INSERT INTO loans (id,copy_id,member_id,borrowed_at,due_at,renewed_count,issued_by) VALUES (?,?,?,?,?,?,?)", [id(), copyId, memberId, now, dueDate(days), 0, "local-operator"]);
+      await db.execute("UPDATE copies SET status='on-loan',updated_at=? WHERE id=?", [now, copyId]);
+    }
+    await audit(db, "checkout", "loan", memberId, null, JSON.stringify({ copyIds }));
+    await db.execute("COMMIT");
+  } catch (error) {
+    await db.execute("ROLLBACK");
+    throw error;
+  }
+}
+
+export async function returnCopies(copyIds: string[]): Promise<void> {
+  const db = await database();
+  const now = timestamp();
+  await db.execute("BEGIN IMMEDIATE");
+  try {
+    for (const copyId of copyIds) {
+      const loan = await db.select<Loan[]>("SELECT * FROM loans WHERE copy_id=? AND returned_at IS NULL", [copyId]);
+      if (!loan[0]) throw new Error("No open loan was found for this copy.");
+      await db.execute("UPDATE loans SET returned_at=?,received_by=? WHERE id=?", [now, "local-operator", loan[0].id]);
+      const reserve = await db.select<Reservation[]>("SELECT * FROM reservations WHERE book_id=(SELECT book_id FROM copies WHERE id=?) AND status='queued' ORDER BY position,reserved_at LIMIT 1", [copyId]);
+      if (reserve[0]) {
+        await db.execute("UPDATE reservations SET status='ready',expires_at=? WHERE id=?", [dueDate(3), reserve[0].id]);
+        await db.execute("UPDATE copies SET status='reserved',updated_at=? WHERE id=?", [now, copyId]);
+      } else {
+        await db.execute("UPDATE copies SET status='available',updated_at=? WHERE id=?", [now, copyId]);
+      }
+    }
+    await audit(db, "return", "loan", copyIds.join(","), null, JSON.stringify({ copyIds }));
+    await db.execute("COMMIT");
+  } catch (error) {
+    await db.execute("ROLLBACK");
+    throw error;
+  }
+}
+
+export async function renewLoan(loanId: string, days: number): Promise<void> {
+  const db = await database();
+  await db.execute("BEGIN IMMEDIATE");
+  try {
+    const loan = await db.select<Loan[]>("SELECT * FROM loans WHERE id = ?", [loanId]);
+    if (!loan[0]) throw new Error("Loan not found");
+    
+    const currentDueDate = new Date(loan[0].due_at);
+    const baseDate = currentDueDate > new Date() ? currentDueDate : new Date();
+    baseDate.setDate(baseDate.getDate() + days);
+    const newDueDate = baseDate.toISOString().split('T')[0];
+    
+    await db.execute("UPDATE loans SET due_at = ?, renewed_count = renewed_count + 1 WHERE id = ?", [newDueDate, loanId]);
+    await audit(db, "renew", "loan", loanId, null, JSON.stringify({ old_due: loan[0].due_at, new_due: newDueDate }));
+    await db.execute("COMMIT");
+  } catch (error) {
+    await db.execute("ROLLBACK");
+    throw error;
+  }
+}
+
+export async function cancelReservation(reservationId: string): Promise<void> {
+  const db = await database();
+  await db.execute("UPDATE reservations SET status = 'cancelled' WHERE id = ?", [reservationId]);
+}
+
+export async function reservations(): Promise<Reservation[]> {
+  const db = await database();
+  return db.select<Reservation[]>("SELECT r.*,b.title,m.full_name member_name FROM reservations r JOIN books b ON b.id=r.book_id JOIN members m ON m.id=r.member_id ORDER BY r.status,r.position,r.reserved_at");
+}
+
+export async function addReservation(bookId: string, memberId: string): Promise<void> {
+  const db = await database();
+  const rows = await db.select<{ next: number }[]>("SELECT COALESCE(MAX(position),0)+1 next FROM reservations WHERE book_id=? AND status='queued'", [bookId]);
+  await db.execute("INSERT INTO reservations (id,book_id,member_id,status,position,reserved_at) VALUES (?,?,?,?,?,?)", [id(), bookId, memberId, "queued", rows[0]?.next ?? 1, timestamp()]);
+}
+
+export async function auditLog() {
+  const db = await database();
+  return db.select<{ id: string; actor: string; action: string; entity_type: string; entity_id: string; created_at: string; after_json?: string }[]>("SELECT * FROM audit_logs ORDER BY created_at DESC LIMIT 250");
+}
+
+async function audit(db: Database, action: string, entityType: string, entityId: string, before: string | null, after: string | null) {
+  await db.execute("INSERT INTO audit_logs (id,actor,action,entity_type,entity_id,before_json,after_json,created_at) VALUES (?,?,?,?,?,?,?,?)", [id(), "local-operator", action, entityType, entityId, before, after, timestamp()]);
+}
