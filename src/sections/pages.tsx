@@ -18,6 +18,7 @@ import {
   updateMember, deleteMember, getLoansForMember, getReservationsForMember, 
   renewLoan, cancelReservation, addReservation
 } from "../data/repositories/library";
+import { seedDummyData } from "../data/seed";
 import { queryClient } from "../app/providers";
 import { Button, Card, EmptyState, Input, StatusBadge, Modal } from "../components/ui/primitives";
 import { daysLate } from "../utils/dates";
@@ -775,7 +776,10 @@ export function MembersPage() {
               <Cell>{member.department || "—"}</Cell>
               <Cell>{member.email || member.phone || "—"}</Cell>
               <Cell><StatusBadge value={member.status}/></Cell>
-) : (
+            </tr>
+          ))}
+        </Table>
+      ) : (
         <EmptyState 
           icon={UsersRound}
           title="No members found" 
@@ -1553,6 +1557,24 @@ export function SettingsPage() {
               <input type="checkbox" checked={preferences.closeToTray} onChange={(e) => updatePreferences({ closeToTray: e.target.checked })}/>
               <span>Hide to tray when closing</span>
             </label>
+          </div>
+          <div className="mt-8 pt-6 border-t border-ink/10 dark:border-parchment/10">
+            <h3 className="font-semibold text-sm mb-2">Development Tools</h3>
+            <Button 
+              variant="secondary" 
+              onClick={async () => {
+                const toastId = toast.loading("Seeding dummy data...");
+                try {
+                  await seedDummyData();
+                  toast.success("Database seeded successfully!", { id: toastId });
+                  invalidate();
+                } catch (e: any) {
+                  toast.error("Failed to seed: " + e.message, { id: toastId });
+                }
+              }}
+            >
+              Seed Dummy Data
+            </Button>
           </div>
         </Card>
       </div>
