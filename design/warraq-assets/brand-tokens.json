@@ -1,0 +1,19 @@
+{
+  "brand": "Warraq",
+  "colors": {
+    "ink": "#17211F",
+    "emerald": "#176B57",
+    "parchment": "#F4EBDD",
+    "copper": "#C87941",
+    "white": "#FFFFFF"
+  },
+  "fonts": {
+    "latin": "Manrope",
+    "arabic": "IBM Plex Sans Arabic"
+  },
+  "ui": {
+    "radiusCard": "12px",
+    "radiusControl": "8px",
+    "iconStroke": "2px"
+  }
+}
