@@ -51,11 +51,55 @@ export async function dashboard(): Promise<DashboardMetrics> {
   }
 
   const row = rows[0] ?? { titles: 0, copies: 0, on_loan: 0, members: 0, overdue: 0, ready: 0 };
+
+  const activeDepartments = await db.select<{ name: string; count: number }[]>(`
+    SELECT m.department as name, COUNT(l.id) as count 
+    FROM loans l 
+    JOIN members m ON m.id = l.member_id 
+    WHERE m.department IS NOT NULL AND m.department != '' 
+    GROUP BY m.department 
+    ORDER BY count DESC 
+    LIMIT 5`);
+
+  const checkoutsRaw = await db.select<{ hour: string; count: number }[]>(`
+    SELECT strftime('%H', borrowed_at) as hour, COUNT(*) as count 
+    FROM loans 
+    WHERE date(borrowed_at) = date('now') 
+    GROUP BY hour`);
+
+  const returnsRaw = await db.select<{ hour: string; count: number }[]>(`
+    SELECT strftime('%H', returned_at) as hour, COUNT(*) as count 
+    FROM loans 
+    WHERE returned_at IS NOT NULL AND date(returned_at) = date('now') 
+    GROUP BY hour`);
+
+  const rhythmMap = new Map<number, { checkouts: number; returns: number }>();
+  checkoutsRaw.forEach(r => {
+    const h = parseInt(r.hour, 10);
+    rhythmMap.set(h, { checkouts: r.count, returns: 0 });
+  });
+  returnsRaw.forEach(r => {
+    const h = parseInt(r.hour, 10);
+    const existing = rhythmMap.get(h) ?? { checkouts: 0, returns: 0 };
+    existing.returns = r.count;
+    rhythmMap.set(h, existing);
+  });
+
+  const circulationRhythm = [
+    { time: '8 AM', checkouts: rhythmMap.get(8)?.checkouts ?? 0, returns: rhythmMap.get(8)?.returns ?? 0 },
+    { time: '10 AM', checkouts: rhythmMap.get(10)?.checkouts ?? 0, returns: rhythmMap.get(10)?.returns ?? 0 },
+    { time: '12 PM', checkouts: rhythmMap.get(12)?.checkouts ?? 0, returns: rhythmMap.get(12)?.returns ?? 0 },
+    { time: '2 PM', checkouts: rhythmMap.get(14)?.checkouts ?? 0, returns: rhythmMap.get(14)?.returns ?? 0 },
+    { time: '4 PM', checkouts: rhythmMap.get(16)?.checkouts ?? 0, returns: rhythmMap.get(16)?.returns ?? 0 },
+    { time: '6 PM', checkouts: rhythmMap.get(18)?.checkouts ?? 0, returns: rhythmMap.get(18)?.returns ?? 0 },
+  ];
+
   return { 
     titles: row.titles, copies: row.copies, onLoan: row.on_loan, members: row.members, overdue: row.overdue, readyReservations: row.ready,
-    recentLoans, overdueLoans, activity
+    recentLoans, overdueLoans, activity, activeDepartments, circulationRhythm
   };
 }
+
 
 export async function books(query = ""): Promise<Book[]> {
   const db = await database();
@@ -81,7 +125,7 @@ export async function saveBook(input: Omit<Book, "id" | "created_at"> & { author
     if (input.publisher?.trim()) { const existing = await db.select<{ id: string }[]>("SELECT id FROM publishers WHERE name=?", [input.publisher.trim()]); publisherId = existing[0]?.id ?? id(); if (!existing[0]) await db.execute("INSERT INTO publishers (id,name,created_at,updated_at) VALUES (?,?,?,?)", [publisherId, input.publisher.trim(), now, now]); }
     let categoryId: string | null = null;
     if (input.category?.trim()) { const existing = await db.select<{ id: string }[]>("SELECT id FROM categories WHERE name=?", [input.category.trim()]); categoryId = existing[0]?.id ?? id(); if (!existing[0]) await db.execute("INSERT INTO categories (id,name) VALUES (?,?)", [categoryId, input.category.trim()]); }
-    await db.execute("INSERT INTO books (id,isbn10,isbn13,title,subtitle,description,language,publication_year,publisher_id,category_id,call_number,source,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)", [bookId, input.isbn10 ?? null, input.isbn13 ?? null, input.title, input.subtitle ?? null, input.description ?? null, input.language, input.publication_year ?? null, publisherId, categoryId, input.call_number ?? null, "manual", now, now]);
+    await db.execute("INSERT INTO books (id,isbn10,isbn13,title,subtitle,description,language,publication_year,publisher_id,category_id,call_number,cover_path,source,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", [bookId, input.isbn10 ?? null, input.isbn13 ?? null, input.title, input.subtitle ?? null, input.description ?? null, input.language, input.publication_year ?? null, publisherId, categoryId, input.call_number ?? null, input.cover_path ?? null, "manual", now, now]);
     if (input.author?.trim()) { const normalized = input.author.trim().toLocaleLowerCase(); const existing = await db.select<{ id: string }[]>("SELECT id FROM authors WHERE normalized_name=?", [normalized]); const authorId = existing[0]?.id ?? id(); if (!existing[0]) await db.execute("INSERT INTO authors (id,name,normalized_name,created_at,updated_at) VALUES (?,?,?,?,?)", [authorId, input.author.trim(), normalized, now, now]); await db.execute("INSERT INTO book_authors (book_id,author_id,author_order) VALUES (?,?,0)", [bookId, authorId]); }
     if (input.barcode?.trim()) await db.execute("INSERT INTO copies (id,book_id,accession_number,barcode,status,condition,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?)", [id(), bookId, input.accession?.trim() || `ACC-${Date.now()}`, input.barcode.trim(), "available", "good", now, now]);
     await audit(db, "create", "book", bookId, null, JSON.stringify({ title: input.title })); await db.execute("COMMIT");
@@ -129,6 +173,7 @@ export async function updateBook(bookId: string, input: Partial<Book> & { author
     if (input.call_number !== undefined) { fields.push("call_number = ?"); params.push(input.call_number); }
     if (input.isbn10 !== undefined) { fields.push("isbn10 = ?"); params.push(input.isbn10); }
     if (input.isbn13 !== undefined) { fields.push("isbn13 = ?"); params.push(input.isbn13); }
+    if (input.cover_path !== undefined) { fields.push("cover_path = ?"); params.push(input.cover_path); }
     if (publisherId !== undefined) { fields.push("publisher_id = ?"); params.push(publisherId); }
     if (categoryId !== undefined) { fields.push("category_id = ?"); params.push(categoryId); }
     
@@ -195,7 +240,7 @@ export async function addCopy(bookId: string, barcode: string, accessionNumber: 
     [id(), bookId, accessionNumber.trim() || `ACC-${Date.now()}`, barcode.trim(), shelfId, "available", condition, now, now]);
 }
 
-export async function updateCopy(copyId: string, updates: Partial<Copy>): Promise<void> {
+export async function updateCopy(copyId: string, updates: Partial<Copy> & { shelf?: string | null }): Promise<void> {
   const db = await database();
   const now = timestamp();
   const fields: string[] = [];
@@ -204,12 +249,26 @@ export async function updateCopy(copyId: string, updates: Partial<Copy>): Promis
   if (updates.status !== undefined) { fields.push("status = ?"); params.push(updates.status); }
   if (updates.condition !== undefined) { fields.push("condition = ?"); params.push(updates.condition); }
   
+  if (updates.shelf !== undefined) {
+    let shelfId: string | null = null;
+    if (updates.shelf && updates.shelf.trim()) {
+      const existing = await db.select<{ id: string }[]>("SELECT id FROM shelves WHERE code = ?", [updates.shelf.trim()]);
+      shelfId = existing[0]?.id ?? id();
+      if (!existing[0]) {
+        await db.execute("INSERT INTO shelves (id, code, capacity, created_at, updated_at) VALUES (?, ?, 50, ?, ?)", [shelfId, updates.shelf.trim(), now, now]);
+      }
+    }
+    fields.push("shelf_id = ?");
+    params.push(shelfId);
+  }
+  
   fields.push("updated_at = ?");
   params.push(now);
   
   params.push(copyId);
   await db.execute(`UPDATE copies SET ${fields.join(", ")} WHERE id = ?`, params);
 }
+
 
 export async function deleteCopy(copyId: string): Promise<void> {
   const db = await database();
@@ -227,7 +286,7 @@ export async function saveMember(input: Omit<Member, "id" | "member_number" | "j
   const db = await database();
   const now = timestamp();
   const memberNumber = `MB-${String(Date.now()).slice(-6)}`;
-  await db.execute("INSERT INTO members (id,member_number,full_name,email,phone,department,role,status,expiry_date,joined_at,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)", [id(), memberNumber, input.full_name, input.email ?? null, input.phone ?? null, input.department ?? null, input.role ?? null, input.status, input.expiry_date ?? null, today(), now, now]);
+  await db.execute("INSERT INTO members (id,member_number,full_name,email,phone,department,role,status,expiry_date,avatar_path,joined_at,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)", [id(), memberNumber, input.full_name, input.email ?? null, input.phone ?? null, input.department ?? null, input.role ?? null, input.status, input.expiry_date ?? null, input.avatar_path ?? null, today(), now, now]);
 }
 
 export async function updateMember(memberId: string, updates: Partial<Member>): Promise<void> {
@@ -243,6 +302,7 @@ export async function updateMember(memberId: string, updates: Partial<Member>): 
   if (updates.role !== undefined) { fields.push("role = ?"); params.push(updates.role); }
   if (updates.status !== undefined) { fields.push("status = ?"); params.push(updates.status); }
   if (updates.expiry_date !== undefined) { fields.push("expiry_date = ?"); params.push(updates.expiry_date); }
+  if (updates.avatar_path !== undefined) { fields.push("avatar_path = ?"); params.push(updates.avatar_path); }
   
   fields.push("updated_at = ?");
   params.push(now);
