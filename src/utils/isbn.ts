@@ -12,3 +12,25 @@ export function isValidIsbn(value: string) {
   }
   return false;
 }
+
+export function cleanBarcode(value: string): string {
+  return value.trim().toUpperCase();
+}
+
+export function cleanAccession(value: string): string {
+  return value.trim().toUpperCase();
+}
+
+export function cleanPhone(value: string): string {
+  const isPlusFirst = value.trim().startsWith("+");
+  const digits = value.replace(/\D/g, "");
+  return isPlusFirst ? `+${digits}` : digits;
+}
+
+export function cleanMemberNumber(value: string): string {
+  return value.trim().toUpperCase();
+}
+
+export function cleanText(value: string): string {
+  return value.trim();
+}

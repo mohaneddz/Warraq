@@ -4,7 +4,8 @@
 
 @theme {
   --color-ink: #122222;
-  --color-emerald: #1a4d40;
+  --color-emerald: var(--color-accent);
+  --color-emerald-light: var(--color-accent-dark);
   --color-parchment: #F9F8F4;
   --color-copper: #b96f3e;
   --font-display: "Manrope", ui-sans-serif, system-ui, sans-serif;
@@ -19,6 +20,7 @@
 /* ── User-controlled CSS variables (set from JS in AppShell) ── */
 :root {
   --color-accent: #1a4d40;
+  --color-accent-dark: #1b9277;
   --font-size-base: 15px;
 }
 
@@ -42,7 +44,7 @@ input[type="checkbox"], input[type="radio"] {
   background-color: #fff;
   margin: 0;
   font: inherit;
-  color: #1a4d40;
+  color: var(--color-accent);
   width: 1.25rem;
   height: 1.25rem;
   border: 1.5px solid rgba(18, 34, 34, 0.25);
@@ -58,7 +60,7 @@ input[type="checkbox"], input[type="radio"] {
 .dark input[type="checkbox"], .dark input[type="radio"] {
   background-color: #1d2926;
   border-color: rgba(249, 248, 244, 0.3);
-  color: #1b9277;
+  color: var(--color-accent-dark);
 }
 
 input[type="radio"] { border-radius: 50%; }
@@ -86,13 +88,13 @@ input[type="radio"]::before {
 }
 
 input[type="checkbox"]:checked, input[type="radio"]:checked {
-  background-color: #1a4d40;
-  border-color: #1a4d40;
+  background-color: var(--color-accent);
+  border-color: var(--color-accent);
 }
 
 .dark input[type="checkbox"]:checked, .dark input[type="radio"]:checked {
-  background-color: #1b9277;
-  border-color: #1b9277;
+  background-color: var(--color-accent-dark);
+  border-color: var(--color-accent-dark);
 }
 
 input[type="checkbox"]:checked::before, input[type="radio"]:checked::before {
@@ -100,12 +102,12 @@ input[type="checkbox"]:checked::before, input[type="radio"]:checked::before {
 }
 
 input[type="checkbox"]:hover, input[type="radio"]:hover {
-  border-color: #1a4d40;
+  border-color: var(--color-accent);
   box-shadow: 0 0 0 3px rgba(26, 77, 64, 0.1);
 }
 
 .dark input[type="checkbox"]:hover, .dark input[type="radio"]:hover {
-  border-color: #1b9277;
+  border-color: var(--color-accent-dark);
   box-shadow: 0 0 0 3px rgba(27, 146, 119, 0.15);
 }
 

@@ -14,17 +14,19 @@ export const formatDisplayDate = (dateInput: string | Date | null | undefined): 
 
   let formatStr = "dd/MM/yyyy";
   let tz = "Africa/Algiers";
+  let locale = "en";
   try {
     const stored = localStorage.getItem("warraq-preferences");
     if (stored) {
       const prefs = JSON.parse(stored);
       if (prefs.dateFormat) formatStr = prefs.dateFormat;
       if (prefs.timezone) tz = prefs.timezone;
+      if (prefs.locale) locale = prefs.locale;
     }
   } catch {}
 
   try {
-    const formatter = new Intl.DateTimeFormat("en-US", {
+    const formatter = new Intl.DateTimeFormat(locale === "ar" ? "ar-DZ" : locale === "fr" ? "fr-FR" : "en-US", {
       timeZone: tz,
       year: "numeric",
       month: "2-digit",
