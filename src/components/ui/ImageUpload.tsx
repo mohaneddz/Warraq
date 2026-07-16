@@ -109,7 +109,7 @@ export function ImageUpload({ value, onChange, shape = "cover", label }: ImageUp
       const fileBytes = await readFile(selected);
       const ext = selected.split(".").pop()?.toLowerCase() || "jpeg";
       const mimeType = ext === "png" ? "image/png" : ext === "webp" ? "image/webp" : "image/jpeg";
-      
+
       const dataUrl = `data:${mimeType};base64,${uint8ArrayToBase64(fileBytes)}`;
       startCropper(dataUrl);
     } catch (err: any) {
@@ -191,10 +191,10 @@ export function ImageUpload({ value, onChange, shape = "cover", label }: ImageUp
     const img = new Image();
     img.onload = () => {
       const canvas = document.createElement("canvas");
-      
+
       canvas.width = shape === "circle" ? 300 : shape === "rect" ? 480 : 360;
       canvas.height = shape === "circle" ? 300 : shape === "rect" ? 300 : 540;
-      
+
       const ctx = canvas.getContext("2d");
       if (!ctx) {
         onChange(rawImage);
@@ -203,36 +203,36 @@ export function ImageUpload({ value, onChange, shape = "cover", label }: ImageUp
         setLoading(false);
         return;
       }
-      
+
       ctx.fillStyle = "#ffffff";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
-      
+
       const containerWidth = 320;
       const containerHeight = 320;
-      
+
       const cropW = shape === "circle" ? 200 : shape === "rect" ? 280 : 200;
       const cropH = shape === "circle" ? 200 : shape === "rect" ? 175 : 300;
-      
+
       const cropLeft = (containerWidth - cropW) / 2;
       const cropTop = (containerHeight - cropH) / 2;
-      
+
       let renderWidth = img.width;
       let renderHeight = img.height;
       const scaleToFit = Math.min(containerWidth / img.width, containerHeight / img.height);
       renderWidth = img.width * scaleToFit;
       renderHeight = img.height * scaleToFit;
-      
+
       const centerX = (containerWidth / 2) + offset.x;
       const centerY = (containerHeight / 2) + offset.y;
-      
+
       const scaledImgX = centerX - (renderWidth * zoom) / 2;
       const scaledImgY = centerY - (renderHeight * zoom) / 2;
-      
+
       const sourceX = (cropLeft - scaledImgX) / (scaleToFit * zoom);
       const sourceY = (cropTop - scaledImgY) / (scaleToFit * zoom);
       const sourceW = cropW / (scaleToFit * zoom);
       const sourceH = cropH / (scaleToFit * zoom);
-      
+
       try {
         ctx.drawImage(
           img,
@@ -244,7 +244,7 @@ export function ImageUpload({ value, onChange, shape = "cover", label }: ImageUp
       } catch {
         onChange(rawImage);
       }
-      
+
       setIsCropOpen(false);
       setRawImage(null);
       setLoading(false);
@@ -252,9 +252,9 @@ export function ImageUpload({ value, onChange, shape = "cover", label }: ImageUp
     img.src = rawImage;
   };
 
-  const aspectClass = 
-    shape === "circle" 
-      ? "aspect-square rounded-full max-w-[140px]" 
+  const aspectClass =
+    shape === "circle"
+      ? "aspect-square rounded-full max-w-[140px]"
       : shape === "rect"
         ? "aspect-[1.6] rounded-xl w-32 h-20"
         : "aspect-[2/3] rounded-xl w-full max-w-[200px]";
@@ -266,18 +266,17 @@ export function ImageUpload({ value, onChange, shape = "cover", label }: ImageUp
           {label}
         </span>
       )}
-      
+
       <div className="relative">
         <div
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
           onClick={value ? undefined : triggerSelect}
-          className={`relative flex flex-col items-center justify-center border-2 border-dashed overflow-hidden transition-all duration-200 shadow-sm ${aspectClass} ${
-            isDragOver
+          className={`relative flex flex-col items-center justify-center border-2 border-dashed overflow-hidden transition-all duration-200 shadow-sm ${aspectClass} ${isDragOver
               ? "border-emerald bg-emerald/5 ring-4 ring-emerald/10"
               : "border-black/10 dark:border-white/10 bg-[#fcfbf8] dark:bg-[#111d1a] hover:border-emerald dark:hover:border-[#1b9277] hover:bg-black/[0.01]"
-          } ${value ? "cursor-default" : "cursor-pointer"}`}
+            } ${value ? "cursor-default" : "cursor-pointer"}`}
         >
           {value ? (
             <>
@@ -301,7 +300,7 @@ export function ImageUpload({ value, onChange, shape = "cover", label }: ImageUp
                   }}
                   className="px-2.5 py-1 bg-[#1a4d40] hover:bg-[#1a4d40]/90 text-white font-bold text-[10px] rounded shadow-sm flex items-center gap-1.5 transition-colors cursor-pointer w-full max-w-[85px] justify-center"
                 >
-                  <Upload size={10} /> New Pic
+                  <Upload size={10} /> Upload
                 </button>
               </div>
             </>
@@ -353,7 +352,7 @@ export function ImageUpload({ value, onChange, shape = "cover", label }: ImageUp
       {isCropOpen && rawImage && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in select-none">
           <div className="bg-white dark:bg-[#1d2926] rounded-2xl border border-black/10 dark:border-white/10 shadow-2xl p-6 w-full max-w-sm flex flex-col items-center">
-            
+
             <h3 className="font-bold text-[15px] text-[#122222] dark:text-white mb-1 self-start">
               Crop & Position Image
             </h3>
@@ -362,7 +361,7 @@ export function ImageUpload({ value, onChange, shape = "cover", label }: ImageUp
             </p>
 
             {/* Draggable Viewport */}
-            <div 
+            <div
               className="w-[320px] h-[320px] bg-black/5 dark:bg-white/5 rounded-xl overflow-hidden relative cursor-move border border-black/10 dark:border-white/10"
               onMouseDown={handleMouseDown}
               onMouseMove={handleMouseMove}
@@ -370,9 +369,9 @@ export function ImageUpload({ value, onChange, shape = "cover", label }: ImageUp
               onMouseLeave={handleMouseUp}
               onWheel={handleWheel}
             >
-              <img 
-                src={rawImage} 
-                alt="To Crop" 
+              <img
+                src={rawImage}
+                alt="To Crop"
                 draggable={false}
                 style={{
                   transform: `translate(${offset.x}px, ${offset.y}px) scale(${zoom})`,
@@ -393,18 +392,17 @@ export function ImageUpload({ value, onChange, shape = "cover", label }: ImageUp
                 <div className="flex-1 bg-black/40" />
                 <div className="flex">
                   <div className="flex-1 bg-black/40" />
-                  
+
                   {/* The crop boundary indicator */}
-                  <div 
-                    className={`shrink-0 border-2 border-white shadow-[0_0_0_9999px_rgba(0,0,0,0.4)] ${
-                      shape === "circle" 
-                        ? "rounded-full w-[200px] h-[200px]" 
+                  <div
+                    className={`shrink-0 border-2 border-white shadow-[0_0_0_9999px_rgba(0,0,0,0.4)] ${shape === "circle"
+                        ? "rounded-full w-[200px] h-[200px]"
                         : shape === "rect"
                           ? "rounded-xl w-[280px] h-[175px]"
                           : "rounded-xl w-[200px] h-[300px]"
-                    }`}
+                      }`}
                   />
-                  
+
                   <div className="flex-1 bg-black/40" />
                 </div>
                 <div className="flex-1 bg-black/40" />
@@ -417,12 +415,12 @@ export function ImageUpload({ value, onChange, shape = "cover", label }: ImageUp
                 <span>Zoom</span>
                 <span>{Math.round(zoom * 100)}%</span>
               </div>
-              <input 
-                type="range" 
-                min="0.2" 
-                max="3" 
+              <input
+                type="range"
+                min="0.2"
+                max="3"
                 step="0.05"
-                value={zoom} 
+                value={zoom}
                 onChange={(e) => setZoom(parseFloat(e.target.value))}
                 className="w-full h-1.5 bg-black/10 dark:bg-white/10 rounded-lg appearance-none cursor-pointer accent-[#1a4d40] dark:accent-[#1b9277]"
               />

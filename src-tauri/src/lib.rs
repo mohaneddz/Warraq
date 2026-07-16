@@ -8,6 +8,7 @@ fn migrations() -> Vec<Migration> {
     vec![
         Migration { version: 1, description: "initial_library_schema", sql: include_str!("../migrations/0001_initial.sql"), kind: MigrationKind::Up },
         Migration { version: 2, description: "library_indexes_and_fts", sql: include_str!("../migrations/0002_indexes.sql"), kind: MigrationKind::Up },
+        Migration { version: 3, description: "add_arabic_title_and_tags", sql: include_str!("../migrations/0003_add_arabic_title.sql"), kind: MigrationKind::Up },
     ]
 }
 

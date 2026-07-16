@@ -50,7 +50,10 @@ interface ModalProps {
 export function Modal({ isOpen, onClose, title, children }: ModalProps) {
   if (!isOpen) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-all duration-200">
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-all duration-200"
+      onClick={onClose}
+    >
       <div 
         className="relative w-full max-w-2xl max-h-[85vh] overflow-y-auto rounded-card border border-ink/10 bg-white p-6 shadow-2xl dark:border-parchment/10 dark:bg-[#1d2926] dark:text-parchment flex flex-col animate-in fade-in zoom-in-95 duration-150"
         onClick={(e) => e.stopPropagation()}
