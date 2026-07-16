@@ -15,12 +15,17 @@ import type { Book } from "../types";
 import { Modal, Input, Button, StatusBadge } from "../components/ui/primitives";
 import { SearchableSelect } from "../components/ui/shared";
 import { toast } from "sonner";
-import { isValidIsbn, normalizeIsbn } from "../utils/isbn";
+import { 
+  isValidIsbn, normalizeIsbn, cleanBarcode, 
+  cleanAccession, cleanText 
+} from "../utils/isbn";
 import { queryClient } from "../app/providers";
 import { fetchBookMetadataByIsbn, enrichMetadataWithGroq } from "../utils/metadata";
 import { useUiStore } from "../store/uiStore";
 import { useLocation } from "react-router-dom";
 import { ImageUpload } from "../components/ui/ImageUpload";
+import { useTranslation } from "react-i18next";
+import { formatDisplayDate } from "../utils/dates";
 
 const invalidate = () => queryClient.invalidateQueries();
 
@@ -42,7 +47,9 @@ const bookSchema = z.object({
 type BookValues = z.infer<typeof bookSchema>;
 
 export function CatalogPage() {
+  const { t } = useTranslation();
   const location = useLocation();
+
   const [term, setTerm] = useState("");
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
   const [adding, setAdding] = useState(false);
@@ -73,24 +80,36 @@ export function CatalogPage() {
   });
   const watchedTags = addForm.watch("tags");
 
+  // Form input standardizer helper
+  const registerClean = (form: any, name: any, cleaner: (val: string) => string) => {
+    const reg = form.register(name);
+    return {
+      ...reg,
+      onBlur: (e: any) => {
+        form.setValue(name, cleaner(e.target.value));
+        reg.onBlur(e);
+      }
+    };
+  };
+
   const addMutation = useMutation({
     mutationFn: async (values: BookValues) => {
       const isbn = normalizeIsbn(values.isbn ?? "");
       if (isbn && !isValidIsbn(isbn)) throw new Error("Enter a valid ISBN-10 or ISBN-13.");
       return saveBook({
-        title: values.title,
-        language: values.language,
-        subtitle: values.subtitle || null,
-        arabic_title: values.arabic_title || null,
-        tags: values.tags || null,
+        title: cleanText(values.title),
+        language: cleanText(values.language),
+        subtitle: values.subtitle ? cleanText(values.subtitle) : null,
+        arabic_title: values.arabic_title ? cleanText(values.arabic_title) : null,
+        tags: values.tags ? cleanText(values.tags) : null,
         isbn10: isbn.length === 10 ? isbn : null,
         isbn13: isbn.length === 13 ? isbn : null,
-        publisher: values.publisher,
-        category: values.category,
-        author: values.author,
-        barcode: values.barcode,
-        accession: values.accession,
-        description: values.description || null,
+        publisher: values.publisher ? cleanText(values.publisher) : "",
+        category: values.category ? cleanText(values.category) : "",
+        author: values.author ? cleanText(values.author) : "",
+        barcode: values.barcode ? cleanBarcode(values.barcode) : "",
+        accession: values.accession ? cleanAccession(values.accession) : "",
+        description: values.description ? cleanText(values.description) : null,
         cover_path: values.cover_path || null
       });
     },
@@ -145,15 +164,15 @@ export function CatalogPage() {
       }
 
       if (meta) {
-        addForm.setValue("title", meta.title);
-        addForm.setValue("subtitle", meta.subtitle || "");
-        addForm.setValue("arabic_title", meta.arabic_title || "");
-        addForm.setValue("tags", meta.tags || "");
-        if (meta.author) addForm.setValue("author", meta.author);
-        if (meta.publisher) addForm.setValue("publisher", meta.publisher);
-        if (meta.category) addForm.setValue("category", meta.category);
-        if (meta.language) addForm.setValue("language", meta.language);
-        if (meta.description) addForm.setValue("description", meta.description);
+        addForm.setValue("title", cleanText(meta.title));
+        addForm.setValue("subtitle", meta.subtitle ? cleanText(meta.subtitle) : "");
+        addForm.setValue("arabic_title", meta.arabic_title ? cleanText(meta.arabic_title) : "");
+        addForm.setValue("tags", meta.tags ? cleanText(meta.tags) : "");
+        if (meta.author) addForm.setValue("author", cleanText(meta.author));
+        if (meta.publisher) addForm.setValue("publisher", cleanText(meta.publisher));
+        if (meta.category) addForm.setValue("category", cleanText(meta.category));
+        if (meta.language) addForm.setValue("language", cleanText(meta.language));
+        if (meta.description) addForm.setValue("description", cleanText(meta.description));
 
         // Download cover url and convert to base64
         if (meta.cover_url) {
@@ -262,15 +281,15 @@ export function CatalogPage() {
         {/* Header */}
         <div className="flex justify-between items-end mb-8">
           <div>
-            <h1 className="font-display text-[28px] font-bold text-[#122222] dark:text-white leading-tight">Catalog</h1>
-            <p className="text-[13px] text-[#122222]/60 dark:text-white/60">Digital collection • {(sortedBooks.length).toLocaleString()} titles</p>
+            <h1 className="font-display text-[28px] font-bold text-[#122222] dark:text-white leading-tight">{t("catalog.title")}</h1>
+            <p className="text-[13px] text-[#122222]/60 dark:text-white/60">{t("catalog.subtitle", { count: sortedBooks.length })}</p>
           </div>
           <div className="flex items-center gap-3">
             <button
               onClick={() => setAdding(true)}
-              className="flex items-center gap-2 bg-[#1a4d40] text-white px-4 py-2 rounded-lg font-bold text-[13px] hover:bg-[#1a4d40]/90 transition-colors shadow-sm shadow-[#1a4d40]/20"
+              className="flex items-center gap-2 bg-emerald text-white px-4 py-2 rounded-lg font-bold text-[13px] hover:bg-emerald/90 transition-colors shadow-sm shadow-emerald/20 cursor-pointer"
             >
-              <Plus size={16} /> Add book
+              <Plus size={16} /> {t("catalog.addBook")}
             </button>
           </div>
         </div>
@@ -281,10 +300,10 @@ export function CatalogPage() {
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#122222]/40" />
             <input
               type="text"
-              placeholder="Search in catalog..."
+              placeholder={t("catalog.searchPlaceholder")}
               value={term}
               onChange={(e) => { setTerm(e.target.value); setPage(1); }}
-              className="w-full bg-white dark:bg-[#1d2926] border border-black/5 dark:border-white/5 rounded-lg py-2 pl-9 pr-3 text-[13px] text-[#122222] dark:text-[#f0ebe1] outline-none focus:border-[#1a4d40] focus:ring-1 focus:ring-[#1a4d40]"
+              className="w-full bg-white dark:bg-[#1d2926] border border-black/5 dark:border-white/5 rounded-lg py-2 pl-9 pr-3 text-[13px] text-[#122222] dark:text-[#f0ebe1] outline-none focus:border-emerald focus:ring-1 focus:ring-emerald"
             />
           </div>
 
@@ -292,9 +311,9 @@ export function CatalogPage() {
           <select
             value={catFilter}
             onChange={(e) => { setCatFilter(e.target.value); setPage(1); }}
-            className="bg-white dark:bg-[#1d2926] border border-black/5 dark:border-white/5 rounded-lg py-2 px-4 text-[13px] font-semibold text-[#122222]/70 dark:text-white/70 outline-none cursor-pointer hover:border-[#1a4d40]/30 transition-colors"
+            className="bg-white dark:bg-[#1d2926] border border-black/5 dark:border-white/5 rounded-lg py-2 px-4 text-[13px] font-semibold text-[#122222]/70 dark:text-white/70 outline-none cursor-pointer hover:border-emerald/30 transition-colors"
           >
-            <option value="All Categories">All Categories</option>
+            <option value="All Categories">{t("catalog.allCategories")}</option>
             {categoriesList.map(cat => (
               <option key={cat} value={cat}>{cat}</option>
             ))}
@@ -304,9 +323,9 @@ export function CatalogPage() {
           <select
             value={langFilter}
             onChange={(e) => { setLangFilter(e.target.value); setPage(1); }}
-            className="bg-white dark:bg-[#1d2926] border border-black/5 dark:border-white/5 rounded-lg py-2 px-4 text-[13px] font-semibold text-[#122222]/70 dark:text-white/70 outline-none cursor-pointer hover:border-[#1a4d40]/30 transition-colors"
+            className="bg-white dark:bg-[#1d2926] border border-black/5 dark:border-white/5 rounded-lg py-2 px-4 text-[13px] font-semibold text-[#122222]/70 dark:text-white/70 outline-none cursor-pointer hover:border-emerald/30 transition-colors"
           >
-            <option value="All Languages">All Languages</option>
+            <option value="All Languages">{t("catalog.allLanguages")}</option>
             <option value="English">English</option>
             <option value="Arabic">Arabic</option>
             <option value="French">French</option>
@@ -316,24 +335,24 @@ export function CatalogPage() {
         {/* Saved Views */}
         <div className="flex items-center justify-between bg-white dark:bg-[#1d2926] p-1.5 rounded-lg border border-black/5 dark:border-white/5 mb-4 shadow-card">
           <div className="flex items-center gap-1 overflow-x-auto no-scrollbar">
-            <span className="text-[11px] font-semibold text-[#122222]/40 dark:text-white/40 uppercase tracking-wider pl-2 pr-3">Saved views:</span>
+            <span className="text-[11px] font-semibold text-[#122222]/40 dark:text-white/40 uppercase tracking-wider pl-2 pr-3">{t("catalog.savedViews")}:</span>
             <button
               onClick={() => { setSavedView("All Books"); setPage(1); }}
-              className={`px-4 py-1.5 text-[13px] font-bold rounded-md transition-colors ${savedView === "All Books" ? "bg-[#1a4d40] text-white" : "text-[#122222]/60 dark:text-white/60 hover:bg-black/5 dark:hover:bg-white/5"}`}
+              className={`px-4 py-1.5 text-[13px] font-bold rounded-md transition-colors ${savedView === "All Books" ? "bg-emerald text-white" : "text-[#122222]/60 dark:text-white/60 hover:bg-black/5 dark:hover:bg-white/5"}`}
             >
-              All Books
+              {t("catalog.allBooks")}
             </button>
             <button
               onClick={() => { setSavedView("Recent Additions"); setPage(1); }}
-              className={`px-4 py-1.5 text-[13px] font-bold rounded-md transition-colors ${savedView === "Recent Additions" ? "bg-[#1a4d40] text-white" : "text-[#122222]/60 dark:text-white/60 hover:bg-black/5 dark:hover:bg-white/5"}`}
+              className={`px-4 py-1.5 text-[13px] font-bold rounded-md transition-colors ${savedView === "Recent Additions" ? "bg-emerald text-white" : "text-[#122222]/60 dark:text-white/60 hover:bg-black/5 dark:hover:bg-white/5"}`}
             >
-              Recent Additions
+              {t("catalog.recentAdditions")}
             </button>
             <button
               onClick={() => { setSavedView("Medical Core"); setPage(1); }}
-              className={`px-4 py-1.5 text-[13px] font-bold rounded-md transition-colors ${savedView === "Medical Core" ? "bg-[#1a4d40] text-white" : "text-[#122222]/60 dark:text-white/60 hover:bg-black/5 dark:hover:bg-white/5"}`}
+              className={`px-4 py-1.5 text-[13px] font-bold rounded-md transition-colors ${savedView === "Medical Core" ? "bg-emerald text-white" : "text-[#122222]/60 dark:text-white/60 hover:bg-black/5 dark:hover:bg-white/5"}`}
             >
-              Medical Core
+              {t("catalog.medicalCore")}
             </button>
           </div>
         </div>
@@ -346,17 +365,17 @@ export function CatalogPage() {
                 <thead className="bg-[#fcfbf8] dark:bg-[#111d1a] sticky top-0 border-b border-black/5 dark:border-white/5 text-[11px] font-bold text-[#122222]/50 dark:text-white/50 uppercase tracking-wider select-none">
                   <tr>
                     <th className="px-4 py-3 w-10"></th>
-                    <th className="px-4 py-3 cursor-pointer hover:text-[#1a4d40] dark:hover:text-[#1b9277]" onClick={() => handleSort("title")}>
-                      TITLE {sortBy === "title" ? (sortOrder === "asc" ? "▲" : "▼") : "↕"}
+                    <th className="px-4 py-3 cursor-pointer hover:text-emerald dark:hover:text-emerald-light" onClick={() => handleSort("title")}>
+                      {t("catalog.headers.title")} {sortBy === "title" ? (sortOrder === "asc" ? "▲" : "▼") : "↕"}
                     </th>
-                    <th className="px-4 py-3 cursor-pointer hover:text-[#1a4d40] dark:hover:text-[#1b9277]" onClick={() => handleSort("author")}>
-                      AUTHOR {sortBy === "author" ? (sortOrder === "asc" ? "▲" : "▼") : "↕"}
+                    <th className="px-4 py-3 cursor-pointer hover:text-emerald dark:hover:text-emerald-light" onClick={() => handleSort("author")}>
+                      {t("catalog.headers.author")} {sortBy === "author" ? (sortOrder === "asc" ? "▲" : "▼") : "↕"}
                     </th>
-                    <th className="px-4 py-3 cursor-pointer hover:text-[#1a4d40] dark:hover:text-[#1b9277]" onClick={() => handleSort("category")}>
-                      CATEGORY {sortBy === "category" ? (sortOrder === "asc" ? "▲" : "▼") : "↕"}
+                    <th className="px-4 py-3 cursor-pointer hover:text-emerald dark:hover:text-emerald-light" onClick={() => handleSort("category")}>
+                      {t("catalog.headers.category")} {sortBy === "category" ? (sortOrder === "asc" ? "▲" : "▼") : "↕"}
                     </th>
-                    <th className="px-4 py-3 cursor-pointer hover:text-[#1a4d40] dark:hover:text-[#1b9277]" onClick={() => handleSort("isbn")}>
-                      ISBN {sortBy === "isbn" ? (sortOrder === "asc" ? "▲" : "▼") : "↕"}
+                    <th className="px-4 py-3 cursor-pointer hover:text-emerald dark:hover:text-emerald-light" onClick={() => handleSort("isbn")}>
+                      {t("catalog.headers.isbn")} {sortBy === "isbn" ? (sortOrder === "asc" ? "▲" : "▼") : "↕"}
                     </th>
                     <th className="px-4 py-3 w-10"></th>
                   </tr>
@@ -366,7 +385,7 @@ export function CatalogPage() {
                     <tr
                       key={book.id}
                       onClick={() => setSelectedBook(book)}
-                      className={`cursor-pointer transition-colors ${selectedBook?.id === book.id ? 'bg-[#1a4d40]/5' : 'hover:bg-black/5 dark:hover:bg-white/5'}`}
+                      className={`cursor-pointer transition-colors ${selectedBook?.id === book.id ? 'bg-emerald/5' : 'hover:bg-black/5 dark:hover:bg-white/5'}`}
                     >
                       <td className="px-4 py-3"><input type="checkbox" checked={selectedBook?.id === book.id} readOnly /></td>
                       <td className="px-4 py-3 font-semibold text-[#122222] dark:text-white">
@@ -395,14 +414,14 @@ export function CatalogPage() {
             ) : (
               <div className="flex flex-col items-center justify-center py-20 text-[#122222]/50 dark:text-white/50">
                 <BookOpen size={48} className="mb-4 text-[#122222]/30" />
-                <p className="text-[14px]">No books found in the catalog.</p>
+                <p className="text-[14px]">{t("catalog.noBooks")}</p>
               </div>
             )}
           </div>
 
           {/* Pagination */}
           <div className="p-3 border-t border-black/5 dark:border-white/5 flex items-center justify-between text-[12px] text-[#122222]/60 dark:text-white/60 font-semibold bg-[#fcfbf8] dark:bg-[#111d1a]">
-            <div>Showing {Math.min(sortedBooks.length, (page - 1) * itemsPerPage + 1)} to {Math.min(sortedBooks.length, page * itemsPerPage)} of {sortedBooks.length} results</div>
+            <div>{t("catalog.showing", { start: Math.min(sortedBooks.length, (page - 1) * itemsPerPage + 1), end: Math.min(sortedBooks.length, page * itemsPerPage), total: sortedBooks.length })}</div>
             <div className="flex items-center gap-1">
               <button
                 onClick={() => setPage(p => Math.max(1, p - 1))}
@@ -432,60 +451,61 @@ export function CatalogPage() {
             setSelectedBook(null);
             invalidate();
           }}
+          registerClean={registerClean}
         />
       )}
 
       {adding && (
-        <Modal isOpen={adding} onClose={() => setAdding(false)} title="Add New Book">
+        <Modal isOpen={adding} onClose={() => setAdding(false)} title={t("catalog.addModal.title")}>
           <form className="grid gap-4 md:grid-cols-2 text-[13px]" onSubmit={addForm.handleSubmit((values) => addMutation.mutate(values))}>
             <div className="md:col-span-2 flex justify-center py-2">
               <ImageUpload
                 value={addForm.watch("cover_path")}
                 onChange={(val) => addForm.setValue("cover_path", val)}
                 shape="cover"
-                label="Book Cover"
+                label={t("catalog.addModal.cover")}
               />
             </div>
-            <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 md:col-span-2">ISBN
+            <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 md:col-span-2">{t("catalog.addModal.isbnLabel")}
               <div className="flex gap-2 mt-1">
-                <Input {...addForm.register("isbn")} placeholder="Type ISBN-10 or ISBN-13..." />
+                <Input {...registerClean(addForm, "isbn", normalizeIsbn)} placeholder="Type ISBN-10 or ISBN-13..." />
                 <Button type="button" variant="secondary" onClick={handleIsbnLookup} disabled={lookupLoading} className="flex gap-1 items-center">
-                  <Sparkles size={14} /> {lookupLoading ? "Autofilling..." : "Autofill"}
+                  <Sparkles size={14} /> {lookupLoading ? t("catalog.addModal.autofilling") : t("catalog.addModal.autofill")}
                 </Button>
               </div>
             </label>
-            <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 md:col-span-2"><span>Title <span className="text-red-500">*</span></span>
-              <Input {...addForm.register("title")} placeholder="e.g. The Canon of Medicine" />
+            <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 md:col-span-2"><span>{t("catalog.addModal.titleLabel")} <span className="text-red-500">*</span></span>
+              <Input {...registerClean(addForm, "title", cleanText)} placeholder="e.g. The Canon of Medicine" />
               {addForm.formState.errors.title && <small className="text-red-500">{addForm.formState.errors.title.message}</small>}
             </label>
-            <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60">Subtitle
-              <Input {...addForm.register("subtitle")} placeholder="e.g. A Novel of Regency England" />
+            <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60">{t("catalog.addModal.subtitleLabel")}
+              <Input {...registerClean(addForm, "subtitle", cleanText)} placeholder="e.g. A Novel of Regency England" />
             </label>
-            <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60">Arabic Title
-              <Input {...addForm.register("arabic_title")} placeholder="e.g. كبرياء وتحامل" />
+            <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60">{t("catalog.addModal.arabicTitleLabel")}
+              <Input {...registerClean(addForm, "arabic_title", cleanText)} placeholder="e.g. كبرياء وتحامل" />
             </label>
-            <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60">Author
-              <Input {...addForm.register("author")} placeholder="e.g. Ibn Sina" />
+            <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60">{t("catalog.addModal.authorLabel")}
+              <Input {...registerClean(addForm, "author", cleanText)} placeholder="e.g. Ibn Sina" />
             </label>
-            <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60"><span>Language <span className="text-red-500">*</span></span>
-              <Input {...addForm.register("language")} />
+            <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60"><span>{t("catalog.addModal.langLabel")} <span className="text-red-500">*</span></span>
+              <Input {...registerClean(addForm, "language", cleanText)} />
               {addForm.formState.errors.language && <small className="text-red-500">{addForm.formState.errors.language.message}</small>}
             </label>
-            <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60">Publisher
-              <Input {...addForm.register("publisher")} placeholder="e.g. Dar al-Ma'rifa" />
+            <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60">{t("catalog.addModal.publisherLabel")}
+              <Input {...registerClean(addForm, "publisher", cleanText)} placeholder="e.g. Dar al-Ma'rifa" />
             </label>
-            <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60">Category
-              <Input {...addForm.register("category")} placeholder="e.g. Classical Medicine" />
+            <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60">{t("catalog.addModal.categoryLabel")}
+              <Input {...registerClean(addForm, "category", cleanText)} placeholder="e.g. Classical Medicine" />
             </label>
-            <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 md:col-span-2">Tags (comma-separated)
-              <Input {...addForm.register("tags")} placeholder="e.g. classic, fiction, romance" />
+            <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 md:col-span-2">{t("catalog.addModal.tagsLabel")}
+              <Input {...registerClean(addForm, "tags", cleanText)} placeholder="e.g. classic, fiction, romance" />
               {watchedTags && (
                 <div className="flex flex-wrap gap-1 mt-1.5">
                   {watchedTags.split(",").map((t, idx) => {
                     const clean = t.trim();
                     if (!clean) return null;
                     return (
-                      <span key={idx} className="px-2 py-0.5 bg-[#1a4d40]/10 dark:bg-[#1b9277]/20 text-[#1a4d40] dark:text-[#1b9277] rounded text-[10px] font-bold">
+                      <span key={idx} className="px-2 py-0.5 bg-emerald/10 dark:bg-emerald-light/20 text-emerald dark:text-emerald-light rounded text-[10px] font-bold">
                         {clean}
                       </span>
                     );
@@ -493,22 +513,22 @@ export function CatalogPage() {
                 </div>
               )}
             </label>
-            <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 font-semibold">Accession number
-              <Input {...addForm.register("accession")} placeholder="Auto-generated if blank" />
+            <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60">{t("catalog.addModal.accessionLabel")}
+              <Input {...registerClean(addForm, "accession", cleanAccession)} placeholder="Auto-generated if blank" />
             </label>
-            <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 font-semibold">Barcode (Optional first copy)
-              <Input {...addForm.register("barcode")} placeholder="Scan or enter barcode" />
+            <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60">{t("catalog.addModal.barcodeLabel")}
+              <Input {...registerClean(addForm, "barcode", cleanBarcode)} placeholder="Scan or enter barcode" />
             </label>
-            <label className="md:col-span-2 text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">Description
+            <label className="md:col-span-2 text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">{t("catalog.addModal.descLabel")}
               <textarea
-                {...addForm.register("description")}
+                {...registerClean(addForm, "description", cleanText)}
                 placeholder="Write summary description of the book..."
-                className="w-full bg-white dark:bg-[#1d2926] border border-black/10 dark:border-white/10 rounded-lg py-2 px-3 text-[13px] text-[#122222] dark:text-white outline-none focus:border-[#1a4d40] min-h-[60px] mt-1"
+                className="w-full bg-white dark:bg-[#1d2926] border border-black/10 dark:border-white/10 rounded-lg py-2 px-3 text-[13px] text-[#122222] dark:text-white outline-none focus:border-emerald min-h-[60px] mt-1"
               />
             </label>
             <div className="md:col-span-2 flex gap-2 justify-end pt-4 border-t border-black/5 dark:border-white/5">
-              <Button type="button" variant="ghost" onClick={() => setAdding(false)}>Cancel</Button>
-              <Button type="submit" disabled={addMutation.isPending}>{addMutation.isPending ? "Saving…" : "Save book"}</Button>
+              <Button type="button" variant="ghost" onClick={() => setAdding(false)}>{t("catalog.addModal.cancel")}</Button>
+              <Button type="submit" disabled={addMutation.isPending}>{addMutation.isPending ? "Saving…" : t("catalog.addModal.save")}</Button>
             </div>
           </form>
         </Modal>
@@ -517,7 +537,8 @@ export function CatalogPage() {
   );
 }
 
-function BookSidebar({ book, onClose }: { book: Book; onClose: () => void }) {
+function BookSidebar({ book, onClose, registerClean }: { book: Book; onClose: () => void; registerClean: any }) {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<"details" | "copies" | "reserve">("details");
   const [isEditing, setIsEditing] = useState(false);
   const [addCopyOpen, setAddCopyOpen] = useState(false);
@@ -566,19 +587,19 @@ function BookSidebar({ book, onClose }: { book: Book; onClose: () => void }) {
     mutationFn: (values: any) => {
       const isbn = normalizeIsbn(values.isbn);
       return updateBook(book.id, {
-        title: values.title,
-        subtitle: values.subtitle || null,
-        arabic_title: values.arabic_title || null,
-        tags: values.tags || null,
-        author: values.author,
+        title: cleanText(values.title),
+        subtitle: values.subtitle ? cleanText(values.subtitle) : null,
+        arabic_title: values.arabic_title ? cleanText(values.arabic_title) : null,
+        tags: values.tags ? cleanText(values.tags) : null,
+        author: values.author ? cleanText(values.author) : "",
         isbn10: isbn.length === 10 ? isbn : null,
         isbn13: isbn.length === 13 ? isbn : null,
-        publisher: values.publisher,
-        category: values.category,
-        language: values.language,
+        publisher: values.publisher ? cleanText(values.publisher) : "",
+        category: values.category ? cleanText(values.category) : "",
+        language: cleanText(values.language),
         publication_year: values.publication_year ? Number(values.publication_year) : null,
-        call_number: values.call_number || null,
-        description: values.description || null,
+        call_number: values.call_number ? cleanText(values.call_number) : null,
+        description: values.description ? cleanText(values.description) : null,
         cover_path: values.cover_path || null
       });
     },
@@ -605,7 +626,7 @@ function BookSidebar({ book, onClose }: { book: Book; onClose: () => void }) {
   });
 
   const addCopyMutation = useMutation({
-    mutationFn: (values: any) => addCopy(book.id, values.barcode, values.accession, values.condition, values.shelf),
+    mutationFn: (values: any) => addCopy(book.id, cleanBarcode(values.barcode), cleanAccession(values.accession), values.condition, cleanText(values.shelf)),
     onSuccess: () => {
       toast.success("Copy added.");
       copyForm.reset();
@@ -640,10 +661,10 @@ function BookSidebar({ book, onClose }: { book: Book; onClose: () => void }) {
     <div className="w-[340px] shrink-0 bg-white dark:bg-[#1d2926] border border-black/5 dark:border-white/5 rounded-2xl shadow-card flex flex-col h-full overflow-hidden relative transition-transform">
       {/* Header */}
       <div className="p-4 border-b border-black/5 dark:border-white/5 flex justify-between items-center bg-[#fcfbf8] dark:bg-[#111d1a]">
-        <button onClick={onClose} className="text-[#1a4d40] dark:text-[#1b9277] hover:bg-[#1a4d40]/5 p-1 rounded-md transition-colors flex items-center gap-1 text-[13px] font-bold">
-          <ChevronLeft size={16} /> Back
+        <button onClick={onClose} className="text-emerald dark:text-emerald-light hover:bg-emerald/5 p-1 rounded-md transition-colors flex items-center gap-1 text-[13px] font-bold cursor-pointer">
+          <ChevronLeft size={16} /> {t("catalog.details.back")}
         </button>
-        <button onClick={onClose} className="text-[#122222]/40 hover:text-[#122222] transition-colors"><X size={18} /></button>
+        <button onClick={onClose} className="text-[#122222]/40 hover:text-[#122222] transition-colors cursor-pointer"><X size={18} /></button>
       </div>
 
       <div className="flex-1 overflow-auto p-6 flex flex-col items-start space-y-6">
@@ -661,24 +682,24 @@ function BookSidebar({ book, onClose }: { book: Book; onClose: () => void }) {
         <div className="flex w-full border-b border-black/5 dark:border-white/5 shrink-0">
           <button
             onClick={() => { setActiveTab("details"); setIsEditing(false); }}
-            className={`flex-1 pb-2 text-[12px] font-bold border-b-2 text-center transition-all ${activeTab === "details" ? "border-[#1a4d40] text-[#1a4d40] dark:border-[#1b9277] dark:text-[#1b9277]" : "border-transparent text-[#122222]/50 dark:text-white/50"
+            className={`flex-1 pb-2 text-[12px] font-bold border-b-2 text-center transition-all cursor-pointer ${activeTab === "details" ? "border-emerald text-emerald dark:border-emerald-light dark:text-emerald-light" : "border-transparent text-[#122222]/50 dark:text-white/50"
               }`}
           >
-            Details
+            {t("catalog.details.title")}
           </button>
           <button
             onClick={() => setActiveTab("copies")}
-            className={`flex-1 pb-2 text-[12px] font-bold border-b-2 text-center transition-all ${activeTab === "copies" ? "border-[#1a4d40] text-[#1a4d40] dark:border-[#1b9277] dark:text-[#1b9277]" : "border-transparent text-[#122222]/50 dark:text-white/50"
+            className={`flex-1 pb-2 text-[12px] font-bold border-b-2 text-center transition-all cursor-pointer ${activeTab === "copies" ? "border-emerald text-emerald dark:border-emerald-light dark:text-emerald-light" : "border-transparent text-[#122222]/50 dark:text-white/50"
               }`}
           >
-            Copies ({copiesList?.length ?? 0})
+            {t("catalog.details.copies", { count: copiesList?.length ?? 0 })}
           </button>
           <button
             onClick={() => setActiveTab("reserve")}
-            className={`flex-1 pb-2 text-[12px] font-bold border-b-2 text-center transition-all ${activeTab === "reserve" ? "border-[#1a4d40] text-[#1a4d40] dark:border-[#1b9277] dark:text-[#1b9277]" : "border-transparent text-[#122222]/50 dark:text-white/50"
+            className={`flex-1 pb-2 text-[12px] font-bold border-b-2 text-center transition-all cursor-pointer ${activeTab === "reserve" ? "border-emerald text-emerald dark:border-emerald-light dark:text-emerald-light" : "border-transparent text-[#122222]/50 dark:text-white/50"
               }`}
           >
-            Reserve
+            {t("catalog.details.reserve")}
           </button>
         </div>
 
@@ -693,7 +714,7 @@ function BookSidebar({ book, onClose }: { book: Book; onClose: () => void }) {
                   {book.tags && (
                     <div className="flex flex-wrap gap-1 mt-2 mb-2">
                       {book.tags.split(",").map((t, idx) => (
-                        <span key={idx} className="px-2 py-0.5 bg-[#1a4d40]/10 dark:bg-[#1b9277]/20 text-[#1a4d40] dark:text-[#1b9277] rounded text-[10px] font-bold">
+                        <span key={idx} className="px-2 py-0.5 bg-emerald/10 dark:bg-emerald-light/20 text-emerald dark:text-emerald-light rounded text-[10px] font-bold">
                           {t.trim()}
                         </span>
                       ))}
@@ -701,19 +722,19 @@ function BookSidebar({ book, onClose }: { book: Book; onClose: () => void }) {
                   )}
                 </div>
                 <div className="space-y-3">
-                  <InfoRow label="Author" value={book.author || "—"} />
-                  <InfoRow label="Category" value={book.category || "Uncategorized"} />
-                  <InfoRow label="Language" value={book.language} />
-                  <InfoRow label="Publisher" value={book.publisher || "—"} />
+                  <InfoRow label={t("catalog.details.author")} value={book.author || "—"} />
+                  <InfoRow label={t("catalog.details.category")} value={book.category || "Uncategorized"} />
+                  <InfoRow label={t("catalog.details.language")} value={book.language} />
+                  <InfoRow label={t("catalog.details.publisher")} value={book.publisher || "—"} />
                   <div className="grid grid-cols-2 gap-4">
-                    <InfoRow label="Publication Year" value={book.publication_year ? String(book.publication_year) : "—"} />
-                    <InfoRow label="Call Number" value={book.call_number || "—"} />
+                    <InfoRow label={t("catalog.details.pubYear")} value={book.publication_year ? String(book.publication_year) : "—"} />
+                    <InfoRow label={t("catalog.details.callNumber")} value={book.call_number || "—"} />
                   </div>
-                  <InfoRow label="ISBN-10" value={book.isbn10 || "—"} />
-                  <InfoRow label="ISBN-13" value={book.isbn13 || "—"} />
+                  <InfoRow label={t("catalog.details.isbn10")} value={book.isbn10 || "—"} />
+                  <InfoRow label={t("catalog.details.isbn13")} value={book.isbn13 || "—"} />
                   {book.description && (
                     <div className="pt-2">
-                      <div className="text-[11px] font-bold text-[#122222]/50 dark:text-white/50 uppercase tracking-wider mb-1">Description</div>
+                      <div className="text-[11px] font-bold text-[#122222]/50 dark:text-white/50 uppercase tracking-wider mb-1">{t("catalog.details.description")}</div>
                       <p className="text-[12px] text-[#122222]/70 dark:text-white/70 leading-relaxed bg-[#fcfbf8] dark:bg-[#111d1a] p-3 rounded-lg border border-black/5 dark:border-white/5 max-h-40 overflow-y-auto">{book.description}</p>
                     </div>
                   )}
@@ -722,9 +743,9 @@ function BookSidebar({ book, onClose }: { book: Book; onClose: () => void }) {
                 <div className="flex gap-2 pt-4 border-t border-black/5 dark:border-white/5 w-full">
                   <button
                     onClick={() => setIsEditing(true)}
-                    className="flex-1 flex items-center justify-center gap-2 bg-[#fcfbf8] dark:bg-[#111d1a] border border-black/10 dark:border-white/10 text-[12px] font-bold text-[#122222] dark:text-white py-2 rounded-lg hover:bg-black/5 transition-colors"
+                    className="flex-1 flex items-center justify-center gap-2 bg-[#fcfbf8] dark:bg-[#111d1a] border border-black/10 dark:border-white/10 text-[12px] font-bold text-[#122222] dark:text-white py-2 rounded-lg hover:bg-black/5 transition-colors cursor-pointer"
                   >
-                    <Edit2 size={14} /> Edit
+                    <Edit2 size={14} /> {t("catalog.details.edit")}
                   </button>
                   <button
                     onClick={() => {
@@ -732,18 +753,18 @@ function BookSidebar({ book, onClose }: { book: Book; onClose: () => void }) {
                         deleteBookMutation.mutate();
                       }
                     }}
-                    className="flex-1 flex items-center justify-center gap-2 bg-red-500/10 text-red-500 text-[12px] font-bold py-2 rounded-lg hover:bg-red-500/20 transition-colors"
+                    className="flex-1 flex items-center justify-center gap-2 bg-red-500/10 text-red-500 text-[12px] font-bold py-2 rounded-lg hover:bg-red-500/20 transition-colors cursor-pointer"
                   >
-                    <Trash2 size={14} /> Archive
+                    <Trash2 size={14} /> {t("catalog.details.archive")}
                   </button>
                 </div>
 
                 {bookAudits.length > 0 && (
                   <div className="w-full pt-6 border-t border-black/5 dark:border-white/5">
-                    <h3 className="font-bold text-[13px] text-[#122222] dark:text-white flex items-center gap-2 mb-3"><Clock size={12} /> Recent Activity</h3>
+                    <h3 className="font-bold text-[13px] text-[#122222] dark:text-white flex items-center gap-2 mb-3"><Clock size={12} strokeWidth={2.5} /> {t("catalog.details.recentActivity")}</h3>
                     <div className="space-y-3">
                       {bookAudits.map((item) => (
-                        <ActivityRow key={item.id} date={new Date(item.created_at).toLocaleDateString()} action={item.action} actor={item.actor} />
+                        <ActivityRow key={item.id} date={formatDisplayDate(item.created_at)} action={item.action} actor={item.actor} />
                       ))}
                     </div>
                   </div>
@@ -756,27 +777,27 @@ function BookSidebar({ book, onClose }: { book: Book; onClose: () => void }) {
                     value={editForm.watch("cover_path")}
                     onChange={(val) => editForm.setValue("cover_path", val || "")}
                     shape="cover"
-                    label="Book Cover"
+                    label={t("catalog.addModal.cover")}
                   />
                 </div>
-                <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">Title
-                  <Input {...editForm.register("title")} className="py-1 px-2.5 text-[13px]" />
+                <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">{t("catalog.addModal.titleLabel")}
+                  <Input {...registerClean(editForm, "title", cleanText)} className="py-1 px-2.5 text-[13px]" />
                 </label>
-                <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">Subtitle
-                  <Input {...editForm.register("subtitle")} className="py-1 px-2.5 text-[13px]" />
+                <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">{t("catalog.addModal.subtitleLabel")}
+                  <Input {...registerClean(editForm, "subtitle", cleanText)} className="py-1 px-2.5 text-[13px]" />
                 </label>
-                <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">Arabic Title
-                  <Input {...editForm.register("arabic_title")} className="py-1 px-2.5 text-[13px]" />
+                <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">{t("catalog.addModal.arabicTitleLabel")}
+                  <Input {...registerClean(editForm, "arabic_title", cleanText)} className="py-1 px-2.5 text-[13px]" />
                 </label>
-                <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block font-semibold">Tags (comma-separated)
-                  <Input {...editForm.register("tags")} className="py-1 px-2.5 text-[13px]" />
+                <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block font-semibold">{t("catalog.addModal.tagsLabel")}
+                  <Input {...registerClean(editForm, "tags", cleanText)} className="py-1 px-2.5 text-[13px]" />
                   {watchedEditTags && (
                     <div className="flex flex-wrap gap-1 mt-1.5">
                       {watchedEditTags.split(",").map((t, idx) => {
                         const clean = t.trim();
                         if (!clean) return null;
                         return (
-                          <span key={idx} className="px-2 py-0.5 bg-[#1a4d40]/10 dark:bg-[#1b9277]/20 text-[#1a4d40] dark:text-[#1b9277] rounded text-[10px] font-bold">
+                          <span key={idx} className="px-2 py-0.5 bg-emerald/10 dark:bg-emerald-light/20 text-emerald dark:text-emerald-light rounded text-[10px] font-bold">
                             {clean}
                           </span>
                         );
@@ -784,35 +805,38 @@ function BookSidebar({ book, onClose }: { book: Book; onClose: () => void }) {
                     </div>
                   )}
                 </label>
-                <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">Author
-                  <Input {...editForm.register("author")} className="py-1 px-2.5 text-[13px]" />
+                <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">{t("catalog.addModal.authorLabel")}
+                  <Input {...registerClean(editForm, "author", cleanText)} className="py-1 px-2.5 text-[13px]" />
                 </label>
-                <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">ISBN
-                  <Input {...editForm.register("isbn")} className="py-1 px-2.5 text-[13px]" />
+                <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">{t("catalog.addModal.isbnLabel")}
+                  <Input {...registerClean(editForm, "isbn", normalizeIsbn)} className="py-1 px-2.5 text-[13px]" />
                 </label>
-                <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">Publisher
-                  <Input {...editForm.register("publisher")} className="py-1 px-2.5 text-[13px]" />
+                <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">{t("catalog.addModal.publisherLabel")}
+                  <Input {...registerClean(editForm, "publisher", cleanText)} className="py-1 px-2.5 text-[13px]" />
                 </label>
-                <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">Category
-                  <Input {...editForm.register("category")} className="py-1 px-2.5 text-[13px]" />
+                <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">{t("catalog.addModal.categoryLabel")}
+                  <Input {...registerClean(editForm, "category", cleanText)} className="py-1 px-2.5 text-[13px]" />
                 </label>
                 <div className="grid grid-cols-2 gap-2">
-                  <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">Year
-                    <Input {...editForm.register("publication_year")} className="py-1 px-2.5 text-[13px]" />
+                  <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">{t("catalog.details.pubYear")}
+                    <Input {...editForm.register("publication_year")} className="py-1 px-2.5 text-[13px]" type="number" />
                   </label>
-                  <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">Call Number
-                    <Input {...editForm.register("call_number")} className="py-1 px-2.5 text-[13px]" />
+                  <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">{t("catalog.details.callNumber")}
+                    <Input {...registerClean(editForm, "call_number", cleanText)} className="py-1 px-2.5 text-[13px]" />
                   </label>
                 </div>
-                <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">Description
+                <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">{t("catalog.addModal.langLabel")}
+                  <Input {...registerClean(editForm, "language", cleanText)} className="py-1 px-2.5 text-[13px]" />
+                </label>
+                <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">{t("catalog.addModal.descLabel")}
                   <textarea
-                    {...editForm.register("description")}
-                    className="w-full bg-[#fcfbf8] dark:bg-[#111d1a] border border-black/10 dark:border-white/10 rounded-lg py-2 px-3 text-[13px] text-[#122222] dark:text-white outline-none focus:border-[#1a4d40] min-h-[60px]"
+                    {...registerClean(editForm, "description", cleanText)}
+                    className="w-full bg-[#fcfbf8] dark:bg-[#111d1a] border border-black/10 dark:border-white/10 rounded-lg py-1.5 px-2.5 text-[13px] text-[#122222] dark:text-white outline-none focus:border-emerald min-h-[60px] mt-1"
                   />
                 </label>
-                <div className="flex gap-2 pt-2">
-                  <Button type="submit" disabled={updateBookMutation.isPending} className="flex-1 py-1.5 text-[12px]">Save</Button>
-                  <Button type="button" variant="ghost" onClick={() => setIsEditing(false)} className="flex-1 py-1.5 text-[12px]">Cancel</Button>
+                <div className="flex gap-2 justify-end pt-3 border-t border-black/5 dark:border-white/5">
+                  <Button type="button" variant="ghost" onClick={() => setIsEditing(false)}>{t("catalog.addModal.cancel")}</Button>
+                  <Button type="submit" disabled={updateBookMutation.isPending}>{updateBookMutation.isPending ? "Saving..." : t("save")}</Button>
                 </div>
               </form>
             )}
@@ -821,100 +845,104 @@ function BookSidebar({ book, onClose }: { book: Book; onClose: () => void }) {
 
         {activeTab === "copies" && (
           <div className="w-full space-y-4">
-            <div className="flex justify-between items-center">
-              <h3 className="font-bold text-[13px] text-[#122222] dark:text-white">Active Copies</h3>
+            <div className="flex justify-between items-center shrink-0">
+              <h3 className="font-bold text-[14px] text-[#122222] dark:text-white">Physical copies</h3>
               <button
-                onClick={() => setAddCopyOpen(!addCopyOpen)}
-                className="text-[11px] font-bold text-[#1a4d40] dark:text-[#1b9277] hover:underline"
+                onClick={() => setAddCopyOpen(true)}
+                className="flex items-center gap-1 text-[11px] font-bold text-emerald hover:underline cursor-pointer"
               >
-                {addCopyOpen ? "Hide form" : "Add copy"}
+                <Plus size={12} /> Add copy
               </button>
             </div>
 
-            {addCopyOpen && (
-              <form onSubmit={copyForm.handleSubmit((v) => addCopyMutation.mutate(v))} className="space-y-3 bg-[#fcfbf8] dark:bg-[#111d1a] p-3 rounded-lg border border-black/5 dark:border-white/5 w-full">
-                <label className="text-[10px] font-semibold text-[#122222]/60 dark:text-white/60 block font-semibold"><span>Barcode <span className="text-red-500">*</span></span>
-                  <Input {...copyForm.register("barcode")} required className="py-1 px-2 text-[12px]" />
-                </label>
-                <label className="text-[10px] font-semibold text-[#122222]/60 dark:text-white/60 block font-semibold">Accession Number
-                  <Input {...copyForm.register("accession")} placeholder="Leave blank to auto-generate" className="py-1 px-2 text-[12px]" />
-                </label>
-                <label className="text-[10px] font-semibold text-[#122222]/60 dark:text-white/60 block font-semibold">Shelf Location
-                  <Input {...copyForm.register("shelf")} placeholder="e.g. A-12" className="py-1 px-2 text-[12px]" />
-                </label>
-                <label className="text-[10px] font-semibold text-[#122222]/60 dark:text-white/60 block font-semibold">Condition
-                  <select {...copyForm.register("condition")} className="field-select text-[12px] py-1 px-2">
-                    <option value="good">Good</option>
-                    <option value="fair">Fair</option>
-                    <option value="poor">Poor</option>
-                    <option value="damaged">Damaged</option>
-                  </select>
-                </label>
-                <div className="flex gap-2">
-                  <Button type="submit" disabled={addCopyMutation.isPending} className="flex-1 py-1 text-[11px]">Save</Button>
-                  <Button type="button" variant="ghost" onClick={() => setAddCopyOpen(false)} className="flex-1 py-1 text-[11px]">Cancel</Button>
-                </div>
-              </form>
-            )}
-
-            <div className="space-y-3 max-h-72 overflow-y-auto pr-1 w-full">
-              {copiesList?.length ? (
-                copiesList.map((c) => (
-                  <div key={c.id} className="flex items-center justify-between p-3 rounded-xl border border-black/5 dark:border-white/5 bg-[#fcfbf8] dark:bg-[#111d1a]">
-                    <div className="min-w-0 flex-1 pr-2">
-                      <p className="font-bold text-[12px] text-[#122222] dark:text-white font-mono truncate">{c.barcode}</p>
-                      <p className="text-[10px] text-[#122222]/50 dark:text-white/50 mt-0.5 truncate">
-                        <MapPin size={10} className="inline mr-1" />
-                        Shelf: {c.shelf || "—"} · Acc: {c.accession_number}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <StatusBadge value={c.status} />
-                      <button
-                        onClick={() => {
-                          if (confirm(`Archive copy ${c.barcode}?`)) deleteCopyMutation.mutate(c.id);
-                        }}
-                        className="text-[#122222]/40 hover:text-red-500 p-1 rounded"
-                        title="Archive copy"
-                      >
-                        <Trash2 size={13} />
-                      </button>
-                    </div>
+            <div className="space-y-2 max-h-[350px] overflow-y-auto pr-1">
+              {copiesList?.map((copy) => (
+                <div key={copy.id} className="p-3 bg-[#fcfbf8] dark:bg-[#111d1a] border border-black/5 dark:border-white/5 rounded-xl flex items-center justify-between">
+                  <div>
+                    <div className="font-mono text-[12px] font-bold text-[#122222] dark:text-white">{copy.barcode}</div>
+                    <div className="text-[10px] text-[#122222]/50 dark:text-white/50 mt-0.5">Accession: {copy.accession_number}</div>
+                    {copy.shelf && (
+                      <div className="flex items-center gap-1 text-[10px] text-emerald font-semibold mt-1">
+                        <MapPin size={10} /> Shelf {copy.shelf}
+                      </div>
+                    )}
                   </div>
-                ))
-              ) : (
-                <div className="text-center py-6 text-[12px] text-[#122222]/40 dark:text-white/40">No copies registered.</div>
-              )}
+                  <div className="flex items-center gap-3">
+                    <StatusBadge value={copy.status} />
+                    <button
+                      onClick={() => {
+                        if (confirm("Are you sure you want to archive this copy?")) {
+                          deleteCopyMutation.mutate(copy.id);
+                        }
+                      }}
+                      className="text-red-500 hover:text-red-700 cursor-pointer"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
+
+            {addCopyOpen && (
+              <Modal isOpen={addCopyOpen} onClose={() => setAddCopyOpen(false)} title="Add Physical Copy">
+                <form onSubmit={copyForm.handleSubmit((v) => addCopyMutation.mutate(v))} className="space-y-4 text-[13px]">
+                  <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">Barcode
+                    <Input {...registerClean(copyForm, "barcode", cleanBarcode)} placeholder="Scan or enter copy barcode" required />
+                  </label>
+                  <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">Accession number
+                    <Input {...registerClean(copyForm, "accession", cleanAccession)} placeholder="Auto-generated if blank" />
+                  </label>
+                  <div className="grid grid-cols-2 gap-4">
+                    <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">Shelf location
+                      <Input {...registerClean(copyForm, "shelf", cleanText)} placeholder="e.g. A-12" />
+                    </label>
+                    <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">Condition
+                      <select {...copyForm.register("condition")} className="field-select mt-1 text-[13px] py-2 px-3">
+                        <option value="mint">Mint</option>
+                        <option value="good">Good</option>
+                        <option value="worn">Worn</option>
+                        <option value="damaged">Damaged</option>
+                      </select>
+                    </label>
+                  </div>
+                  <div className="flex gap-2 justify-end pt-3 border-t border-black/5 dark:border-white/5">
+                    <Button type="button" variant="ghost" onClick={() => setAddCopyOpen(false)}>{t("catalog.addModal.cancel")}</Button>
+                    <Button type="submit" disabled={addCopyMutation.isPending}>Add copy</Button>
+                  </div>
+                </form>
+              </Modal>
+            )}
           </div>
         )}
 
         {activeTab === "reserve" && (
           <div className="w-full space-y-4">
-            <div>
-              <h3 className="font-bold text-[13px] text-[#122222] dark:text-white">Create a Reservation</h3>
-              <p className="text-[11px] text-[#122222]/50 dark:text-white/50 mt-0.5">Place a hold request on behalf of a member.</p>
-            </div>
-            <div className="space-y-3">
-              <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">Member
+            <h3 className="font-bold text-[14px] text-[#122222] dark:text-white mb-1">Place reservation hold</h3>
+            <p className="text-[12px] text-[#122222]/65 dark:text-parchment/65">If all copies are checked out, you can place a reservation hold for a member. They will be notified when a copy is returned.</p>
+
+            <label className="text-[11px] font-bold text-[#122222]/50 dark:text-white/50 uppercase tracking-wider block">
+              Search member
+              <div className="mt-1">
                 <SearchableSelect
-                  options={membersQuery.data?.filter(m => m.status === "active") || []}
+                  options={membersQuery.data ?? []}
                   labelKey="full_name"
                   valueKey="id"
                   subLabelKey="member_number"
-                  placeholder="Search member..."
+                  placeholder="Type name or membership number..."
                   value={reservingMemberId}
-                  onChange={setReservingMemberId}
+                  onChange={(val) => setReservingMemberId(val)}
                 />
-              </label>
-              <Button
-                className="w-full py-2 text-[12px]"
-                disabled={!reservingMemberId || reserveMutation.isPending}
-                onClick={() => reserveMutation.mutate()}
-              >
-                {reserveMutation.isPending ? "Reserving..." : "Confirm Reservation"}
-              </Button>
-            </div>
+              </div>
+            </label>
+
+            <button
+              onClick={() => reserveMutation.mutate()}
+              disabled={!reservingMemberId || reserveMutation.isPending}
+              className="w-full bg-[#1a4d40] text-white py-2.5 rounded-lg font-bold text-[13px] hover:bg-[#1a4d40]/90 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+            >
+              Confirm Reservation Hold
+            </button>
           </div>
         )}
       </div>
@@ -922,23 +950,23 @@ function BookSidebar({ book, onClose }: { book: Book; onClose: () => void }) {
   );
 }
 
-function InfoRow({ label, value, subValue }: { label: string, value: string, subValue?: string }) {
+function InfoRow({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <div className="text-[11px] font-bold text-[#122222]/50 dark:text-white/50 uppercase tracking-wider mb-0.5">{label}</div>
-      <div className="text-[13px] font-semibold text-[#122222] dark:text-white">
-        {value} {subValue && <span className="font-arabic text-[#122222]/60 font-normal ml-1">{subValue}</span>}
-      </div>
+      <span className="text-[10px] font-bold text-[#122222]/40 dark:text-white/40 uppercase tracking-wider block">{label}</span>
+      <span className="text-[13px] font-semibold text-[#122222] dark:text-white block mt-0.5">{value}</span>
     </div>
   );
 }
 
-function ActivityRow({ date, action, actor }: any) {
+function ActivityRow({ date, action, actor }: { date: string; action: string; actor: string }) {
   return (
-    <div className="flex items-start gap-4 text-[12px] w-full">
-      <div className="text-[#122222]/50 dark:text-white/50 whitespace-nowrap"><Clock size={12} className="inline mr-1 opacity-50" />{date}</div>
-      <div className="flex-1 font-semibold text-[#122222] dark:text-white truncate">{action}</div>
-      <div className="text-[#122222]/50 dark:text-white/50 text-right w-16 shrink-0 truncate">{actor}</div>
+    <div className="flex justify-between text-[11px] border-b border-black/5 dark:border-white/5 pb-2 last:border-b-0 last:pb-0">
+      <div>
+        <span className="font-semibold capitalize text-[#122222] dark:text-white">{action}</span>
+        <span className="text-[#122222]/50 dark:text-white/50 ml-1">by {actor}</span>
+      </div>
+      <span className="text-[#122222]/40 dark:text-white/40">{date}</span>
     </div>
   );
 }
