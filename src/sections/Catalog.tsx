@@ -3,13 +3,13 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { 
-  BookOpen, Plus, Search, 
+import {
+  BookOpen, Plus, Search,
   MoreHorizontal, ChevronLeft, ChevronRight, X, Clock, Edit2, Trash2, MapPin, Sparkles
 } from "lucide-react";
-import { 
-  books, saveBook, updateBook, deleteBook, getCopiesForBook, 
-  addCopy, deleteCopy, addReservation, members, auditLog 
+import {
+  books, saveBook, updateBook, deleteBook, getCopiesForBook,
+  addCopy, deleteCopy, addReservation, members, auditLog
 } from "../data/repositories/library";
 import type { Book } from "../types";
 import { Modal, Input, Button, StatusBadge } from "../components/ui/primitives";
@@ -24,15 +24,17 @@ import { ImageUpload } from "../components/ui/ImageUpload";
 
 const invalidate = () => queryClient.invalidateQueries();
 
-const bookSchema = z.object({ 
-  title: z.string().min(2, "A title is required"), 
+const bookSchema = z.object({
+  title: z.string().min(2, "A title is required"),
   subtitle: z.string().optional(),
-  author: z.string().optional(), 
-  isbn: z.string().optional(), 
-  language: z.string().min(2, "Language must be at least 2 characters"), 
-  publisher: z.string().optional(), 
-  category: z.string().optional(), 
-  barcode: z.string().optional(), 
+  arabic_title: z.string().optional(),
+  tags: z.string().optional(),
+  author: z.string().optional(),
+  isbn: z.string().optional(),
+  language: z.string().min(2, "Language must be at least 2 characters"),
+  publisher: z.string().optional(),
+  category: z.string().optional(),
+  barcode: z.string().optional(),
   accession: z.string().optional(),
   description: z.string().optional(),
   cover_path: z.string().nullable().optional()
@@ -65,37 +67,43 @@ export function CatalogPage() {
   // Quick fetch
   const result = useQuery({ queryKey: ["books", term], queryFn: () => books(term) });
 
-  const addForm = useForm<BookValues>({ 
-    resolver: zodResolver(bookSchema), 
-    defaultValues: { title: "", subtitle: "", author: "", isbn: "", language: "English", publisher: "", category: "", barcode: "", accession: "", description: "", cover_path: null } 
+  const addForm = useForm<BookValues>({
+    resolver: zodResolver(bookSchema),
+    defaultValues: { title: "", subtitle: "", arabic_title: "", tags: "", author: "", isbn: "", language: "English", publisher: "", category: "", barcode: "", accession: "", description: "", cover_path: null }
   });
+  const watchedTags = addForm.watch("tags");
 
-  const addMutation = useMutation({ 
-    mutationFn: async (values: BookValues) => { 
-      const isbn = normalizeIsbn(values.isbn ?? ""); 
-      if (isbn && !isValidIsbn(isbn)) throw new Error("Enter a valid ISBN-10 or ISBN-13."); 
-      return saveBook({ 
-        title: values.title, 
-        language: values.language, 
+  const addMutation = useMutation({
+    mutationFn: async (values: BookValues) => {
+      const isbn = normalizeIsbn(values.isbn ?? "");
+      if (isbn && !isValidIsbn(isbn)) throw new Error("Enter a valid ISBN-10 or ISBN-13.");
+      return saveBook({
+        title: values.title,
+        language: values.language,
         subtitle: values.subtitle || null,
-        isbn10: isbn.length === 10 ? isbn : null, 
-        isbn13: isbn.length === 13 ? isbn : null, 
-        publisher: values.publisher, 
-        category: values.category, 
-        author: values.author, 
-        barcode: values.barcode, 
+        arabic_title: values.arabic_title || null,
+        tags: values.tags || null,
+        isbn10: isbn.length === 10 ? isbn : null,
+        isbn13: isbn.length === 13 ? isbn : null,
+        publisher: values.publisher,
+        category: values.category,
+        author: values.author,
+        barcode: values.barcode,
         accession: values.accession,
         description: values.description || null,
         cover_path: values.cover_path || null
-      }); 
-    }, 
-    onSuccess: () => { 
-      invalidate(); 
-      toast.success("Book saved to the catalog."); 
-      addForm.reset(); 
-      setAdding(false); 
-    }, 
-    onError: (error) => toast.error(error.message) 
+      });
+    },
+    onSuccess: () => {
+      invalidate();
+      toast.success("Book saved to the catalog.");
+      addForm.reset();
+      setAdding(false);
+    },
+    onError: (error: any) => {
+      console.error("Save book error detail:", error);
+      toast.error(error?.message || String(error) || "An unknown error occurred while saving the book.");
+    }
   });
 
   const handleIsbnLookup = async () => {
@@ -106,10 +114,10 @@ export function CatalogPage() {
     }
     setLookupLoading(true);
     const toastId = toast.loading("Querying metadata provider...");
-    
+
     let meta: any = null;
     let queryError: any = null;
-    
+
     try {
       meta = await fetchBookMetadataByIsbn(isbnVal);
     } catch (err: any) {
@@ -130,17 +138,45 @@ export function CatalogPage() {
         meta = await enrichMetadataWithGroq(isbnVal, meta || {}, apiKey);
         toast.success("Book metadata auto-filled & enriched with Groq AI!", { id: toastId });
       } else {
-        toast.success("Book metadata auto-filled! (Configure Groq API Key in Settings for AI enrichment)", { id: toastId });
+        toast.success("Book metadata auto-filled!", { id: toastId });
+        toast.info("Tip: Configure your Groq API Key in Settings to get auto-translated Arabic titles, detailed descriptions, and targeted tags.", {
+          duration: 8000
+        });
       }
 
       if (meta) {
         addForm.setValue("title", meta.title);
-        if (meta.subtitle) addForm.setValue("subtitle", meta.subtitle);
+        addForm.setValue("subtitle", meta.subtitle || "");
+        addForm.setValue("arabic_title", meta.arabic_title || "");
+        addForm.setValue("tags", meta.tags || "");
         if (meta.author) addForm.setValue("author", meta.author);
         if (meta.publisher) addForm.setValue("publisher", meta.publisher);
         if (meta.category) addForm.setValue("category", meta.category);
         if (meta.language) addForm.setValue("language", meta.language);
         if (meta.description) addForm.setValue("description", meta.description);
+
+        // Download cover url and convert to base64
+        if (meta.cover_url) {
+          try {
+            toast.loading("Downloading book cover image...", { id: toastId });
+            const response = await fetch(meta.cover_url);
+            if (response.ok) {
+              const blob = await response.blob();
+              const reader = new FileReader();
+              reader.onloadend = () => {
+                const base64data = reader.result as string;
+                addForm.setValue("cover_path", base64data);
+                toast.success("Book cover downloaded!", { id: toastId });
+              };
+              reader.readAsDataURL(blob);
+            } else {
+              addForm.setValue("cover_path", meta.cover_url);
+            }
+          } catch (e) {
+            console.error("Cover image download failed", e);
+            addForm.setValue("cover_path", meta.cover_url);
+          }
+        }
       }
     } catch (err: any) {
       toast.error(err.message, { id: toastId });
@@ -194,7 +230,7 @@ export function CatalogPage() {
       else if (sortBy === "author") { valA = a.author || ""; valB = b.author || ""; }
       else if (sortBy === "category") { valA = a.category || ""; valB = b.category || ""; }
       else if (sortBy === "isbn") { valA = a.isbn13 || a.isbn10 || ""; valB = b.isbn13 || b.isbn10 || ""; }
-      
+
       return sortOrder === "asc"
         ? valA.localeCompare(valB, undefined, { numeric: true, sensitivity: 'base' })
         : valB.localeCompare(valA, undefined, { numeric: true, sensitivity: 'base' });
@@ -222,7 +258,7 @@ export function CatalogPage() {
     <div className="flex h-full w-full relative">
       {/* Main Content Area */}
       <div className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ${selectedBook ? "pr-6 border-r border-black/5 dark:border-white/5 mr-6" : ""}`}>
-        
+
         {/* Header */}
         <div className="flex justify-between items-end mb-8">
           <div>
@@ -230,7 +266,7 @@ export function CatalogPage() {
             <p className="text-[13px] text-[#122222]/60 dark:text-white/60">Digital collection • {(sortedBooks.length).toLocaleString()} titles</p>
           </div>
           <div className="flex items-center gap-3">
-            <button 
+            <button
               onClick={() => setAdding(true)}
               className="flex items-center gap-2 bg-[#1a4d40] text-white px-4 py-2 rounded-lg font-bold text-[13px] hover:bg-[#1a4d40]/90 transition-colors shadow-sm shadow-[#1a4d40]/20"
             >
@@ -243,18 +279,18 @@ export function CatalogPage() {
         <div className="flex items-center gap-3 mb-4">
           <div className="flex-1 relative">
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#122222]/40" />
-            <input 
-              type="text" 
-              placeholder="Search in catalog..." 
+            <input
+              type="text"
+              placeholder="Search in catalog..."
               value={term}
               onChange={(e) => { setTerm(e.target.value); setPage(1); }}
-              className="w-full bg-white dark:bg-[#1d2926] border border-black/5 dark:border-white/5 rounded-lg py-2 pl-9 pr-3 text-[13px] text-[#122222] dark:text-[#f0ebe1] outline-none focus:border-[#1a4d40] focus:ring-1 focus:ring-[#1a4d40]" 
+              className="w-full bg-white dark:bg-[#1d2926] border border-black/5 dark:border-white/5 rounded-lg py-2 pl-9 pr-3 text-[13px] text-[#122222] dark:text-[#f0ebe1] outline-none focus:border-[#1a4d40] focus:ring-1 focus:ring-[#1a4d40]"
             />
           </div>
-          
+
           {/* Category Filter Select */}
-          <select 
-            value={catFilter} 
+          <select
+            value={catFilter}
             onChange={(e) => { setCatFilter(e.target.value); setPage(1); }}
             className="bg-white dark:bg-[#1d2926] border border-black/5 dark:border-white/5 rounded-lg py-2 px-4 text-[13px] font-semibold text-[#122222]/70 dark:text-white/70 outline-none cursor-pointer hover:border-[#1a4d40]/30 transition-colors"
           >
@@ -265,8 +301,8 @@ export function CatalogPage() {
           </select>
 
           {/* Language Filter Select */}
-          <select 
-            value={langFilter} 
+          <select
+            value={langFilter}
             onChange={(e) => { setLangFilter(e.target.value); setPage(1); }}
             className="bg-white dark:bg-[#1d2926] border border-black/5 dark:border-white/5 rounded-lg py-2 px-4 text-[13px] font-semibold text-[#122222]/70 dark:text-white/70 outline-none cursor-pointer hover:border-[#1a4d40]/30 transition-colors"
           >
@@ -281,19 +317,19 @@ export function CatalogPage() {
         <div className="flex items-center justify-between bg-white dark:bg-[#1d2926] p-1.5 rounded-lg border border-black/5 dark:border-white/5 mb-4 shadow-card">
           <div className="flex items-center gap-1 overflow-x-auto no-scrollbar">
             <span className="text-[11px] font-semibold text-[#122222]/40 dark:text-white/40 uppercase tracking-wider pl-2 pr-3">Saved views:</span>
-            <button 
+            <button
               onClick={() => { setSavedView("All Books"); setPage(1); }}
               className={`px-4 py-1.5 text-[13px] font-bold rounded-md transition-colors ${savedView === "All Books" ? "bg-[#1a4d40] text-white" : "text-[#122222]/60 dark:text-white/60 hover:bg-black/5 dark:hover:bg-white/5"}`}
             >
               All Books
             </button>
-            <button 
+            <button
               onClick={() => { setSavedView("Recent Additions"); setPage(1); }}
               className={`px-4 py-1.5 text-[13px] font-bold rounded-md transition-colors ${savedView === "Recent Additions" ? "bg-[#1a4d40] text-white" : "text-[#122222]/60 dark:text-white/60 hover:bg-black/5 dark:hover:bg-white/5"}`}
             >
               Recent Additions
             </button>
-            <button 
+            <button
               onClick={() => { setSavedView("Medical Core"); setPage(1); }}
               className={`px-4 py-1.5 text-[13px] font-bold rounded-md transition-colors ${savedView === "Medical Core" ? "bg-[#1a4d40] text-white" : "text-[#122222]/60 dark:text-white/60 hover:bg-black/5 dark:hover:bg-white/5"}`}
             >
@@ -327,8 +363,8 @@ export function CatalogPage() {
                 </thead>
                 <tbody className="divide-y divide-black/5 dark:divide-white/5">
                   {paginatedBooks.map((book) => (
-                    <tr 
-                      key={book.id} 
+                    <tr
+                      key={book.id}
                       onClick={() => setSelectedBook(book)}
                       className={`cursor-pointer transition-colors ${selectedBook?.id === book.id ? 'bg-[#1a4d40]/5' : 'hover:bg-black/5 dark:hover:bg-white/5'}`}
                     >
@@ -363,25 +399,25 @@ export function CatalogPage() {
               </div>
             )}
           </div>
-          
+
           {/* Pagination */}
           <div className="p-3 border-t border-black/5 dark:border-white/5 flex items-center justify-between text-[12px] text-[#122222]/60 dark:text-white/60 font-semibold bg-[#fcfbf8] dark:bg-[#111d1a]">
             <div>Showing {Math.min(sortedBooks.length, (page - 1) * itemsPerPage + 1)} to {Math.min(sortedBooks.length, page * itemsPerPage)} of {sortedBooks.length} results</div>
             <div className="flex items-center gap-1">
-              <button 
-                onClick={() => setPage(p => Math.max(1, p - 1))} 
+              <button
+                onClick={() => setPage(p => Math.max(1, p - 1))}
                 disabled={page === 1}
                 className="w-7 h-7 rounded flex items-center justify-center hover:bg-black/5 disabled:opacity-30"
               >
-                <ChevronLeft size={14}/>
+                <ChevronLeft size={14} />
               </button>
               <span className="px-2">{page} / {totalPages}</span>
-              <button 
-                onClick={() => setPage(p => Math.min(totalPages, p + 1))} 
+              <button
+                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                 disabled={page === totalPages}
                 className="w-7 h-7 rounded flex items-center justify-center hover:bg-black/5 disabled:opacity-30"
               >
-                <ChevronRight size={14}/>
+                <ChevronRight size={14} />
               </button>
             </div>
           </div>
@@ -390,8 +426,8 @@ export function CatalogPage() {
 
       {/* Right Sidebar (Details Panel) */}
       {selectedBook && (
-        <BookSidebar 
-          book={selectedBook} 
+        <BookSidebar
+          book={selectedBook}
           onClose={() => {
             setSelectedBook(null);
             invalidate();
@@ -414,7 +450,7 @@ export function CatalogPage() {
               <div className="flex gap-2 mt-1">
                 <Input {...addForm.register("isbn")} placeholder="Type ISBN-10 or ISBN-13..." />
                 <Button type="button" variant="secondary" onClick={handleIsbnLookup} disabled={lookupLoading} className="flex gap-1 items-center">
-                  <Sparkles size={14}/> {lookupLoading ? "Autofilling..." : "Autofill via ISBN"}
+                  <Sparkles size={14} /> {lookupLoading ? "Autofilling..." : "Autofill"}
                 </Button>
               </div>
             </label>
@@ -422,8 +458,11 @@ export function CatalogPage() {
               <Input {...addForm.register("title")} placeholder="e.g. The Canon of Medicine" />
               {addForm.formState.errors.title && <small className="text-red-500">{addForm.formState.errors.title.message}</small>}
             </label>
-            <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60">Subtitle / Arabic Title
-              <Input {...addForm.register("subtitle")} placeholder="e.g. القانون في الطب" />
+            <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60">Subtitle
+              <Input {...addForm.register("subtitle")} placeholder="e.g. A Novel of Regency England" />
+            </label>
+            <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60">Arabic Title
+              <Input {...addForm.register("arabic_title")} placeholder="e.g. كبرياء وتحامل" />
             </label>
             <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60">Author
               <Input {...addForm.register("author")} placeholder="e.g. Ibn Sina" />
@@ -438,6 +477,22 @@ export function CatalogPage() {
             <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60">Category
               <Input {...addForm.register("category")} placeholder="e.g. Classical Medicine" />
             </label>
+            <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 md:col-span-2">Tags (comma-separated)
+              <Input {...addForm.register("tags")} placeholder="e.g. classic, fiction, romance" />
+              {watchedTags && (
+                <div className="flex flex-wrap gap-1 mt-1.5">
+                  {watchedTags.split(",").map((t, idx) => {
+                    const clean = t.trim();
+                    if (!clean) return null;
+                    return (
+                      <span key={idx} className="px-2 py-0.5 bg-[#1a4d40]/10 dark:bg-[#1b9277]/20 text-[#1a4d40] dark:text-[#1b9277] rounded text-[10px] font-bold">
+                        {clean}
+                      </span>
+                    );
+                  })}
+                </div>
+              )}
+            </label>
             <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 font-semibold">Accession number
               <Input {...addForm.register("accession")} placeholder="Auto-generated if blank" />
             </label>
@@ -445,10 +500,10 @@ export function CatalogPage() {
               <Input {...addForm.register("barcode")} placeholder="Scan or enter barcode" />
             </label>
             <label className="md:col-span-2 text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">Description
-              <textarea 
-                {...addForm.register("description")} 
-                placeholder="Write summary description of the book..." 
-                className="w-full bg-white dark:bg-[#1d2926] border border-black/10 dark:border-white/10 rounded-lg py-2 px-3 text-[13px] text-[#122222] dark:text-white outline-none focus:border-[#1a4d40] min-h-[60px] mt-1" 
+              <textarea
+                {...addForm.register("description")}
+                placeholder="Write summary description of the book..."
+                className="w-full bg-white dark:bg-[#1d2926] border border-black/10 dark:border-white/10 rounded-lg py-2 px-3 text-[13px] text-[#122222] dark:text-white outline-none focus:border-[#1a4d40] min-h-[60px] mt-1"
               />
             </label>
             <div className="md:col-span-2 flex gap-2 justify-end pt-4 border-t border-black/5 dark:border-white/5">
@@ -473,7 +528,7 @@ function BookSidebar({ book, onClose }: { book: Book; onClose: () => void }) {
     queryKey: ["book-copies", book.id],
     queryFn: () => getCopiesForBook(book.id)
   });
-  
+
   const membersQuery = useQuery({ queryKey: ["members-all-catalog"], queryFn: () => members() });
   const auditQuery = useQuery({ queryKey: ["book-audit-logs", book.id], queryFn: () => auditLog() });
 
@@ -486,6 +541,8 @@ function BookSidebar({ book, onClose }: { book: Book; onClose: () => void }) {
     defaultValues: {
       title: book.title,
       subtitle: book.subtitle || "",
+      arabic_title: book.arabic_title || "",
+      tags: book.tags || "",
       author: book.author || "",
       isbn: book.isbn13 || book.isbn10 || "",
       publisher: book.publisher || "",
@@ -497,6 +554,7 @@ function BookSidebar({ book, onClose }: { book: Book; onClose: () => void }) {
       cover_path: book.cover_path || ""
     }
   });
+  const watchedEditTags = editForm.watch("tags");
 
   // Add Copy Form
   const copyForm = useForm({
@@ -510,6 +568,8 @@ function BookSidebar({ book, onClose }: { book: Book; onClose: () => void }) {
       return updateBook(book.id, {
         title: values.title,
         subtitle: values.subtitle || null,
+        arabic_title: values.arabic_title || null,
+        tags: values.tags || null,
         author: values.author,
         isbn10: isbn.length === 10 ? isbn : null,
         isbn13: isbn.length === 13 ? isbn : null,
@@ -528,7 +588,10 @@ function BookSidebar({ book, onClose }: { book: Book; onClose: () => void }) {
       invalidate();
       onClose();
     },
-    onError: (err: any) => toast.error(err.message)
+    onError: (err: any) => {
+      console.error("Update book error detail:", err);
+      toast.error(err?.message || String(err) || "An unknown error occurred while updating the book.");
+    }
   });
 
   const deleteBookMutation = useMutation({
@@ -586,37 +649,34 @@ function BookSidebar({ book, onClose }: { book: Book; onClose: () => void }) {
       <div className="flex-1 overflow-auto p-6 flex flex-col items-start space-y-6">
         {/* Book Cover */}
         <div className="w-full aspect-[2/3] bg-[#f4ebdd] dark:bg-[#1a2522] rounded-xl border border-black/10 flex items-center justify-center shadow-md relative overflow-hidden shrink-0">
-           <div className="absolute left-2 top-0 bottom-0 w-1 bg-black/10" />
-           {book.cover_path ? (
-             <img src={book.cover_path} alt={book.title} className="w-full h-full object-cover" />
-           ) : (
-             <BookOpen size={48} className="text-[#b96f3e]/20" />
-           )}
+          <div className="absolute left-2 top-0 bottom-0 w-1 bg-black/10" />
+          {book.cover_path ? (
+            <img src={book.cover_path} alt={book.title} className="w-full h-full object-cover" />
+          ) : (
+            <BookOpen size={48} className="text-[#b96f3e]/20" />
+          )}
         </div>
 
         {/* Tab Buttons */}
         <div className="flex w-full border-b border-black/5 dark:border-white/5 shrink-0">
-          <button 
-            onClick={() => { setActiveTab("details"); setIsEditing(false); }} 
-            className={`flex-1 pb-2 text-[12px] font-bold border-b-2 text-center transition-all ${
-              activeTab === "details" ? "border-[#1a4d40] text-[#1a4d40] dark:border-[#1b9277] dark:text-[#1b9277]" : "border-transparent text-[#122222]/50 dark:text-white/50"
-            }`}
+          <button
+            onClick={() => { setActiveTab("details"); setIsEditing(false); }}
+            className={`flex-1 pb-2 text-[12px] font-bold border-b-2 text-center transition-all ${activeTab === "details" ? "border-[#1a4d40] text-[#1a4d40] dark:border-[#1b9277] dark:text-[#1b9277]" : "border-transparent text-[#122222]/50 dark:text-white/50"
+              }`}
           >
             Details
           </button>
-          <button 
-            onClick={() => setActiveTab("copies")} 
-            className={`flex-1 pb-2 text-[12px] font-bold border-b-2 text-center transition-all ${
-              activeTab === "copies" ? "border-[#1a4d40] text-[#1a4d40] dark:border-[#1b9277] dark:text-[#1b9277]" : "border-transparent text-[#122222]/50 dark:text-white/50"
-            }`}
+          <button
+            onClick={() => setActiveTab("copies")}
+            className={`flex-1 pb-2 text-[12px] font-bold border-b-2 text-center transition-all ${activeTab === "copies" ? "border-[#1a4d40] text-[#1a4d40] dark:border-[#1b9277] dark:text-[#1b9277]" : "border-transparent text-[#122222]/50 dark:text-white/50"
+              }`}
           >
             Copies ({copiesList?.length ?? 0})
           </button>
-          <button 
-            onClick={() => setActiveTab("reserve")} 
-            className={`flex-1 pb-2 text-[12px] font-bold border-b-2 text-center transition-all ${
-              activeTab === "reserve" ? "border-[#1a4d40] text-[#1a4d40] dark:border-[#1b9277] dark:text-[#1b9277]" : "border-transparent text-[#122222]/50 dark:text-white/50"
-            }`}
+          <button
+            onClick={() => setActiveTab("reserve")}
+            className={`flex-1 pb-2 text-[12px] font-bold border-b-2 text-center transition-all ${activeTab === "reserve" ? "border-[#1a4d40] text-[#1a4d40] dark:border-[#1b9277] dark:text-[#1b9277]" : "border-transparent text-[#122222]/50 dark:text-white/50"
+              }`}
           >
             Reserve
           </button>
@@ -628,7 +688,17 @@ function BookSidebar({ book, onClose }: { book: Book; onClose: () => void }) {
               <>
                 <div>
                   <h2 className="text-[18px] font-bold text-[#122222] dark:text-white leading-tight mb-1">{book.title}</h2>
-                  {book.subtitle && <p className="text-[13px] font-arabic text-[#122222]/60 dark:text-white/60 mb-4">{book.subtitle}</p>}
+                  {book.subtitle && <p className="text-[13px] text-[#122222]/60 dark:text-white/60 mb-1">{book.subtitle}</p>}
+                  {book.arabic_title && <p className="text-[13px] font-arabic text-[#122222]/60 dark:text-white/60 mb-2 font-medium">{book.arabic_title}</p>}
+                  {book.tags && (
+                    <div className="flex flex-wrap gap-1 mt-2 mb-2">
+                      {book.tags.split(",").map((t, idx) => (
+                        <span key={idx} className="px-2 py-0.5 bg-[#1a4d40]/10 dark:bg-[#1b9277]/20 text-[#1a4d40] dark:text-[#1b9277] rounded text-[10px] font-bold">
+                          {t.trim()}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <div className="space-y-3">
                   <InfoRow label="Author" value={book.author || "—"} />
@@ -648,20 +718,20 @@ function BookSidebar({ book, onClose }: { book: Book; onClose: () => void }) {
                     </div>
                   )}
                 </div>
-                
+
                 <div className="flex gap-2 pt-4 border-t border-black/5 dark:border-white/5 w-full">
-                  <button 
-                    onClick={() => setIsEditing(true)} 
+                  <button
+                    onClick={() => setIsEditing(true)}
                     className="flex-1 flex items-center justify-center gap-2 bg-[#fcfbf8] dark:bg-[#111d1a] border border-black/10 dark:border-white/10 text-[12px] font-bold text-[#122222] dark:text-white py-2 rounded-lg hover:bg-black/5 transition-colors"
                   >
                     <Edit2 size={14} /> Edit
                   </button>
-                  <button 
+                  <button
                     onClick={() => {
                       if (confirm("Are you sure you want to delete this book? This will archive all of its copies.")) {
                         deleteBookMutation.mutate();
                       }
-                    }} 
+                    }}
                     className="flex-1 flex items-center justify-center gap-2 bg-red-500/10 text-red-500 text-[12px] font-bold py-2 rounded-lg hover:bg-red-500/20 transition-colors"
                   >
                     <Trash2 size={14} /> Archive
@@ -670,12 +740,12 @@ function BookSidebar({ book, onClose }: { book: Book; onClose: () => void }) {
 
                 {bookAudits.length > 0 && (
                   <div className="w-full pt-6 border-t border-black/5 dark:border-white/5">
-                     <h3 className="font-bold text-[13px] text-[#122222] dark:text-white flex items-center gap-2 mb-3"><Clock size={12}/> Recent Activity</h3>
-                     <div className="space-y-3">
-                       {bookAudits.map((item) => (
-                         <ActivityRow key={item.id} date={new Date(item.created_at).toLocaleDateString()} action={item.action} actor={item.actor} />
-                       ))}
-                     </div>
+                    <h3 className="font-bold text-[13px] text-[#122222] dark:text-white flex items-center gap-2 mb-3"><Clock size={12} /> Recent Activity</h3>
+                    <div className="space-y-3">
+                      {bookAudits.map((item) => (
+                        <ActivityRow key={item.id} date={new Date(item.created_at).toLocaleDateString()} action={item.action} actor={item.actor} />
+                      ))}
+                    </div>
                   </div>
                 )}
               </>
@@ -694,6 +764,25 @@ function BookSidebar({ book, onClose }: { book: Book; onClose: () => void }) {
                 </label>
                 <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">Subtitle
                   <Input {...editForm.register("subtitle")} className="py-1 px-2.5 text-[13px]" />
+                </label>
+                <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">Arabic Title
+                  <Input {...editForm.register("arabic_title")} className="py-1 px-2.5 text-[13px]" />
+                </label>
+                <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block font-semibold">Tags (comma-separated)
+                  <Input {...editForm.register("tags")} className="py-1 px-2.5 text-[13px]" />
+                  {watchedEditTags && (
+                    <div className="flex flex-wrap gap-1 mt-1.5">
+                      {watchedEditTags.split(",").map((t, idx) => {
+                        const clean = t.trim();
+                        if (!clean) return null;
+                        return (
+                          <span key={idx} className="px-2 py-0.5 bg-[#1a4d40]/10 dark:bg-[#1b9277]/20 text-[#1a4d40] dark:text-[#1b9277] rounded text-[10px] font-bold">
+                            {clean}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  )}
                 </label>
                 <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">Author
                   <Input {...editForm.register("author")} className="py-1 px-2.5 text-[13px]" />
@@ -716,9 +805,9 @@ function BookSidebar({ book, onClose }: { book: Book; onClose: () => void }) {
                   </label>
                 </div>
                 <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">Description
-                  <textarea 
-                    {...editForm.register("description")} 
-                    className="w-full bg-[#fcfbf8] dark:bg-[#111d1a] border border-black/10 dark:border-white/10 rounded-lg py-2 px-3 text-[13px] text-[#122222] dark:text-white outline-none focus:border-[#1a4d40] min-h-[60px]" 
+                  <textarea
+                    {...editForm.register("description")}
+                    className="w-full bg-[#fcfbf8] dark:bg-[#111d1a] border border-black/10 dark:border-white/10 rounded-lg py-2 px-3 text-[13px] text-[#122222] dark:text-white outline-none focus:border-[#1a4d40] min-h-[60px]"
                   />
                 </label>
                 <div className="flex gap-2 pt-2">
@@ -734,7 +823,7 @@ function BookSidebar({ book, onClose }: { book: Book; onClose: () => void }) {
           <div className="w-full space-y-4">
             <div className="flex justify-between items-center">
               <h3 className="font-bold text-[13px] text-[#122222] dark:text-white">Active Copies</h3>
-              <button 
+              <button
                 onClick={() => setAddCopyOpen(!addCopyOpen)}
                 className="text-[11px] font-bold text-[#1a4d40] dark:text-[#1b9277] hover:underline"
               >
@@ -781,7 +870,7 @@ function BookSidebar({ book, onClose }: { book: Book; onClose: () => void }) {
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       <StatusBadge value={c.status} />
-                      <button 
+                      <button
                         onClick={() => {
                           if (confirm(`Archive copy ${c.barcode}?`)) deleteCopyMutation.mutate(c.id);
                         }}
@@ -818,8 +907,8 @@ function BookSidebar({ book, onClose }: { book: Book; onClose: () => void }) {
                   onChange={setReservingMemberId}
                 />
               </label>
-              <Button 
-                className="w-full py-2 text-[12px]" 
+              <Button
+                className="w-full py-2 text-[12px]"
                 disabled={!reservingMemberId || reserveMutation.isPending}
                 onClick={() => reserveMutation.mutate()}
               >
@@ -847,7 +936,7 @@ function InfoRow({ label, value, subValue }: { label: string, value: string, sub
 function ActivityRow({ date, action, actor }: any) {
   return (
     <div className="flex items-start gap-4 text-[12px] w-full">
-      <div className="text-[#122222]/50 dark:text-white/50 whitespace-nowrap"><Clock size={12} className="inline mr-1 opacity-50"/>{date}</div>
+      <div className="text-[#122222]/50 dark:text-white/50 whitespace-nowrap"><Clock size={12} className="inline mr-1 opacity-50" />{date}</div>
       <div className="flex-1 font-semibold text-[#122222] dark:text-white truncate">{action}</div>
       <div className="text-[#122222]/50 dark:text-white/50 text-right w-16 shrink-0 truncate">{actor}</div>
     </div>

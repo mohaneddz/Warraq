@@ -142,10 +142,10 @@ function GeneralTab({ prefs, update }: TabProps) {
         </div>
         <Field label="Profile Picture">
           <div className="flex items-center gap-4">
-            <ImageUpload 
-              value={prefs.operatorAvatar} 
-              onChange={val => update({ operatorAvatar: val })} 
-              shape="circle" 
+            <ImageUpload
+              value={prefs.operatorAvatar}
+              onChange={val => update({ operatorAvatar: val })}
+              shape="circle"
             />
             <p className="text-[11px] text-[#122222]/40 dark:text-white/40">Recommended: Square PNG, JPG or WEBP<br />Max size: 2 MB</p>
           </div>
@@ -1148,7 +1148,6 @@ function DesktopTab({ prefs, update }: TabProps) {
 // ═══════════════════════════════════════════════════════════════════════════════
 function AboutTab() {
   const credits = [
-    { role: "Design & Engineering", name: "Warraq Team" },
     { role: "Book data", name: "Google Books / Open Library" },
     { role: "Icons", name: "Lucide React" },
     { role: "Font", name: "Manrope / IBM Plex Sans Arabic" },
@@ -1184,8 +1183,21 @@ function AboutTab() {
 
       <Card title="Credits" icon={<LayoutGrid size={16} className="text-[#b96f3e]" />}>
         <div className="space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-black/5 dark:border-white/5 pb-3">
+            <span className="text-[12px] text-[#122222]/60 dark:text-white/60">Design & Engineering</span>
+            <div className="flex flex-col items-end mt-1 sm:mt-0">
+              <span className="text-[13px] font-semibold text-[#122222] dark:text-white">MANAA Mohaned</span>
+              <div className="flex gap-2.5 mt-1 text-[11px] font-medium text-[#1a4d40] dark:text-[#1b9277]">
+                <a href="https://mohaned.space/" target="_blank" rel="noopener noreferrer" className="hover:underline">Website</a>
+                <span className="text-black/20 dark:text-white/20">•</span>
+                <a href="https://github.com/mohaneddz" target="_blank" rel="noopener noreferrer" className="hover:underline">GitHub</a>
+                <span className="text-black/20 dark:text-white/20">•</span>
+                <a href="https://www.linkedin.com/in/mohaned-manaa-491483295/" target="_blank" rel="noopener noreferrer" className="hover:underline">LinkedIn</a>
+              </div>
+            </div>
+          </div>
           {credits.map(c => (
-            <div key={c.role} className="flex justify-between">
+            <div key={c.role} className="flex justify-between py-1">
               <span className="text-[12px] text-[#122222]/60 dark:text-white/60">{c.role}</span>
               <span className="text-[13px] font-semibold text-[#122222] dark:text-white">{c.name}</span>
             </div>

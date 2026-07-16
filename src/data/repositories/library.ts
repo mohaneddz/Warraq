@@ -106,14 +106,15 @@ export async function books(query = ""): Promise<Book[]> {
   const term = `%${query.trim()}%`;
   return db.select<Book[]>(
     `SELECT b.*, p.name publisher, c.name category, 
-     (SELECT GROUP_CONCAT(a.name, ', ') FROM book_authors ba JOIN authors a ON a.id=ba.author_id WHERE ba.book_id=b.id) author 
+     (SELECT GROUP_CONCAT(a.name, ', ') FROM book_authors ba JOIN authors a ON a.id=ba.author_id WHERE ba.book_id=b.id) author,
+     (SELECT GROUP_CONCAT(t.name, ', ') FROM book_tags bt JOIN tags t ON t.id=bt.tag_id WHERE bt.book_id=b.id) tags
      FROM books b 
      LEFT JOIN publishers p ON p.id=b.publisher_id 
      LEFT JOIN categories c ON c.id=b.category_id 
      WHERE b.archived_at IS NULL 
-     AND (?='' OR b.title LIKE ? OR b.isbn13 LIKE ? OR b.isbn10 LIKE ? OR EXISTS (SELECT 1 FROM book_authors ba JOIN authors a ON a.id=ba.author_id WHERE ba.book_id=b.id AND a.name LIKE ?)) 
+     AND (?='' OR b.title LIKE ? OR b.arabic_title LIKE ? OR b.subtitle LIKE ? OR b.isbn13 LIKE ? OR b.isbn10 LIKE ? OR EXISTS (SELECT 1 FROM book_authors ba JOIN authors a ON a.id=ba.author_id WHERE ba.book_id=b.id AND a.name LIKE ?)) 
      ORDER BY b.title`,
-    [query.trim(), term, term, term, term]
+    [query.trim(), term, term, term, term, term, term]
   );
 }
 
@@ -125,9 +126,26 @@ export async function saveBook(input: Omit<Book, "id" | "created_at"> & { author
     if (input.publisher?.trim()) { const existing = await db.select<{ id: string }[]>("SELECT id FROM publishers WHERE name=?", [input.publisher.trim()]); publisherId = existing[0]?.id ?? id(); if (!existing[0]) await db.execute("INSERT INTO publishers (id,name,created_at,updated_at) VALUES (?,?,?,?)", [publisherId, input.publisher.trim(), now, now]); }
     let categoryId: string | null = null;
     if (input.category?.trim()) { const existing = await db.select<{ id: string }[]>("SELECT id FROM categories WHERE name=?", [input.category.trim()]); categoryId = existing[0]?.id ?? id(); if (!existing[0]) await db.execute("INSERT INTO categories (id,name) VALUES (?,?)", [categoryId, input.category.trim()]); }
-    await db.execute("INSERT INTO books (id,isbn10,isbn13,title,subtitle,description,language,publication_year,publisher_id,category_id,call_number,cover_path,source,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", [bookId, input.isbn10 ?? null, input.isbn13 ?? null, input.title, input.subtitle ?? null, input.description ?? null, input.language, input.publication_year ?? null, publisherId, categoryId, input.call_number ?? null, input.cover_path ?? null, "manual", now, now]);
+    await db.execute("INSERT INTO books (id,isbn10,isbn13,title,subtitle,arabic_title,description,language,publisher_id,category_id,call_number,cover_path,source,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", [bookId, input.isbn10 ?? null, input.isbn13 ?? null, input.title, input.subtitle ?? null, input.arabic_title ?? null, input.description ?? null, input.language, publisherId, categoryId, input.call_number ?? null, input.cover_path ?? null, "manual", now, now]);
     if (input.author?.trim()) { const normalized = input.author.trim().toLocaleLowerCase(); const existing = await db.select<{ id: string }[]>("SELECT id FROM authors WHERE normalized_name=?", [normalized]); const authorId = existing[0]?.id ?? id(); if (!existing[0]) await db.execute("INSERT INTO authors (id,name,normalized_name,created_at,updated_at) VALUES (?,?,?,?,?)", [authorId, input.author.trim(), normalized, now, now]); await db.execute("INSERT INTO book_authors (book_id,author_id,author_order) VALUES (?,?,0)", [bookId, authorId]); }
     if (input.barcode?.trim()) await db.execute("INSERT INTO copies (id,book_id,accession_number,barcode,status,condition,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?)", [id(), bookId, input.accession?.trim() || `ACC-${Date.now()}`, input.barcode.trim(), "available", "good", now, now]);
+    
+    // Save tags relation
+    if (input.tags?.trim()) {
+      const tagsList = input.tags.split(",").map(t => t.trim()).filter(Boolean);
+      for (const tagName of tagsList) {
+        const existingTag = await db.select<{ id: string }[]>("SELECT id FROM tags WHERE name = ?", [tagName]);
+        let tagId = existingTag[0]?.id;
+        if (!tagId) {
+          tagId = id();
+          const colors = ["#FEE2E2", "#FEF3C7", "#D1FAE5", "#DBEAFE", "#E0E7FF", "#F3E8FF", "#FCE7F3"];
+          const randomColor = colors[Math.floor(Math.random() * colors.length)];
+          await db.execute("INSERT INTO tags (id, name, color) VALUES (?, ?, ?)", [tagId, tagName, randomColor]);
+        }
+        await db.execute("INSERT OR IGNORE INTO book_tags (book_id, tag_id) VALUES (?, ?)", [bookId, tagId]);
+      }
+    }
+
     await audit(db, "create", "book", bookId, null, JSON.stringify({ title: input.title })); await db.execute("COMMIT");
   } catch (error) { await db.execute("ROLLBACK"); throw error; }
 }
@@ -167,6 +185,7 @@ export async function updateBook(bookId: string, input: Partial<Book> & { author
     const params: any[] = [];
     if (input.title !== undefined) { fields.push("title = ?"); params.push(input.title); }
     if (input.subtitle !== undefined) { fields.push("subtitle = ?"); params.push(input.subtitle); }
+    if (input.arabic_title !== undefined) { fields.push("arabic_title = ?"); params.push(input.arabic_title); }
     if (input.description !== undefined) { fields.push("description = ?"); params.push(input.description); }
     if (input.language !== undefined) { fields.push("language = ?"); params.push(input.language); }
     if (input.publication_year !== undefined) { fields.push("publication_year = ?"); params.push(input.publication_year); }
@@ -195,6 +214,24 @@ export async function updateBook(bookId: string, input: Partial<Book> & { author
           await db.execute("INSERT INTO authors (id,name,normalized_name,created_at,updated_at) VALUES (?,?,?,?,?)", [authorId, input.author.trim(), normalized, now, now]);
         }
         await db.execute("INSERT INTO book_authors (book_id,author_id,author_order) VALUES (?,?,0)", [bookId, authorId]);
+      }
+    }
+
+    if (input.tags !== undefined) {
+      await db.execute("DELETE FROM book_tags WHERE book_id = ?", [bookId]);
+      if (input.tags?.trim()) {
+        const tagsList = input.tags.split(",").map(t => t.trim()).filter(Boolean);
+        for (const tagName of tagsList) {
+          const existingTag = await db.select<{ id: string }[]>("SELECT id FROM tags WHERE name = ?", [tagName]);
+          let tagId = existingTag[0]?.id;
+          if (!tagId) {
+            tagId = id();
+            const colors = ["#FEE2E2", "#FEF3C7", "#D1FAE5", "#DBEAFE", "#E0E7FF", "#F3E8FF", "#FCE7F3"];
+            const randomColor = colors[Math.floor(Math.random() * colors.length)];
+            await db.execute("INSERT INTO tags (id, name, color) VALUES (?, ?, ?)", [tagId, tagName, randomColor]);
+          }
+          await db.execute("INSERT OR IGNORE INTO book_tags (book_id, tag_id) VALUES (?, ?)", [bookId, tagId]);
+        }
       }
     }
 
