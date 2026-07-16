@@ -5,8 +5,12 @@ import { dashboard, loans } from "../data/repositories/library";
 import { database } from "../data/database";
 import { daysLate } from "../utils/dates";
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { useUiStore } from "../store/uiStore";
 
 export function ReportsPage() {
+  const { t } = useTranslation();
+  const prefs = useUiStore((state) => state.preferences);
   const [activeTab, setActiveTab] = useState("Overview");
 
   // Queries
@@ -61,10 +65,10 @@ export function ReportsPage() {
       ];
     }
     return dashQuery.data.activity.map(act => ({
-      name: new Date(act.date).toLocaleDateString(undefined, { weekday: 'short' }),
+      name: new Date(act.date).toLocaleDateString(prefs.locale === "ar" ? "ar-DZ" : prefs.locale === "fr" ? "fr-FR" : "en-US", { weekday: 'short' }),
       circulation: act.count
     }));
-  }, [dashQuery.data?.activity]);
+  }, [dashQuery.data?.activity, prefs.locale]);
 
   // Map top categories
   const categoriesList = useMemo(() => {
@@ -84,17 +88,17 @@ export function ReportsPage() {
   }, [categoriesList]);
 
   return (
-    <div className="flex flex-col h-full w-full">
+    <div className="flex flex-col h-full w-full text-[13px]">
       {/* Header */}
       <div className="flex justify-between items-end mb-8">
         <div>
-          <h1 className="font-display text-[28px] font-bold text-[#122222] dark:text-white leading-tight">Reports & analytics</h1>
-          <p className="text-[13px] text-[#122222]/60 dark:text-white/60">Generate insights on library usage, inventory status, and member activity.</p>
+          <h1 className="font-display text-[28px] font-bold text-[#122222] dark:text-white leading-tight">{t("reports.title")}</h1>
+          <p className="text-[13px] text-[#122222]/60 dark:text-white/60">{t("reports.subtitle")}</p>
         </div>
         <div className="flex items-center gap-3">
           <button 
             onClick={() => window.print()}
-            className="flex items-center gap-2 bg-white dark:bg-[#1d2926] border border-black/10 dark:border-white/10 text-[#122222] dark:text-white px-4 py-2 rounded-lg font-bold text-[13px] hover:bg-black/5 dark:hover:bg-white/5 transition-colors shadow-sm"
+            className="flex items-center gap-2 bg-white dark:bg-[#1d2926] border border-black/10 dark:border-white/10 text-[#122222] dark:text-white px-4 py-2 rounded-lg font-bold text-[13px] hover:bg-black/5 dark:hover:bg-white/5 transition-colors shadow-sm cursor-pointer"
           >
             <Printer size={16} /> Print
           </button>
@@ -102,7 +106,7 @@ export function ReportsPage() {
       </div>
 
       {/* Tabs & Filters */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-8 select-none">
         <div className="flex gap-2 p-1 bg-black/5 dark:bg-white/5 rounded-xl">
           <Tab label="Overview" active={activeTab === "Overview"} onClick={() => setActiveTab("Overview")} />
           <Tab label="Circulation" active={activeTab === "Circulation"} onClick={() => setActiveTab("Circulation")} />
@@ -110,18 +114,18 @@ export function ReportsPage() {
           <Tab label="Members" active={activeTab === "Members"} onClick={() => setActiveTab("Members")} />
         </div>
         <div className="flex items-center gap-3">
-          <button className="flex items-center gap-2 bg-white dark:bg-[#1d2926] border border-black/5 dark:border-white/5 rounded-lg py-2 px-4 text-[13px] font-semibold text-[#122222] dark:text-white shadow-sm hover:border-[#1a4d40]/30 transition-colors">
-            <Calendar size={14} className="text-[#1a4d40] dark:text-[#1b9277]"/> This Month
+          <button className="flex items-center gap-2 bg-white dark:bg-[#1d2926] border border-black/5 dark:border-white/5 rounded-lg py-2 px-4 text-[13px] font-semibold text-[#122222] dark:text-white shadow-sm hover:border-emerald/30 transition-colors cursor-pointer">
+            <Calendar size={14} className="text-emerald dark:text-emerald-light"/> This Month
           </button>
         </div>
       </div>
 
       {/* Metric Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <MetricCard title="Total circulation" value={stats.totalLoans.toLocaleString()} label="All-time checkouts" />
-        <MetricCard title="Active members" value={stats.activeMembers.toLocaleString()} label="Registered borrowers" />
-        <MetricCard title="Overdue rate" value={stats.overdueRate} label="Overdue vs open loans" />
-        <MetricCard title="Total copy acquisitions" value={stats.acquisitions.toLocaleString()} label="Physical holdings" />
+        <MetricCard title={t("reports.metrics.circulation")} value={stats.totalLoans.toLocaleString(prefs.locale)} label="All-time checkouts" />
+        <MetricCard title={t("reports.metrics.activeMembers")} value={stats.activeMembers.toLocaleString(prefs.locale)} label="Registered borrowers" />
+        <MetricCard title={t("reports.metrics.overdueRate")} value={stats.overdueRate} label="Overdue vs open loans" />
+        <MetricCard title={t("reports.metrics.acquisitions")} value={stats.acquisitions.toLocaleString(prefs.locale)} label="Physical holdings" />
       </div>
 
       {/* Charts Grid */}
@@ -146,31 +150,33 @@ export function ReportsPage() {
                   <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#122222', opacity: 0.5 }} dy={10} />
                   <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#122222', opacity: 0.5 }} />
                   <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.08)', fontSize: '13px' }} />
-                  <Area type="monotone" dataKey="circulation" stroke="#1a4d40" strokeWidth={3} fillOpacity={1} fill="url(#colorCirculation)" />
+                  <Area type="monotone" dataKey="circulation" stroke="var(--color-accent)" strokeWidth={3} fillOpacity={1} fill="url(#colorCirculation)" />
                 </AreaChart>
               </ResponsiveContainer>
             )}
           </div>
         </div>
 
-        {/* Top Categories Chart */}
+        {/* Sidebar Chart info: popular categories */}
         <div className="bg-white dark:bg-[#1d2926] p-6 rounded-2xl border border-black/5 dark:border-white/5 shadow-card flex flex-col">
-          <h3 className="font-bold text-[15px] text-[#122222] dark:text-white mb-6">Top borrowed categories</h3>
-          <div className="flex-1 flex flex-col justify-around">
-            {categoriesQuery.isLoading ? (
-              <div className="text-center text-zinc-500 py-10 text-[13px]">
-                <RefreshCw size={16} className="animate-spin inline mr-2" /> Querying categories...
-              </div>
-            ) : categoriesList.length > 0 ? (
-              categoriesList.map(cat => (
-                <CategoryBar key={cat.name} name={cat.name || "Uncategorized"} value={cat.value} max={maxCategoryVal} color="#1a4d40" />
-              ))
-            ) : (
-              <div className="text-center text-zinc-400 py-10 text-[13px] flex flex-col items-center">
-                <BarChart2 size={24} className="mb-2 opacity-50" />
-                <span>No checkout data recorded yet.</span>
-              </div>
-            )}
+          <h3 className="font-bold text-[15px] text-[#122222] dark:text-white mb-6 flex items-center gap-2">
+            <BarChart2 size={18} className="text-emerald dark:text-emerald-light" /> Popular categories
+          </h3>
+          <div className="flex-1 flex flex-col justify-between py-2 space-y-4">
+            {categoriesList.map((item) => {
+              const percent = (item.value / maxCategoryVal) * 100;
+              return (
+                <div key={item.name} className="flex flex-col gap-2">
+                  <div className="flex justify-between items-center text-[12px] font-semibold text-[#122222] dark:text-white">
+                    <span className="truncate">{item.name}</span>
+                    <span className="font-bold text-[12px] text-[#122222]/60 dark:text-white/60">{item.value} loans</span>
+                  </div>
+                  <div className="w-full h-2 bg-black/5 dark:bg-white/5 rounded-full overflow-hidden">
+                    <div className="h-full bg-emerald" style={{ width: `${percent}%` }} />
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>
@@ -178,14 +184,14 @@ export function ReportsPage() {
   );
 }
 
-function Tab({ label, active = false, onClick }: { label: string; active?: boolean; onClick?: () => void }) {
+function Tab({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
   return (
     <button 
       onClick={onClick}
-      className={`px-5 py-2 text-[13px] font-bold rounded-lg whitespace-nowrap transition-all ${
+      className={`px-4 py-1.5 text-[13px] font-bold rounded-lg transition-colors cursor-pointer ${
         active 
-          ? "bg-white dark:bg-[#1d2926] text-[#1a4d40] dark:text-[#1b9277] shadow-sm" 
-          : "text-[#122222]/60 dark:text-white/60 hover:text-[#122222] dark:hover:text-white"
+          ? "bg-white dark:bg-[#1d2926] text-emerald dark:text-emerald-light shadow-sm" 
+          : "text-[#122222]/50 dark:text-white/50 hover:bg-black/5 dark:hover:bg-white/5"
       }`}
     >
       {label}
@@ -193,31 +199,14 @@ function Tab({ label, active = false, onClick }: { label: string; active?: boole
   );
 }
 
-function MetricCard({ title, value, label }: any) {
+function MetricCard({ title, value, label }: { title: string; value: string; label: string }) {
   return (
-    <div className="bg-white dark:bg-[#1d2926] p-5 rounded-2xl border border-black/5 dark:border-white/5 shadow-card">
-      <p className="text-[11px] font-bold text-[#122222]/50 dark:text-white/50 uppercase tracking-wider mb-2">{title}</p>
-      <div className="flex items-end gap-3 justify-between">
-        <p className="text-[32px] font-display font-bold text-[#122222] dark:text-white leading-none">{value}</p>
-        <div className="text-[11px] text-[#122222]/50 dark:text-white/50 text-right">
-          {label}
-        </div>
+    <div className="bg-white dark:bg-[#1d2926] p-5 rounded-2xl border border-black/5 dark:border-white/5 shadow-sm flex flex-col justify-between h-[120px]">
+      <div>
+        <p className="text-[11px] font-bold text-[#122222]/50 dark:text-white/50 uppercase tracking-wider mb-1">{title}</p>
+        <p className="text-[28px] font-display font-bold text-[#122222] dark:text-white leading-tight">{value}</p>
       </div>
-    </div>
-  );
-}
-
-function CategoryBar({ name, value, max, color }: any) {
-  const percent = (value / max) * 100;
-  return (
-    <div>
-      <div className="flex justify-between text-[13px] font-semibold text-[#122222] dark:text-white mb-1.5">
-        <span>{name}</span>
-        <span className="opacity-60">{value} loan{value !== 1 ? 's' : ''}</span>
-      </div>
-      <div className="h-2 bg-black/5 dark:bg-white/5 rounded-full overflow-hidden">
-        <div className="h-full rounded-full" style={{ width: `${percent}%`, backgroundColor: color }} />
-      </div>
+      <p className="text-[11px] text-[#122222]/40 dark:text-white/40 font-semibold">{label}</p>
     </div>
   );
 }

@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { useUiStore } from "../store/uiStore";
 import { ImageUpload } from "../components/ui/ImageUpload";
+import { useTranslation } from "react-i18next";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type Tab =
@@ -18,8 +19,25 @@ type Tab =
   | "Backup & Restore" | "Database" | "Integrations & AI" | "Secrets & Keys"
   | "Desktop & Data" | "About";
 
+const tabIcons: Record<Tab, React.ComponentType<{ size?: number; className?: string }>> = {
+  "General": SettingsIcon,
+  "Library Profile": MapPin,
+  "Localization": Globe,
+  "Appearance": Palette,
+  "Rules": BookMarked,
+  "Fines & Fees": DollarSign,
+  "Notifications": Bell,
+  "Backup & Restore": HardDrive,
+  "Database": Database,
+  "Integrations & AI": Zap,
+  "Secrets & Keys": Shield,
+  "Desktop & Data": Monitor,
+  "About": Info,
+};
+
 // ─── Root Component ───────────────────────────────────────────────────────────
 export function SettingsPage() {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<Tab>("General");
   const [search, setSearch] = useState("");
   const { preferences, updatePreferences } = useUiStore();
@@ -41,14 +59,14 @@ export function SettingsPage() {
       <div className="w-[260px] shrink-0 border-r border-black/5 dark:border-white/5 pr-6 mr-6 flex flex-col h-full overflow-y-auto no-scrollbar">
         <div className="flex items-center gap-2 mb-6 text-[#b96f3e]">
           <SettingsIcon size={20} />
-          <h1 className="font-display text-[22px] font-bold text-[#122222] dark:text-white leading-tight">Settings</h1>
+          <h1 className="font-display text-[22px] font-bold text-[#122222] dark:text-white leading-tight">{t("nav.settings")}</h1>
         </div>
 
         <div className="relative mb-6">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#122222]/40 dark:text-white/40" />
           <input
             type="text"
-            placeholder="Search settings..."
+            placeholder={t("settings.searchPlaceholder") || "Search settings..."}
             value={search}
             onChange={e => setSearch(e.target.value)}
             className="w-full bg-white dark:bg-[#1d2926] border border-black/10 dark:border-white/10 rounded-lg py-2 pl-8 pr-3 text-[13px] text-[#122222] dark:text-[#f0ebe1] outline-none focus:border-[#1a4d40]"
@@ -57,9 +75,15 @@ export function SettingsPage() {
 
         <div className="space-y-5 flex-1">
           {filtered.map(group => (
-            <NavGroup key={group.group} title={group.group}>
+            <NavGroup key={group.group} title={t("settings.groups." + group.group.toLowerCase().replace(/[^a-z0-9]/g, '')) || group.group}>
               {group.items.map(item => (
-                <NavItem key={item} label={item} active={activeTab === item} onClick={() => setActiveTab(item)} />
+                <NavItem 
+                  key={item} 
+                  label={t("settings.tabs." + item.toLowerCase().replace(/[^a-z0-9]/g, '')) || item} 
+                  icon={tabIcons[item]} 
+                  active={activeTab === item} 
+                  onClick={() => setActiveTab(item)} 
+                />
               ))}
             </NavGroup>
           ))}
@@ -260,7 +284,7 @@ function LocalizationTab({ prefs, update }: TabProps) {
             <button
               key={lang.code}
               onClick={() => handleLocaleChange(lang.code)}
-              className={`p-4 rounded-xl border-2 text-left transition-all ${prefs.locale === lang.code ? "border-[#b96f3e] bg-[#b96f3e]/5" : "border-black/5 dark:border-white/5 hover:border-black/10 dark:hover:border-white/10"}`}
+              className={`p-4 rounded-xl border-2 text-start transition-all ${prefs.locale === lang.code ? "border-[#b96f3e] bg-[#b96f3e]/5" : "border-black/5 dark:border-white/5 hover:border-black/10 dark:hover:border-white/10"}`}
             >
               <div className="text-[18px] mb-2">{lang.code === "en" ? "🇬🇧" : lang.code === "fr" ? "🇫🇷" : "🇩🇿"}</div>
               <div className="font-bold text-[13px] text-[#122222] dark:text-white">{lang.label}</div>
@@ -363,7 +387,7 @@ function AppearanceTab({ prefs, update }: TabProps) {
             <button
               key={s.value}
               onClick={() => update({ fontSize: s.value })}
-              className={`p-4 rounded-xl border-2 text-left transition-all ${prefs.fontSize === s.value ? "border-[#b96f3e] bg-[#b96f3e]/5" : "border-black/5 dark:border-white/5 hover:border-black/10 dark:hover:border-white/10"}`}
+              className={`p-4 rounded-xl border-2 text-start transition-all ${prefs.fontSize === s.value ? "border-[#b96f3e] bg-[#b96f3e]/5" : "border-black/5 dark:border-white/5 hover:border-black/10 dark:hover:border-white/10"}`}
             >
               <div className={`font-bold text-[#122222] dark:text-white mb-1 ${s.value === "small" ? "text-[12px]" : s.value === "large" ? "text-[16px]" : "text-[14px]"}`}>Aa</div>
               <div className="font-bold text-[13px] text-[#122222] dark:text-white">{s.label}</div>
@@ -576,7 +600,9 @@ function NotificationsTab({ prefs, update }: TabProps) {
 // 8. BACKUP & RESTORE TAB
 // ═══════════════════════════════════════════════════════════════════════════════
 function BackupTab() {
-  const [lastBackup] = useState<string | null>("2026-07-14 09:12");
+  const [lastBackup, setLastBackup] = useState<string | null>(() => {
+    return localStorage.getItem("warraq-last-backup-timestamp");
+  });
   const [restoring, setRestoring] = useState(false);
 
   const handleExport = async () => {
@@ -588,6 +614,9 @@ function BackupTab() {
       const dest = await save({ defaultPath: "warraq-backup.db", filters: [{ name: "Database", extensions: ["db"] }] });
       if (dest) {
         await copyFile(`${dir}/warraq.db`, dest);
+        const nowStr = new Date().toISOString().replace("T", " ").substring(0, 16);
+        localStorage.setItem("warraq-last-backup-timestamp", nowStr);
+        setLastBackup(nowStr);
         alert("Backup saved successfully.");
       }
     } catch {
@@ -1476,13 +1505,21 @@ function NavGroup({ title, children }: { title: string; children: React.ReactNod
   );
 }
 
-function NavItem({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
+function NavItem({ label, icon: Icon, active, onClick }: { label: string; icon: React.ComponentType<{ size?: number; className?: string }>; active: boolean; onClick: () => void }) {
   return (
     <button
       onClick={onClick}
-      className={`w-full text-left px-3 py-2 rounded-lg text-[13px] font-semibold transition-colors ${active ? "bg-[#1a4d40]/10 dark:bg-[#1b9277]/10 text-[#1a4d40] dark:text-[#1b9277]" : "text-[#122222]/70 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/5"}`}
+      className={`w-full text-start px-3 py-2 rounded-lg text-[13px] font-semibold transition-colors flex items-center gap-2.5 ${active ? "bg-[#1a4d40]/10 dark:bg-[#1b9277]/10 text-[#1a4d40] dark:text-[#1b9277]" : "text-[#122222]/70 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/5"}`}
     >
-      {label}
+      <Icon 
+        size={15} 
+        className={`shrink-0 transition-colors ${
+          active 
+            ? "text-[#1a4d40] dark:text-[#1b9277]" 
+            : "text-[#122222]/40 dark:text-white/40"
+        }`} 
+      />
+      <span>{label}</span>
     </button>
   );
 }

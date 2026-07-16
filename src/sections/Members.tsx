@@ -5,7 +5,7 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { 
   Plus, Search, ChevronLeft, ChevronRight, X, 
-  Mail, Trash2, CheckCircle2, IdCard, Building, Phone, Edit2
+  Trash2, IdCard, Building, Phone, Edit2
 } from "lucide-react";
 import { 
   members, saveMember, updateMember, deleteMember, getLoansForMember, 
@@ -18,59 +18,82 @@ import { daysLate, formatDisplayDate } from "../utils/dates";
 import { queryClient } from "../app/providers";
 import { useUiStore } from "../store/uiStore";
 import { ImageUpload } from "../components/ui/ImageUpload";
+import { cleanPhone, cleanMemberNumber, cleanText } from "../utils/isbn";
+import { useTranslation } from "react-i18next";
 
 const invalidate = () => queryClient.invalidateQueries();
 
-const memberSchema = z.object({ 
-  full_name: z.string().min(2, "A full name is required"), 
-  email: z.string().email().or(z.literal("")).optional(), 
-  phone: z.string().optional(), 
-  department: z.string().optional(), 
-  role: z.string().optional(),
-  status: z.enum(["active", "suspended", "expired", "archived"]).optional(),
+const memberSchema = z.object({
+  full_name: z.string().min(2, "A full name is required"),
+  member_number: z.string().min(3, "A membership number is required"),
+  email: z.string().email("Enter a valid email").or(z.literal("")),
+  phone: z.string().optional(),
+  role: z.string().min(2, "Role is required"),
+  department: z.string().optional(),
+  status: z.enum(["active", "suspended", "expired", "archived"]),
   avatar_path: z.string().nullable().optional()
 });
 type MemberValues = z.infer<typeof memberSchema>;
 
 export function MembersPage() {
+  const { t } = useTranslation();
+
   const [term, setTerm] = useState("");
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
   const [adding, setAdding] = useState(false);
 
-  // Sorting, Filtering & Pagination State
+  // Sorting & Filtering State
   const [sortBy, setSortBy] = useState<"name" | "number" | "joined">("name");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const [savedView, setSavedView] = useState("All Members");
   const [deptFilter, setDeptFilter] = useState("All Departments");
   const [page, setPage] = useState(1);
   const itemsPerPage = 8;
-  
-  // Quick fetch
+
+  // Form input standardizer helper
+  const registerClean = (form: any, name: any, cleaner: (val: string) => string) => {
+    const reg = form.register(name);
+    return {
+      ...reg,
+      onBlur: (e: any) => {
+        form.setValue(name, cleaner(e.target.value));
+        reg.onBlur(e);
+      }
+    };
+  };
+
+  // Queries
   const result = useQuery({ queryKey: ["members", term], queryFn: () => members(term) });
 
-  const addForm = useForm<MemberValues>({ 
-    resolver: zodResolver(memberSchema), 
-    defaultValues: { full_name: "", email: "", phone: "", department: "", role: "", status: "active", avatar_path: null } 
+  const addForm = useForm<MemberValues>({
+    resolver: zodResolver(memberSchema),
+    defaultValues: { full_name: "", member_number: "", email: "", phone: "", role: "Staff", department: "", status: "active", avatar_path: null }
   });
 
-  const addMutation = useMutation({ 
-    mutationFn: (values: MemberValues) => saveMember({ 
-      full_name: values.full_name,
-      email: values.email || null, 
-      phone: values.phone || null, 
-      department: values.department || null, 
-      role: values.role || null, 
-      status: values.status || "active", 
-      expiry_date: null,
-      avatar_path: values.avatar_path || null
-    }), 
-    onSuccess: () => { 
-      invalidate(); 
-      toast.success("Member registered successfully."); 
-      addForm.reset(); 
-      setAdding(false); 
-    }, 
-    onError: (error) => toast.error(error.message) 
+  const addMutation = useMutation({
+    mutationFn: async (values: MemberValues) => {
+      // Validate unique member number locally before repository insert
+      const exists = result.data?.some(m => m.member_number.toUpperCase() === values.member_number.toUpperCase());
+      if (exists) throw new Error("A member with this number already exists.");
+      
+      return saveMember({
+        full_name: cleanText(values.full_name),
+        member_number: cleanMemberNumber(values.member_number),
+        email: values.email ? cleanText(values.email) : "",
+        phone: values.phone ? cleanPhone(values.phone) : "",
+        role: cleanText(values.role),
+        department: values.department ? cleanText(values.department) : "",
+        status: values.status,
+        avatar_path: values.avatar_path || null
+      });
+    },
+    onSuccess: () => {
+      invalidate();
+      toast.success("Member saved successfully.");
+      addForm.reset();
+      setAdding(false);
+    },
+    onError: (err: any) => toast.error(err.message)
   });
 
   // Extract departments list dynamically
@@ -85,11 +108,8 @@ export function MembersPage() {
     if (!result.data) return [];
     return result.data.filter(m => {
       // Saved views
-      if (savedView === "Active") {
-        if (m.status !== "active") return false;
-      } else if (savedView === "Suspended") {
-        if (m.status !== "suspended") return false;
-      }
+      if (savedView === "Active" && m.status !== "active") return false;
+      if (savedView === "Suspended" && m.status !== "suspended") return false;
 
       // Department filter
       if (deptFilter !== "All Departments") {
@@ -100,7 +120,7 @@ export function MembersPage() {
     });
   }, [result.data, savedView, deptFilter]);
 
-  // Sort members
+  // Sort Members
   const sortedMembers = useMemo(() => {
     const list = [...filteredMembers];
     return list.sort((a, b) => {
@@ -116,7 +136,7 @@ export function MembersPage() {
     });
   }, [filteredMembers, sortBy, sortOrder]);
 
-  // Paginated members
+  // Paginated Members
   const paginatedMembers = useMemo(() => {
     const start = (page - 1) * itemsPerPage;
     return sortedMembers.slice(start, start + itemsPerPage);
@@ -124,9 +144,7 @@ export function MembersPage() {
 
   const totalPages = Math.ceil(sortedMembers.length / itemsPerPage) || 1;
 
-  const toggleSortOrder = () => {
-    setSortOrder(sortOrder === "asc" ? "desc" : "asc");
-  };
+  const toggleSortOrder = () => setSortOrder(o => o === "asc" ? "desc" : "asc");
 
   return (
     <div className="flex h-full w-full relative">
@@ -136,15 +154,15 @@ export function MembersPage() {
         {/* Header */}
         <div className="flex justify-between items-end mb-8">
           <div>
-            <h1 className="font-display text-[28px] font-bold text-[#122222] dark:text-white leading-tight">Members</h1>
-            <p className="text-[13px] text-[#122222]/60 dark:text-white/60">Manage borrowing eligibility, contact information, and membership.</p>
+            <h1 className="font-display text-[28px] font-bold text-[#122222] dark:text-white leading-tight">{t("members.title")}</h1>
+            <p className="text-[13px] text-[#122222]/60 dark:text-white/60">{t("members.subtitle")}</p>
           </div>
           <div className="flex items-center gap-3">
             <button 
               onClick={() => setAdding(true)}
-              className="flex items-center gap-2 bg-[#1a4d40] text-white px-4 py-2 rounded-lg font-bold text-[13px] hover:bg-[#1a4d40]/90 transition-colors shadow-sm shadow-[#1a4d40]/20"
+              className="flex items-center gap-2 bg-emerald text-white px-4 py-2 rounded-lg font-bold text-[13px] hover:bg-emerald/90 transition-colors shadow-sm shadow-emerald/20 cursor-pointer"
             >
-              <Plus size={16} /> Add member
+              <Plus size={16} /> {t("members.addMember")}
             </button>
           </div>
         </div>
@@ -155,10 +173,10 @@ export function MembersPage() {
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#122222]/40" />
             <input 
               type="text" 
-              placeholder="Search member name, number, or department..." 
+              placeholder={t("members.searchPlaceholder")}
               value={term}
               onChange={(e) => { setTerm(e.target.value); setPage(1); }}
-              className="w-full bg-white dark:bg-[#1d2926] border border-black/5 dark:border-white/5 rounded-lg py-2 pl-9 pr-3 text-[13px] text-[#122222] dark:text-[#f0ebe1] outline-none focus:border-[#1a4d40] focus:ring-1 focus:ring-[#1a4d40]" 
+              className="w-full bg-white dark:bg-[#1d2926] border border-black/5 dark:border-white/5 rounded-lg py-2 pl-9 pr-3 text-[13px] text-[#122222] dark:text-[#f0ebe1] outline-none focus:border-emerald focus:ring-1 focus:ring-emerald" 
             />
           </div>
 
@@ -166,9 +184,9 @@ export function MembersPage() {
           <select 
             value={deptFilter} 
             onChange={(e) => { setDeptFilter(e.target.value); setPage(1); }}
-            className="bg-white dark:bg-[#1d2926] border border-black/5 dark:border-white/5 rounded-lg py-2 px-4 text-[13px] font-semibold text-[#122222]/70 dark:text-white/70 outline-none cursor-pointer hover:border-[#1a4d40]/30 transition-colors"
+            className="bg-white dark:bg-[#1d2926] border border-black/5 dark:border-white/5 rounded-lg py-2 px-4 text-[13px] font-semibold text-[#122222]/70 dark:text-white/70 outline-none cursor-pointer hover:border-emerald/30 transition-colors"
           >
-            <option value="All Departments">All Departments</option>
+            <option value="All Departments">{t("members.allDepartments")}</option>
             {departmentsList.map(dept => (
               <option key={dept} value={dept}>{dept}</option>
             ))}
@@ -178,16 +196,16 @@ export function MembersPage() {
           <select 
             value={sortBy} 
             onChange={(e) => setSortBy(e.target.value as any)}
-            className="bg-white dark:bg-[#1d2926] border border-black/5 dark:border-white/5 rounded-lg py-2 px-4 text-[13px] font-semibold text-[#122222]/70 dark:text-white/70 outline-none cursor-pointer hover:border-[#1a4d40]/30 transition-colors"
+            className="bg-white dark:bg-[#1d2926] border border-black/5 dark:border-white/5 rounded-lg py-2 px-4 text-[13px] font-semibold text-[#122222]/70 dark:text-white/70 outline-none cursor-pointer hover:border-emerald/30 transition-colors"
           >
-            <option value="name">Sort by Name</option>
-            <option value="number">Sort by ID</option>
-            <option value="joined">Sort by Joined Date</option>
+            <option value="name">{t("members.sortByName")}</option>
+            <option value="number">{t("members.sortById")}</option>
+            <option value="joined">{t("members.sortByJoined")}</option>
           </select>
 
           <button 
             onClick={toggleSortOrder}
-            className="bg-white dark:bg-[#1d2926] border border-black/5 dark:border-white/5 rounded-lg py-2 px-3 text-[13px] font-semibold text-[#122222]/70 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/5"
+            className="bg-white dark:bg-[#1d2926] border border-black/5 dark:border-white/5 rounded-lg py-2 px-3 text-[13px] font-semibold text-[#122222]/70 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer"
             title="Toggle sort direction"
           >
             {sortOrder === "asc" ? "Asc" : "Desc"}
@@ -197,24 +215,24 @@ export function MembersPage() {
         {/* Saved Views */}
         <div className="flex items-center justify-between bg-white dark:bg-[#1d2926] p-1.5 rounded-lg border border-black/5 dark:border-white/5 mb-4 shadow-card">
           <div className="flex items-center gap-1 overflow-x-auto no-scrollbar">
-            <span className="text-[11px] font-semibold text-[#122222]/40 dark:text-white/40 uppercase tracking-wider pl-2 pr-3">Saved views:</span>
+            <span className="text-[11px] font-semibold text-[#122222]/40 dark:text-white/40 uppercase tracking-wider pl-2 pr-3">{t("catalog.savedViews")}:</span>
             <button 
               onClick={() => { setSavedView("All Members"); setPage(1); }}
-              className={`px-4 py-1.5 text-[13px] font-bold rounded-md transition-colors ${savedView === "All Members" ? "bg-[#1a4d40] text-white" : "text-[#122222]/60 dark:text-white/60 hover:bg-black/5 dark:hover:bg-white/5"}`}
+              className={`px-4 py-1.5 text-[13px] font-bold rounded-md transition-colors ${savedView === "All Members" ? "bg-emerald text-white" : "text-[#122222]/60 dark:text-white/60 hover:bg-black/5 dark:hover:bg-white/5"}`}
             >
-              All Members
+              {t("members.allMembers")}
             </button>
             <button 
               onClick={() => { setSavedView("Active"); setPage(1); }}
-              className={`px-4 py-1.5 text-[13px] font-bold rounded-md transition-colors ${savedView === "Active" ? "bg-[#1a4d40] text-white" : "text-[#122222]/60 dark:text-white/60 hover:bg-black/5 dark:hover:bg-white/5"}`}
+              className={`px-4 py-1.5 text-[13px] font-bold rounded-md transition-colors ${savedView === "Active" ? "bg-emerald text-white" : "text-[#122222]/60 dark:text-white/60 hover:bg-black/5 dark:hover:bg-white/5"}`}
             >
-              Active
+              {t("members.active")}
             </button>
             <button 
               onClick={() => { setSavedView("Suspended"); setPage(1); }}
-              className={`px-4 py-1.5 text-[13px] font-bold rounded-md transition-colors ${savedView === "Suspended" ? "bg-[#1a4d40] text-white" : "text-[#122222]/60 dark:text-white/60 hover:bg-black/5 dark:hover:bg-white/5"}`}
+              className={`px-4 py-1.5 text-[13px] font-bold rounded-md transition-colors ${savedView === "Suspended" ? "bg-emerald text-white" : "text-[#122222]/60 dark:text-white/60 hover:bg-black/5 dark:hover:bg-white/5"}`}
             >
-              Suspended
+              {t("members.suspended")}
             </button>
           </div>
         </div>
@@ -235,7 +253,7 @@ export function MembersPage() {
                       onClick={() => setSelectedMember(member)}
                       className={`relative flex flex-col p-5 bg-white dark:bg-[#1d2926] border rounded-2xl shadow-card transition-all duration-300 cursor-pointer ${
                         selectedMember?.id === member.id 
-                          ? 'border-[#1a4d40] dark:border-[#1b9277] ring-2 ring-[#1a4d40] dark:ring-[#1b9277] bg-[#1a4d40]/5 dark:bg-[#1a4d40]/10' 
+                          ? 'border-emerald dark:border-emerald-light ring-2 ring-emerald dark:ring-emerald-light bg-emerald/5 dark:bg-emerald/10' 
                           : 'border-black/5 dark:border-white/5 hover:border-black/15 dark:hover:border-white/15 hover:shadow-md hover:-translate-y-0.5'
                       }`}
                     >
@@ -248,103 +266,82 @@ export function MembersPage() {
                             e.stopPropagation();
                             setSelectedMember(selectedMember?.id === member.id ? null : member);
                           }}
-                          onClick={(e) => e.stopPropagation()}
-                          className="cursor-pointer"
+                          className="mt-0.5 cursor-pointer"
                         />
-                        <div className="flex items-center gap-1.5 font-bold">
-                          <span className={`px-2 py-0.5 rounded-[4px] text-[11px] font-bold ${
-                            member.status === 'active' 
-                              ? 'bg-[#1a4d40]/10 text-[#1a4d40] dark:bg-[#1b9277]/20 dark:text-[#1b9277]' 
-                              : member.status === 'suspended'
-                              ? 'bg-red-500/10 text-red-500 dark:bg-red-500/20'
-                              : member.status === 'expired'
-                              ? 'bg-amber-500/10 text-amber-500 dark:bg-amber-500/20'
-                              : 'bg-gray-500/10 text-gray-500 dark:bg-gray-500/20'
-                          }`}>
-                            {member.status.charAt(0).toUpperCase() + member.status.slice(1)}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Profile Header */}
-                      <div className="flex flex-col items-center text-center mb-4">
-                        {member.avatar_path ? (
-                          <img src={member.avatar_path} alt="" className="w-14 h-14 rounded-full object-cover mb-3 border border-black/10 shadow-inner select-none" />
-                        ) : (
-                          <div className="w-14 h-14 bg-gradient-to-br from-[#b96f3e] to-[#8a4e27] text-white rounded-full flex items-center justify-center font-bold text-[16px] mb-3 shadow-inner select-none">
-                            {initials}
-                          </div>
-                        )}
-                        <h3 className="font-bold text-[14px] text-[#122222] dark:text-white line-clamp-1 leading-snug">
-                          {member.full_name}
-                        </h3>
-                        <span className="text-[11px] text-[#122222]/50 dark:text-white/50 font-medium">
-                          {member.role || "—"}
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${
+                          member.status === 'active' 
+                            ? 'bg-emerald-500/10 text-emerald-600' 
+                            : 'bg-red-500/10 text-red-500'
+                        }`}>
+                          {t("members." + member.status)}
                         </span>
                       </div>
 
-                      {/* Details Rows */}
-                      <div className="mt-auto pt-4 border-t border-black/5 dark:border-white/5 text-[11px] space-y-2.5">
-                        <div className="flex items-center gap-2 text-[#122222]/60 dark:text-white/60">
-                          <IdCard size={13} className="text-[#122222]/40 dark:text-white/40 shrink-0" />
-                          <span className="font-mono text-[#122222]/80 dark:text-white/80 font-medium line-clamp-1">
-                            {member.member_number}
-                          </span>
+                      {/* Profile details */}
+                      <div className="flex items-center gap-3 mb-4">
+                        {member.avatar_path ? (
+                          <img src={member.avatar_path} alt="" className="h-10 w-10 rounded-full object-cover shrink-0" />
+                        ) : (
+                          <div className="h-10 w-10 rounded-full bg-emerald text-white flex items-center justify-center text-[12px] font-bold shrink-0">
+                            {initials}
+                          </div>
+                        )}
+                        <div className="min-w-0">
+                          <h3 className="font-bold text-[14px] text-[#122222] dark:text-white truncate leading-snug">{member.full_name}</h3>
+                          <p className="text-[11px] text-[#122222]/50 dark:text-white/50 truncate font-mono mt-0.5">{member.member_number}</p>
                         </div>
-                        <div className="flex items-center gap-2 text-[#122222]/60 dark:text-white/60">
-                          <Building size={13} className="text-[#122222]/40 dark:text-white/40 shrink-0" />
-                          <span className="text-[#122222]/80 dark:text-white/80 font-medium line-clamp-1">
-                            {member.department || "—"}
-                          </span>
+                      </div>
+
+                      {/* Bio Details */}
+                      <div className="space-y-2 mt-auto text-[12px] text-[#122222]/60 dark:text-white/60">
+                        <div className="flex items-center gap-2">
+                          <Building size={14} className="text-[#122222]/30 dark:text-white/30" />
+                          <span className="truncate">{member.role} • {member.department || "No Department"}</span>
                         </div>
-                        <div className="flex items-center gap-2 text-[#122222]/60 dark:text-white/60" title={member.email || member.phone || "—"}>
-                          {member.email ? (
-                            <Mail size={13} className="text-[#122222]/40 dark:text-white/40 shrink-0" />
-                          ) : (
-                            <Phone size={13} className="text-[#122222]/40 dark:text-white/40 shrink-0" />
-                          )}
-                          <span className="text-[#122222]/80 dark:text-white/80 font-medium line-clamp-1">
-                            {member.email || member.phone || "—"}
-                          </span>
-                        </div>
+                        {member.phone && (
+                          <div className="flex items-center gap-2">
+                            <Phone size={14} className="text-[#122222]/30 dark:text-white/30" />
+                            <span className="font-mono text-[11px]">{member.phone}</span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   );
                 })}
               </div>
             ) : (
-              <div className="flex flex-col items-center justify-center py-20 text-[#122222]/50 dark:text-white/50 bg-white dark:bg-[#1d2926] rounded-xl border border-black/5 dark:border-white/5 shadow-card">
-                <Phone size={48} className="mb-4 text-[#122222]/30" />
-                <p className="text-[14px]">No members found matching filters.</p>
+              <div className="flex flex-col items-center justify-center py-20 text-[#122222]/50">
+                <IdCard size={48} className="mb-4 text-[#122222]/30" />
+                <p className="text-[14px]">{t("members.noMembers")}</p>
               </div>
             )}
           </div>
-          
+
           {/* Pagination */}
-          <div className="p-3 bg-white dark:bg-[#1d2926] border border-black/5 dark:border-white/5 rounded-xl flex items-center justify-between text-[12px] text-[#122222]/60 dark:text-white/60 font-semibold bg-[#fcfbf8] dark:bg-[#111d1a] shadow-card">
-            <div>Showing {Math.min(sortedMembers.length, (page - 1) * itemsPerPage + 1)} to {Math.min(sortedMembers.length, page * itemsPerPage)} of {sortedMembers.length} results</div>
+          <div className="p-3 border-t border-black/5 dark:border-white/5 flex items-center justify-between text-[12px] text-[#122222]/60 dark:text-white/60 font-semibold bg-[#fcfbf8] dark:bg-[#111d1a] rounded-b-xl">
+            <div>{t("catalog.showing", { start: Math.min(sortedMembers.length, (page - 1) * itemsPerPage + 1), end: Math.min(sortedMembers.length, page * itemsPerPage), total: sortedMembers.length })}</div>
             <div className="flex items-center gap-1">
               <button 
-                onClick={() => setPage(p => Math.max(1, p - 1))} 
+                onClick={() => setPage(p => Math.max(1, p - 1))}
                 disabled={page === 1}
-                className="w-7 h-7 rounded flex items-center justify-center hover:bg-black/5 disabled:opacity-30"
+                className="w-7 h-7 rounded flex items-center justify-center hover:bg-black/5 disabled:opacity-30 cursor-pointer"
               >
-                <ChevronLeft size={14}/>
+                <ChevronLeft size={14} />
               </button>
               <span className="px-2">{page} / {totalPages}</span>
               <button 
-                onClick={() => setPage(p => Math.min(totalPages, p + 1))} 
+                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                 disabled={page === totalPages}
-                className="w-7 h-7 rounded flex items-center justify-center hover:bg-black/5 disabled:opacity-30"
+                className="w-7 h-7 rounded flex items-center justify-center hover:bg-black/5 disabled:opacity-30 cursor-pointer"
               >
-                <ChevronRight size={14}/>
+                <ChevronRight size={14} />
               </button>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Right Sidebar (Details Panel) */}
+      {/* Right Sidebar Details */}
       {selectedMember && (
         <MemberSidebar 
           member={selectedMember} 
@@ -352,40 +349,68 @@ export function MembersPage() {
             setSelectedMember(null);
             invalidate();
           }}
+          registerClean={registerClean}
         />
       )}
 
+      {/* Add Member Modal */}
       {adding && (
-        <Modal isOpen={adding} onClose={() => setAdding(false)} title="Register Member">
+        <Modal isOpen={adding} onClose={() => setAdding(false)} title={t("members.addMember")}>
           <form className="grid gap-4 md:grid-cols-2 text-[13px]" onSubmit={addForm.handleSubmit((values) => addMutation.mutate(values))}>
             <div className="md:col-span-2 flex justify-center py-2">
               <ImageUpload
                 value={addForm.watch("avatar_path")}
                 onChange={(val) => addForm.setValue("avatar_path", val)}
                 shape="circle"
-                label="Profile Picture"
+                label={t("members.avatar")}
               />
             </div>
-            <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60"><span>Full Name <span className="text-red-500">*</span></span>
-              <Input {...addForm.register("full_name")} placeholder="e.g. Mohaned Elamin" />
+            
+            <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 md:col-span-2">
+              <span>{t("members.fullName")} <span className="text-red-500">*</span></span>
+              <Input {...registerClean(addForm, "full_name", cleanText)} placeholder="e.g. Mohamed Benali" />
               {addForm.formState.errors.full_name && <small className="text-red-500">{addForm.formState.errors.full_name.message}</small>}
             </label>
-            <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60">Email
-              <Input type="email" {...addForm.register("email")} placeholder="e.g. mohaned@hospital.dz" />
+            
+            <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60">
+              <span>{t("members.membershipNumber")} <span className="text-red-500">*</span></span>
+              <Input {...registerClean(addForm, "member_number", cleanMemberNumber)} placeholder="e.g. MB-987654" />
+              {addForm.formState.errors.member_number && <small className="text-red-500">{addForm.formState.errors.member_number.message}</small>}
+            </label>
+
+            <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60">
+              <span>{t("members.email")}</span>
+              <Input {...registerClean(addForm, "email", cleanText)} placeholder="name@hospital.com" />
               {addForm.formState.errors.email && <small className="text-red-500">{addForm.formState.errors.email.message}</small>}
             </label>
-            <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60">Phone
-              <Input {...addForm.register("phone")} placeholder="e.g. +213 555-12345" />
+
+            <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60">
+              <span>{t("members.phone")}</span>
+              <Input {...registerClean(addForm, "phone", cleanPhone)} placeholder="+213 555 12 34 56" />
             </label>
-            <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60">Department
-              <Input {...addForm.register("department")} placeholder="e.g. Medicine" />
+
+            <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60">
+              <span>{t("members.roleLabel")} <span className="text-red-500">*</span></span>
+              <Input {...registerClean(addForm, "role", cleanText)} placeholder="e.g. Doctor, Nurse, Student" />
+              {addForm.formState.errors.role && <small className="text-red-500">{addForm.formState.errors.role.message}</small>}
             </label>
-            <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block md:col-span-2">Role / Job Title
-              <Input {...addForm.register("role")} placeholder="e.g. Resident Doctor" />
+
+            <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60">
+              <span>{t("members.departmentLabel")}</span>
+              <Input {...registerClean(addForm, "department", cleanText)} placeholder="e.g. Cardiology" />
             </label>
+
+            <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60">
+              <span>{t("status")}</span>
+              <select {...addForm.register("status")} className="field-select text-[13px] py-2 px-3 mt-1 font-semibold">
+                <option value="active">Active</option>
+                <option value="suspended">Suspended</option>
+              </select>
+            </label>
+
             <div className="md:col-span-2 flex gap-2 justify-end pt-4 border-t border-black/5 dark:border-white/5">
-              <Button type="button" variant="ghost" onClick={() => setAdding(false)}>Cancel</Button>
-              <Button type="submit" disabled={addMutation.isPending}>{addMutation.isPending ? "Registering…" : "Register member"}</Button>
+              <Button type="button" variant="ghost" onClick={() => setAdding(false)}>{t("catalog.addModal.cancel")}</Button>
+              <Button type="submit" disabled={addMutation.isPending}>{addMutation.isPending ? "Saving..." : t("catalog.addModal.save")}</Button>
             </div>
           </form>
         </Modal>
@@ -394,37 +419,50 @@ export function MembersPage() {
   );
 }
 
-function MemberSidebar({ member, onClose }: { member: Member; onClose: () => void }) {
+function MemberSidebar({ member, onClose, registerClean }: { member: Member; onClose: () => void; registerClean: any }) {
+  const { t } = useTranslation();
+  const prefs = useUiStore((state) => state.preferences);
   const [activeTab, setActiveTab] = useState<"profile" | "loans" | "reservations">("profile");
   const [isEditing, setIsEditing] = useState(false);
-  const { preferences } = useUiStore();
 
   // Queries
-  const { data: memberLoans, refetch: refetchLoans } = useQuery({
-    queryKey: ["member-loans", member.id],
-    queryFn: () => getLoansForMember(member.id)
+  const { data: memberLoans, refetch: refetchLoans } = useQuery({ 
+    queryKey: ["member-loans", member.id], 
+    queryFn: () => getLoansForMember(member.id) 
   });
-  const { data: memberReservations, refetch: refetchReservations } = useQuery({
-    queryKey: ["member-reservations", member.id],
-    queryFn: () => getReservationsForMember(member.id)
+  
+  const { data: memberReservations, refetch: refetchRes } = useQuery({ 
+    queryKey: ["member-res", member.id], 
+    queryFn: () => getReservationsForMember(member.id) 
   });
 
-  // Edit Form
-  const editForm = useForm({
+  // Edit Member Form
+  const editForm = useForm<MemberValues>({
+    resolver: zodResolver(memberSchema),
     defaultValues: {
       full_name: member.full_name,
+      member_number: member.member_number,
       email: member.email || "",
       phone: member.phone || "",
+      role: member.role || "Staff",
       department: member.department || "",
-      role: member.role || "",
       status: member.status,
-      avatar_path: member.avatar_path || ""
+      avatar_path: member.avatar_path || null
     }
   });
 
   // Mutations
-  const updateMemberMutation = useMutation({
-    mutationFn: (values: any) => updateMember(member.id, values),
+  const updateMutation = useMutation({
+    mutationFn: (values: MemberValues) => updateMember(member.id, {
+      full_name: cleanText(values.full_name),
+      member_number: cleanMemberNumber(values.member_number),
+      email: values.email ? cleanText(values.email) : "",
+      phone: values.phone ? cleanPhone(values.phone) : "",
+      role: cleanText(values.role),
+      department: values.department ? cleanText(values.department) : "",
+      status: values.status,
+      avatar_path: values.avatar_path || null
+    }),
     onSuccess: () => {
       toast.success("Member profile updated.");
       setIsEditing(false);
@@ -434,18 +472,18 @@ function MemberSidebar({ member, onClose }: { member: Member; onClose: () => voi
     onError: (err: any) => toast.error(err.message)
   });
 
-  const deleteMemberMutation = useMutation({
+  const deleteMutation = useMutation({
     mutationFn: () => deleteMember(member.id),
     onSuccess: () => {
-      toast.success("Member archived.");
+      toast.success("Member record archived.");
       invalidate();
       onClose();
     },
     onError: (err: any) => toast.error(err.message)
   });
 
-  const renewLoanMutation = useMutation({
-    mutationFn: (loanId: string) => renewLoan(loanId, preferences.loanDays),
+  const renewMutation = useMutation({
+    mutationFn: (loanId: string) => renewLoan(loanId, prefs.loanDays),
     onSuccess: () => {
       toast.success("Loan renewed.");
       refetchLoans();
@@ -454,78 +492,82 @@ function MemberSidebar({ member, onClose }: { member: Member; onClose: () => voi
     onError: (err: any) => toast.error(err.message)
   });
 
-  const returnCopyMutation = useMutation({
-    mutationFn: (copyId: string) => returnCopies([copyId]),
+  const returnMutation = useMutation({
+    mutationFn: (copyIds: string[]) => returnCopies(copyIds, prefs.reservationHoldDays),
     onSuccess: () => {
-      toast.success("Item returned.");
+      toast.success("Item returned successfully.");
       refetchLoans();
       invalidate();
     },
     onError: (err: any) => toast.error(err.message)
   });
 
-  const cancelReservationMutation = useMutation({
+  const cancelResMutation = useMutation({
     mutationFn: (resId: string) => cancelReservation(resId),
     onSuccess: () => {
       toast.success("Reservation cancelled.");
-      refetchReservations();
+      refetchRes();
       invalidate();
     },
     onError: (err: any) => toast.error(err.message)
   });
 
-  const initials = member.full_name.substring(0,2).toUpperCase();
-
   return (
-    <div className="w-[320px] shrink-0 bg-white dark:bg-[#1d2926] border border-black/5 dark:border-white/5 rounded-2xl shadow-card flex flex-col h-full overflow-hidden relative transition-transform">
+    <div className="w-[340px] shrink-0 bg-white dark:bg-[#1d2926] border border-black/5 dark:border-white/5 rounded-2xl shadow-card flex flex-col h-full overflow-hidden relative">
       {/* Header */}
       <div className="p-4 border-b border-black/5 dark:border-white/5 flex justify-between items-center bg-[#fcfbf8] dark:bg-[#111d1a]">
-        <button onClick={onClose} className="text-[#1a4d40] dark:text-[#1b9277] hover:bg-[#1a4d40]/5 p-1 rounded-md transition-colors flex items-center gap-1 text-[13px] font-bold">
-          <ChevronLeft size={16} /> Back
+        <button onClick={onClose} className="text-emerald dark:text-emerald-light hover:bg-emerald/5 p-1 rounded-md transition-colors flex items-center gap-1 text-[13px] font-bold cursor-pointer">
+          <ChevronLeft size={16} /> {t("catalog.details.back")}
         </button>
-        <button onClick={onClose} className="text-[#122222]/40 hover:text-[#122222] transition-colors"><X size={18} /></button>
+        <button onClick={onClose} className="text-[#122222]/40 hover:text-[#122222] transition-colors cursor-pointer"><X size={18} /></button>
       </div>
 
       <div className="flex-1 overflow-auto p-6 flex flex-col items-start space-y-6">
-        
-        {/* Profile Header */}
-        <div className="flex flex-col items-center w-full pb-6 border-b border-black/5 dark:border-white/5 shrink-0">
+        {/* Profile Card Header */}
+        <div className="w-full flex flex-col items-center text-center space-y-3 shrink-0">
           {member.avatar_path ? (
-            <img src={member.avatar_path} alt={member.full_name} className="w-20 h-20 rounded-full object-cover mb-4 shadow-sm border border-black/10" />
+            <img src={member.avatar_path} alt="" className="w-20 h-20 rounded-full object-cover shadow border border-black/10" />
           ) : (
-            <div className="w-20 h-20 bg-gradient-to-br from-[#b96f3e] to-[#8a4e27] text-white rounded-full flex items-center justify-center text-[32px] font-bold shadow-sm mb-4 select-none">
-              {initials}
+            <div className="w-20 h-20 rounded-full bg-emerald text-white flex items-center justify-center text-[24px] font-bold shadow-inner">
+              {member.full_name.split(/\s+/).map(n => n[0]).join("").substring(0,2).toUpperCase()}
             </div>
           )}
-          <h2 className="text-[20px] font-bold text-[#122222] dark:text-white leading-tight text-center">{member.full_name}</h2>
-          <p className="text-[13px] font-mono font-semibold text-[#122222]/60 dark:text-white/60 mt-1">{member.member_number}</p>
+          <div>
+            <h2 className="text-[17px] font-bold text-[#122222] dark:text-white leading-tight">{member.full_name}</h2>
+            <p className="text-[11px] font-mono text-[#122222]/50 mt-1">{member.member_number}</p>
+          </div>
+          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${
+            member.status === 'active' ? 'bg-emerald-500/10 text-emerald-600' : 'bg-red-500/10 text-red-500'
+          }`}>
+            {t("members." + member.status)}
+          </span>
         </div>
 
-        {/* Tabs */}
-        <div className="flex gap-4 border-b border-black/5 dark:border-white/5 w-full shrink-0">
+        {/* Tab Selection */}
+        <div className="flex w-full border-b border-black/5 dark:border-white/5 shrink-0">
           <button 
             onClick={() => { setActiveTab("profile"); setIsEditing(false); }}
-            className={`pb-2 text-[12px] font-bold border-b-2 flex-1 text-center transition-all ${
-              activeTab === "profile" ? "border-[#1a4d40] text-[#1a4d40] dark:border-[#1b9277] dark:text-[#1b9277]" : "border-transparent text-[#122222]/50 dark:text-white/50"
+            className={`flex-1 pb-2 text-[12px] font-bold border-b-2 text-center transition-all cursor-pointer ${
+              activeTab === "profile" ? "border-emerald text-emerald dark:border-emerald-light dark:text-emerald-light" : "border-transparent text-[#122222]/50 dark:text-white/50"
             }`}
           >
-            Profile
+            {t("members.tabs.profile")}
           </button>
           <button 
             onClick={() => setActiveTab("loans")}
-            className={`pb-2 text-[12px] font-bold border-b-2 flex-1 text-center transition-all ${
-              activeTab === "loans" ? "border-[#1a4d40] text-[#1a4d40] dark:border-[#1b9277] dark:text-[#1b9277]" : "border-transparent text-[#122222]/50 dark:text-white/50"
+            className={`flex-1 pb-2 text-[12px] font-bold border-b-2 text-center transition-all cursor-pointer ${
+              activeTab === "loans" ? "border-emerald text-emerald dark:border-emerald-light dark:text-emerald-light" : "border-transparent text-[#122222]/50 dark:text-white/50"
             }`}
           >
-            Loans ({memberLoans?.filter(l => !l.returned_at).length ?? 0})
+            {t("members.tabs.loans", { count: memberLoans?.length ?? 0 })}
           </button>
           <button 
             onClick={() => setActiveTab("reservations")}
-            className={`pb-2 text-[12px] font-bold border-b-2 flex-1 text-center transition-all ${
-              activeTab === "reservations" ? "border-[#1a4d40] text-[#1a4d40] dark:border-[#1b9277] dark:text-[#1b9277]" : "border-transparent text-[#122222]/50 dark:text-white/50"
+            className={`flex-1 pb-2 text-[12px] font-bold border-b-2 text-center transition-all cursor-pointer ${
+              activeTab === "reservations" ? "border-emerald text-emerald dark:border-emerald-light dark:text-emerald-light" : "border-transparent text-[#122222]/50 dark:text-white/50"
             }`}
           >
-            Holds
+            {t("members.tabs.holds", { count: memberReservations?.length ?? 0 })}
           </button>
         </div>
 
@@ -533,75 +575,75 @@ function MemberSidebar({ member, onClose }: { member: Member; onClose: () => voi
           <div className="w-full space-y-4">
             {!isEditing ? (
               <>
-                <div className="grid grid-cols-2 gap-4">
-                  <InfoRow label="Department" value={member.department || "—"} />
-                  <InfoRow label="Role / Job Title" value={member.role || "—"} />
-                </div>
-                
-                <div>
-                  <div className="text-[11px] font-bold text-[#122222]/50 dark:text-white/50 uppercase tracking-wider mb-1.5">Status</div>
-                  <div className="flex items-center gap-1.5 text-[13px] font-bold text-emerald-600">
-                    <CheckCircle2 size={14}/> {member.status.charAt(0).toUpperCase() + member.status.slice(1)}
-                  </div>
-                </div>
-
-                <div className="pt-4 border-t border-black/5 dark:border-white/5 space-y-4">
-                  <InfoRow label="Email" value={member.email || "—"} />
-                  <InfoRow label="Phone" value={member.phone || "—"} />
+                <div className="space-y-3">
+                  <SidebarInfoRow label={t("members.roleLabel")} value={member.role || "—"} />
+                  <SidebarInfoRow label={t("members.departmentLabel")} value={member.department || "—"} />
+                  {member.phone && <SidebarInfoRow label={t("members.phone")} value={member.phone} />}
+                  {member.email && (
+                    <div>
+                      <span className="text-[10px] font-bold text-[#122222]/40 dark:text-white/40 uppercase tracking-wider block">{t("members.email")}</span>
+                      <a href={`mailto:${member.email}`} className="text-[13px] font-semibold text-emerald hover:underline block mt-0.5 truncate">{member.email}</a>
+                    </div>
+                  )}
+                  <SidebarInfoRow label={t("members.registeredOn")} value={formatDisplayDate(member.joined_at)} />
                 </div>
 
-                <div className="flex gap-2 w-full pt-4 mt-auto">
+                <div className="flex gap-2 pt-4 border-t border-black/5 dark:border-white/5 w-full">
                   <button 
                     onClick={() => setIsEditing(true)}
-                    className="flex-1 flex items-center justify-center gap-2 bg-[#fcfbf8] dark:bg-[#111d1a] border border-black/10 dark:border-white/10 text-[13px] font-bold text-[#122222] dark:text-white py-2 rounded-lg hover:bg-black/5 transition-colors"
+                    className="flex-1 flex items-center justify-center gap-2 bg-[#fcfbf8] dark:bg-[#111d1a] border border-black/10 dark:border-white/10 text-[12px] font-bold text-[#122222] dark:text-white py-2 rounded-lg hover:bg-black/5 transition-colors cursor-pointer"
                   >
-                    <Edit2 size={16} /> Edit Profile
+                    <Edit2 size={14} /> {t("catalog.details.edit")}
                   </button>
                   <button 
                     onClick={() => {
-                      if (confirm("Are you sure you want to archive this member?")) deleteMemberMutation.mutate();
+                      if (confirm("Are you sure you want to delete this member? All history is retained, but eligibility ceases.")) {
+                        deleteMutation.mutate();
+                      }
                     }}
-                    className="flex-1 flex items-center justify-center gap-2 bg-red-500/10 text-red-500 text-[13px] font-bold py-2 rounded-lg hover:bg-red-500/20 transition-colors"
+                    className="flex-1 flex items-center justify-center gap-2 bg-red-500/10 text-red-500 text-[12px] font-bold py-2 rounded-lg hover:bg-red-500/20 transition-colors cursor-pointer"
                   >
-                    <Trash2 size={16} /> Archive
+                    <Trash2 size={14} /> {t("catalog.details.archive")}
                   </button>
                 </div>
               </>
             ) : (
-              <form onSubmit={editForm.handleSubmit((v) => updateMemberMutation.mutate(v))} className="space-y-3 w-full text-[13px]">
+              <form onSubmit={editForm.handleSubmit((v) => updateMutation.mutate(v))} className="space-y-3 w-full text-[13px]">
                 <div className="flex justify-center py-1">
                   <ImageUpload
                     value={editForm.watch("avatar_path")}
-                    onChange={(val) => editForm.setValue("avatar_path", val || "")}
+                    onChange={(val) => editForm.setValue("avatar_path", val || null)}
                     shape="circle"
-                    label="Profile Picture"
+                    label={t("members.avatar")}
                   />
                 </div>
-                <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">Full Name
-                  <Input {...editForm.register("full_name")} className="py-1 px-2.5 text-[13px]" />
+                <label className="text-[11px] font-semibold text-[#122222]/60 block">{t("members.fullName")}
+                  <Input {...registerClean(editForm, "full_name", cleanText)} className="py-1 px-2.5 text-[13px]" />
                 </label>
-                <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">Email
-                  <Input {...editForm.register("email")} className="py-1 px-2.5 text-[13px]" />
+                <label className="text-[11px] font-semibold text-[#122222]/60 block">{t("members.membershipNumber")}
+                  <Input {...registerClean(editForm, "member_number", cleanMemberNumber)} className="py-1 px-2.5 text-[13px]" />
                 </label>
-                <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">Phone
-                  <Input {...editForm.register("phone")} className="py-1 px-2.5 text-[13px]" />
+                <label className="text-[11px] font-semibold text-[#122222]/60 block">{t("members.email")}
+                  <Input {...registerClean(editForm, "email", cleanText)} className="py-1 px-2.5 text-[13px]" />
                 </label>
-                <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">Department
-                  <Input {...editForm.register("department")} className="py-1 px-2.5 text-[13px]" />
+                <label className="text-[11px] font-semibold text-[#122222]/60 block">{t("members.phone")}
+                  <Input {...registerClean(editForm, "phone", cleanPhone)} className="py-1 px-2.5 text-[13px]" />
                 </label>
-                <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">Role
-                  <Input {...editForm.register("role")} className="py-1 px-2.5 text-[13px]" />
+                <label className="text-[11px] font-semibold text-[#122222]/60 block">{t("members.roleLabel")}
+                  <Input {...registerClean(editForm, "role", cleanText)} className="py-1 px-2.5 text-[13px]" />
                 </label>
-                <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block font-semibold">Status
-                  <select {...editForm.register("status")} className="field-select text-[13px] py-1 px-2.5">
+                <label className="text-[11px] font-semibold text-[#122222]/60 block">{t("members.departmentLabel")}
+                  <Input {...registerClean(editForm, "department", cleanText)} className="py-1 px-2.5 text-[13px]" />
+                </label>
+                <label className="text-[11px] font-semibold text-[#122222]/60 block">{t("status")}
+                  <select {...editForm.register("status")} className="field-select text-[13px] py-1.5 px-2.5 mt-1 font-semibold">
                     <option value="active">Active</option>
                     <option value="suspended">Suspended</option>
-                    <option value="expired">Expired</option>
                   </select>
                 </label>
-                <div className="flex gap-2 pt-2">
-                  <Button type="submit" disabled={updateMemberMutation.isPending} className="flex-1 py-1.5 text-[12px]">Save</Button>
-                  <Button type="button" variant="ghost" onClick={() => setIsEditing(false)} className="flex-1 py-1.5 text-[12px]">Cancel</Button>
+                <div className="flex gap-2 justify-end pt-3 border-t border-black/5 dark:border-white/5">
+                  <Button type="button" variant="ghost" onClick={() => setIsEditing(false)}>{t("catalog.addModal.cancel")}</Button>
+                  <Button type="submit" disabled={updateMutation.isPending}>{updateMutation.isPending ? "Saving..." : t("save")}</Button>
                 </div>
               </form>
             )}
@@ -609,75 +651,75 @@ function MemberSidebar({ member, onClose }: { member: Member; onClose: () => voi
         )}
 
         {activeTab === "loans" && (
-          <div className="w-full space-y-3">
-            <h4 className="font-bold text-[13px] text-[#122222] dark:text-white">Active Loans</h4>
-            <div className="space-y-3 max-h-96 overflow-y-auto pr-1 w-full">
-              {memberLoans?.filter(l => !l.returned_at).length ? (
-                memberLoans.filter(l => !l.returned_at).map((loan) => {
-                  const late = daysLate(loan.due_at);
-                  return (
-                    <div key={loan.id} className="p-3 rounded-xl border border-black/5 dark:border-white/5 bg-[#fcfbf8] dark:bg-[#111d1a] space-y-2.5">
+          <div className="w-full space-y-3 max-h-[400px] overflow-y-auto pr-1">
+            {memberLoans?.length ? (
+              memberLoans.map((loan) => {
+                const overdue = daysLate(loan.due_at) > 0;
+                const renewDisabled = loan.renewed_count >= prefs.renewLimit;
+
+                return (
+                  <div key={loan.id} className="p-3 bg-[#fcfbf8] dark:bg-[#111d1a] border border-black/5 dark:border-white/5 rounded-xl flex flex-col gap-2">
+                    <div className="flex justify-between items-start">
                       <div className="min-w-0">
-                        <p className="font-bold text-[12px] text-[#122222] dark:text-white truncate">{loan.title}</p>
-                        <p className="text-[10px] text-[#122222]/50 mt-0.5 font-mono truncate">BC: {loan.barcode}</p>
+                        <h4 className="text-[13px] font-bold text-[#122222] dark:text-white truncate leading-snug">{loan.title}</h4>
+                        <span className="text-[10px] text-[#122222]/50 dark:text-white/50 block font-mono mt-0.5">{loan.barcode}</span>
                       </div>
-                      <div className="flex justify-between items-center text-[10px]">
-                        <span className={`font-bold ${late > 0 ? "text-red-500" : "text-[#122222]/60 dark:text-white/60"}`}>
-                          Due: {formatDisplayDate(loan.due_at)} {late > 0 && `(${late}d late)`}
-                        </span>
-                      </div>
-                      <div className="flex gap-2 pt-1 border-t border-black/5">
-                        <button 
-                          onClick={() => renewLoanMutation.mutate(loan.id)}
-                          disabled={renewLoanMutation.isPending}
-                          className="flex-1 py-1 bg-white border rounded text-[11px] font-semibold text-[#122222] hover:bg-black/5"
-                        >
-                          Renew
-                        </button>
-                        <button 
-                          onClick={() => returnCopyMutation.mutate(loan.copy_id)}
-                          disabled={returnCopyMutation.isPending}
-                          className="flex-1 py-1 bg-[#1a4d40] text-white rounded text-[11px] font-semibold hover:bg-[#1a4d40]/90"
-                        >
-                          Return
-                        </button>
-                      </div>
+                      <span className={`text-[10px] font-bold ${overdue ? 'text-red-500' : 'text-[#122222]/60'}`}>
+                        {overdue ? "Overdue" : "On loan"}
+                      </span>
                     </div>
-                  );
-                })
-              ) : (
-                <div className="text-center py-6 text-[12px] text-[#122222]/40 dark:text-white/40">No active loans.</div>
-              )}
-            </div>
+                    <div className="text-[11px] text-[#122222]/65 dark:text-white/65">
+                      Due date: <span className="font-semibold">{formatDisplayDate(loan.due_at)}</span>
+                    </div>
+                    <div className="flex gap-2 mt-1">
+                      <button 
+                        onClick={() => renewMutation.mutate(loan.id)}
+                        disabled={renewMutation.isPending || renewDisabled}
+                        className="flex-1 flex items-center justify-center gap-1 py-1 text-[11px] font-semibold text-[#122222]/80 dark:text-white/80 bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 rounded cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                        title={renewDisabled ? "Renewal limit reached" : undefined}
+                      >
+                        Renew ({loan.renewed_count}/{prefs.renewLimit})
+                      </button>
+                      <button 
+                        onClick={() => returnMutation.mutate([loan.copy_id])}
+                        disabled={returnMutation.isPending}
+                        className="flex-1 flex items-center justify-center gap-1 py-1 text-[11px] font-semibold text-emerald bg-emerald/10 dark:bg-emerald-light/10 dark:text-emerald-light hover:bg-emerald/20 rounded cursor-pointer"
+                      >
+                        Return
+                      </button>
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <p className="text-[13px] text-[#122222]/50 text-center py-6">No books currently checked out.</p>
+            )}
           </div>
         )}
 
         {activeTab === "reservations" && (
-          <div className="w-full space-y-3">
-            <h4 className="font-bold text-[13px] text-[#122222] dark:text-white">Active Reservations</h4>
-            <div className="space-y-3 max-h-96 overflow-y-auto pr-1 w-full">
-              {memberReservations?.filter(r => r.status === "queued" || r.status === "ready").length ? (
-                memberReservations.filter(r => r.status === "queued" || r.status === "ready").map((res) => (
-                  <div key={res.id} className="p-3 rounded-xl border border-black/5 dark:border-white/5 bg-[#fcfbf8] dark:bg-[#111d1a] flex justify-between items-center">
-                    <div className="min-w-0 flex-1 pr-2">
-                      <p className="font-bold text-[12px] text-[#122222] dark:text-white truncate">{res.title}</p>
-                      <p className="text-[10px] text-[#122222]/50 mt-0.5 truncate">Queue: #{res.position} · Status: {res.status}</p>
-                    </div>
-                    <button 
-                      onClick={() => {
-                        if (confirm("Cancel reservation?")) cancelReservationMutation.mutate(res.id);
-                      }}
-                      disabled={cancelReservationMutation.isPending}
-                      className="text-red-500 hover:text-red-700 p-1 text-[11px] font-semibold shrink-0"
-                    >
-                      Cancel
-                    </button>
+          <div className="w-full space-y-3 max-h-[400px] overflow-y-auto pr-1">
+            {memberReservations?.length ? (
+              memberReservations.map((res) => (
+                <div key={res.id} className="p-3 bg-[#fcfbf8] dark:bg-[#111d1a] border border-black/5 dark:border-white/5 rounded-xl flex items-center justify-between">
+                  <div className="min-w-0">
+                    <h4 className="text-[13px] font-bold text-[#122222] dark:text-white truncate leading-snug">{res.title}</h4>
+                    <span className={`text-[10px] font-bold capitalize block mt-0.5 ${
+                      res.status === 'ready' ? 'text-emerald' : 'text-[#b96f3e]'
+                    }`}>{res.status}</span>
                   </div>
-                ))
-              ) : (
-                <div className="text-center py-6 text-[12px] text-[#122222]/40 dark:text-white/40">No active reservations.</div>
-              )}
-            </div>
+                  <button 
+                    onClick={() => cancelResMutation.mutate(res.id)}
+                    disabled={cancelResMutation.isPending}
+                    className="text-red-500 hover:text-red-700 text-[11px] font-bold shrink-0 cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              ))
+            ) : (
+              <p className="text-[13px] text-[#122222]/50 text-center py-6">No reservations placed.</p>
+            )}
           </div>
         )}
       </div>
@@ -685,13 +727,11 @@ function MemberSidebar({ member, onClose }: { member: Member; onClose: () => voi
   );
 }
 
-function InfoRow({ label, value }: { label: string, value: string }) {
+function SidebarInfoRow({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <div className="text-[11px] font-bold text-[#122222]/50 dark:text-white/50 uppercase tracking-wider mb-0.5">{label}</div>
-      <div className="text-[13px] font-semibold text-[#122222] dark:text-white">
-        {value}
-      </div>
+      <span className="text-[10px] font-bold text-[#122222]/40 dark:text-white/40 uppercase tracking-wider block">{label}</span>
+      <span className="text-[13px] font-semibold text-[#122222] dark:text-white block mt-0.5">{value}</span>
     </div>
   );
 }
