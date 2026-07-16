@@ -7,7 +7,7 @@ import {
   ScanLine, RotateCcw, RotateCw, BookCopy, UsersRound
 } from "lucide-react";
 import { dashboard, reservations } from "../data/repositories/library";
-import { daysLate } from "../utils/dates";
+import { daysLate, formatDisplayDate } from "../utils/dates";
 
 export function DashboardPage() {
   const navigate = useNavigate();
@@ -220,7 +220,7 @@ export function DashboardPage() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <h4 className="text-[13px] font-bold text-[#122222] dark:text-white truncate">{loan.title}</h4>
-                        <p className="text-[11px] text-[#122222]/50 dark:text-white/50 truncate">Due: {loan.due_at}</p>
+                        <p className="text-[11px] text-[#122222]/50 dark:text-white/50 truncate">Due: {formatDisplayDate(loan.due_at)}</p>
                       </div>
                       <div className="text-right flex items-center gap-2">
                         <div>

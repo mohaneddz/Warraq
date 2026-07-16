@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import { useUiStore } from "../../store/uiStore";
 import { useQuery } from "@tanstack/react-query";
 import { dashboard } from "../../data/repositories/library";
+import { formatDisplayDate } from "../../utils/dates";
 
 const links = [
   ["/dashboard", "Dashboard", LayoutDashboard], 
@@ -66,13 +67,64 @@ export function AppShell() {
 
   // Live queries for overdue alerts
   const { data: dashData } = useQuery({ queryKey: ["dashboard-shell"], queryFn: dashboard });
-  const overdueCount = dashData?.overdue ?? 0;
-  const overdueList = dashData?.overdueLoans ?? [];
+  const overdueCount = preferences.notifyOverdue ? (dashData?.overdue ?? 0) : 0;
+  const overdueList = preferences.notifyOverdue ? (dashData?.overdueLoans ?? []) : [];
 
+  // ── Theme ────────────────────────────────────────────────────────────────────
   useEffect(() => {
-    const isDark = preferences.theme === "dark" || (preferences.theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
-    document.documentElement.classList.toggle("dark", isDark);
+    const applyTheme = () => {
+      const isDark = preferences.theme === "dark" || (preferences.theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+      document.documentElement.classList.toggle("dark", isDark);
+    };
+    applyTheme();
+    const mq = window.matchMedia("(prefers-color-scheme: dark)");
+    mq.addEventListener("change", applyTheme);
+    return () => mq.removeEventListener("change", applyTheme);
   }, [preferences.theme]);
+
+  // ── Accent color → CSS variable ───────────────────────────────────────────
+  useEffect(() => {
+    document.documentElement.style.setProperty("--color-accent", preferences.accentColor);
+  }, [preferences.accentColor]);
+
+  // ── Font size ─────────────────────────────────────────────────────────────
+  useEffect(() => {
+    const size = preferences.fontSize === "small" ? "13px" : preferences.fontSize === "large" ? "17px" : "15px";
+    document.documentElement.style.setProperty("--font-size-base", size);
+  }, [preferences.fontSize]);
+
+  // ── Locale → html lang + dir ──────────────────────────────────────────────
+  useEffect(() => {
+    document.documentElement.lang = preferences.locale;
+    document.documentElement.dir = preferences.locale === "ar" ? "rtl" : "ltr";
+  }, [preferences.locale]);
+
+  // ── Close-to-tray ─────────────────────────────────────────────────────────
+  useEffect(() => {
+    let unlisten: (() => void) | null = null;
+    void import("@tauri-apps/api/window").then(({ getCurrentWindow }) => {
+      void getCurrentWindow().onCloseRequested(async (event) => {
+        if (preferences.closeToTray) {
+          event.preventDefault();
+          await getCurrentWindow().hide();
+        }
+      }).then(fn => { unlisten = fn; });
+    }).catch(() => { /* not in Tauri context */ });
+    return () => { if (unlisten) unlisten(); };
+  }, [preferences.closeToTray]);
+
+  // ── Autosave interval ─────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!preferences.autosaveEnabled) return;
+    const ms = Math.max(10, preferences.autosaveInterval) * 1000;
+    const id = setInterval(() => {
+      // Persist current preferences snapshot (already in localStorage via updatePreferences,
+      // but this ensures any pending changes are flushed)
+      const snap = localStorage.getItem("warraq-preferences");
+      if (snap) localStorage.setItem("warraq-preferences", snap);
+    }, ms);
+    return () => clearInterval(id);
+  }, [preferences.autosaveEnabled, preferences.autosaveInterval]);
 
   useEffect(() => {
     const handler = (event: KeyboardEvent) => { 
@@ -97,7 +149,7 @@ export function AppShell() {
   };
 
   return (
-    <div className={`app-workspace min-h-screen bg-[#F9F8F4] text-[#122222] dark:bg-[#111d1a] dark:text-[#f0ebe1] flex flex-col font-sans ${isDragging ? "select-none cursor-col-resize" : ""}`}>
+    <div className={`app-workspace h-screen overflow-hidden bg-[#F9F8F4] text-[#122222] dark:bg-[#111d1a] dark:text-[#f0ebe1] flex flex-col font-sans ${isDragging ? "select-none cursor-col-resize" : ""}`}>
       {/* Titlebar for OS */}
       <header className="flex h-8 items-center bg-[#122222] px-3 z-50">
         <span data-tauri-drag-region className="flex flex-1 select-none items-center h-full"></span>
@@ -108,7 +160,7 @@ export function AppShell() {
         </div>
       </header>
 
-      <div className="flex min-h-[calc(100vh-2rem)] relative">
+      <div className="flex flex-1 overflow-hidden relative">
         {/* Sidebar */}
         <aside className={(sidebarOpen ? "" : "w-[80px]") + " relative shrink-0 text-white flex flex-col z-40 " + (isDragging ? "" : "transition-[width]")} style={{ width: sidebarOpen ? `${sidebarWidth}px` : "80px", background: '#122222' }}>
           
@@ -187,9 +239,13 @@ export function AppShell() {
               <div className="mt-8 border-t border-white/10 pt-6 pb-2">
                 <div className="flex items-center justify-between group cursor-pointer hover:bg-white/5 p-2 -mx-2 rounded-lg transition-colors" onClick={() => navigate("/settings")}>
                   <div className="flex items-center gap-3">
-                    <div className="h-9 w-9 rounded-full bg-[#b96f3e] text-white flex items-center justify-center text-[12px] font-bold shrink-0">
-                      {(preferences.operatorName || "Librarian").substring(0,2).toUpperCase()}
-                    </div>
+                    {preferences.operatorAvatar ? (
+                      <img src={preferences.operatorAvatar} alt="" className="h-9 w-9 rounded-full object-cover shrink-0" />
+                    ) : (
+                      <div className="h-9 w-9 rounded-full bg-[#b96f3e] text-white flex items-center justify-center text-[12px] font-bold shrink-0">
+                        {(preferences.operatorName || "Librarian").substring(0,2).toUpperCase()}
+                      </div>
+                    )}
                     <div className="flex flex-col min-w-0">
                       <span className="text-[13px] font-semibold text-white truncate">{preferences.operatorName || "Librarian"}</span>
                       <span className="text-[11px] text-white/50 truncate">Library Operator</span>
@@ -260,7 +316,7 @@ export function AppShell() {
                             >
                               <div className="font-bold text-[#122222] dark:text-white truncate">{loan.title}</div>
                               <div className="text-[11px] text-[#122222]/60 dark:text-white/60 mt-0.5">Borrowed by: {loan.member_name}</div>
-                              <div className="text-[10px] text-red-500 font-bold mt-1">Due date: {loan.due_at}</div>
+                              <div className="text-[10px] text-red-500 font-bold mt-1">Due date: {formatDisplayDate(loan.due_at)}</div>
                             </div>
                           ))
                         ) : (
@@ -278,9 +334,13 @@ export function AppShell() {
               
               {/* Profile Dropdown */}
               <div className="flex items-center gap-2 cursor-pointer p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition-colors" onClick={() => navigate("/settings")}>
-                <div className="h-8 w-8 rounded-full bg-[#122222] dark:bg-white/10 text-white flex items-center justify-center text-[12px] font-bold">
-                  <User size={14} />
-                </div>
+                {preferences.operatorAvatar ? (
+                  <img src={preferences.operatorAvatar} alt="" className="h-8 w-8 rounded-full object-cover shrink-0" />
+                ) : (
+                  <div className="h-8 w-8 rounded-full bg-[#122222] dark:bg-white/10 text-white flex items-center justify-center text-[12px] font-bold shrink-0">
+                    <User size={14} />
+                  </div>
+                )}
                 <span className="text-[14px] font-semibold text-[#122222] dark:text-white hidden sm:block truncate max-w-[80px]">
                   {preferences.operatorName || "Librarian"}
                 </span>

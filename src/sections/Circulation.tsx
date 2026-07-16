@@ -7,7 +7,7 @@ import {
 import { useUiStore } from "../store/uiStore";
 import { queryClient } from "../app/providers";
 import { toast } from "sonner";
-import { daysLate } from "../utils/dates";
+import { daysLate, formatDisplayDate } from "../utils/dates";
 import type { Member, Copy } from "../types";
 
 const invalidate = () => queryClient.invalidateQueries();
@@ -259,7 +259,7 @@ export function CirculationPage() {
                             <div className="flex items-center gap-2 mt-1">
                               <span className={`text-[10px] flex items-center gap-1 font-bold ${overdue ? "text-red-500" : "text-[#122222]/60 dark:text-white/60"}`}>
                                 {overdue && <AlertTriangle size={10} />}
-                                Due: {loan.due_at} {overdue && `(${daysLate(loan.due_at)} days overdue)`}
+                                Due: {formatDisplayDate(loan.due_at)} {overdue && `(${daysLate(loan.due_at)} days overdue)`}
                               </span>
                             </div>
                           </div>

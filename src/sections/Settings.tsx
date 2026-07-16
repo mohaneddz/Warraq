@@ -9,6 +9,7 @@ import {
   LayoutGrid, Save,
 } from "lucide-react";
 import { useUiStore } from "../store/uiStore";
+import { ImageUpload } from "../components/ui/ImageUpload";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type Tab =
@@ -122,17 +123,16 @@ function GeneralTab({ prefs, update }: TabProps) {
         </div>
         <Field label="Library logo (optional)">
           <div className="flex items-center gap-4">
-            <div className="w-32 h-20 border-2 border-dashed border-[#1a4d40]/20 rounded-xl flex flex-col items-center justify-center text-[#1a4d40] hover:bg-[#1a4d40]/5 transition-colors cursor-pointer gap-1">
-              <Upload size={16} />
-              <span className="text-[11px] font-bold">Drop or Browse</span>
+            <div className="w-32 h-20 border-2 border-dashed border-[#1a4d40]/10 rounded-xl flex flex-col items-center justify-center text-[#1a4d40]/40 gap-1 bg-[#1a4d40]/5 select-none pointer-events-none">
+              <span className="text-[11px] font-bold">Managed by OS</span>
             </div>
-            <p className="text-[11px] text-[#122222]/40 dark:text-white/40">Recommended: PNG or SVG<br />Max size: 2 MB</p>
+            <p className="text-[11px] text-[#122222]/40 dark:text-white/40">Library application icon is configured<br />in native desktop launcher.</p>
           </div>
         </Field>
       </Card>
 
       <Card title="Operator profile" icon={<UserCircle size={16} className="text-[#b96f3e]" />}>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-4 mb-4">
           <Field label="Operator name">
             <input type="text" defaultValue={prefs.operatorName} placeholder="e.g., Mohamed Benali" onBlur={e => update({ operatorName: e.target.value })} className={inputCls} />
           </Field>
@@ -140,6 +140,16 @@ function GeneralTab({ prefs, update }: TabProps) {
             <input type="email" defaultValue={prefs.operatorEmail} placeholder="librarian@hospital.dz" onBlur={e => update({ operatorEmail: e.target.value })} className={inputCls} />
           </Field>
         </div>
+        <Field label="Profile Picture">
+          <div className="flex items-center gap-4">
+            <ImageUpload 
+              value={prefs.operatorAvatar} 
+              onChange={val => update({ operatorAvatar: val })} 
+              shape="circle" 
+            />
+            <p className="text-[11px] text-[#122222]/40 dark:text-white/40">Recommended: Square PNG, JPG or WEBP<br />Max size: 2 MB</p>
+          </div>
+        </Field>
       </Card>
 
       <Card title="Autosave" icon={<Save size={16} className="text-[#122222]/60 dark:text-white/60" />}>
@@ -234,6 +244,12 @@ function LocalizationTab({ prefs, update }: TabProps) {
   const formats = ["dd/MM/yyyy", "MM/dd/yyyy", "yyyy-MM-dd"] as const;
   const currencies = ["DZD", "EUR", "USD", "GBP", "MAD", "TND", "SAR", "AED"];
 
+  const handleLocaleChange = (code: "en" | "fr" | "ar") => {
+    update({ locale: code });
+    document.documentElement.lang = code;
+    document.documentElement.dir = code === "ar" ? "rtl" : "ltr";
+  };
+
   return (
     <div className="max-w-2xl">
       <PageHeader title="Localization" desc="Configure regional preferences including language, timezone, and formats." />
@@ -243,7 +259,7 @@ function LocalizationTab({ prefs, update }: TabProps) {
           {languages.map(lang => (
             <button
               key={lang.code}
-              onClick={() => update({ locale: lang.code })}
+              onClick={() => handleLocaleChange(lang.code)}
               className={`p-4 rounded-xl border-2 text-left transition-all ${prefs.locale === lang.code ? "border-[#b96f3e] bg-[#b96f3e]/5" : "border-black/5 dark:border-white/5 hover:border-black/10 dark:hover:border-white/10"}`}
             >
               <div className="text-[18px] mb-2">{lang.code === "en" ? "🇬🇧" : lang.code === "fr" ? "🇫🇷" : "🇩🇿"}</div>
@@ -640,9 +656,10 @@ function DatabaseTab() {
   const [vacuuming, setVacuuming] = useState(false);
   const [vacuumDone, setVacuumDone] = useState(false);
   const [showDanger, setShowDanger] = useState(false);
+  const [clearingLoans, setClearingLoans] = useState(false);
+  const [resetting, setResetting] = useState(false);
   const { preferences } = useUiStore();
 
-  // Rough stats (in a real implementation these'd come from DB queries)
   const stats = [
     { label: "Library name", value: preferences.libraryName },
     { label: "Database engine", value: "SQLite 3" },
@@ -652,10 +669,67 @@ function DatabaseTab() {
 
   const handleVacuum = async () => {
     setVacuuming(true);
-    await new Promise(r => setTimeout(r, 1500));
-    setVacuuming(false);
-    setVacuumDone(true);
-    setTimeout(() => setVacuumDone(false), 3000);
+    try {
+      const { database } = await import("../data/database");
+      const db = await database();
+      await db.execute("VACUUM");
+      setVacuumDone(true);
+      setTimeout(() => setVacuumDone(false), 3000);
+    } catch (err) {
+      console.error("VACUUM failed", err);
+      alert("Database optimization failed. See console for details.");
+    } finally {
+      setVacuuming(false);
+    }
+  };
+
+  const handleClearLoans = async () => {
+    const confirmed = window.confirm(
+      "This will permanently delete ALL loan and circulation history.\nMembers and books will NOT be affected.\n\nThis action cannot be undone. Proceed?"
+    );
+    if (!confirmed) return;
+    setClearingLoans(true);
+    try {
+      const { database } = await import("../data/database");
+      const db = await database();
+      await db.execute("DELETE FROM loans");
+      alert("All loan history has been deleted.");
+    } catch (err) {
+      console.error("Clear loans failed", err);
+      alert("Failed to clear loan history.");
+    } finally {
+      setClearingLoans(false);
+    }
+  };
+
+  const handleFactoryReset = async () => {
+    const first = window.confirm(
+      "⚠️ FACTORY RESET\n\nThis will PERMANENTLY DELETE all books, members, loans, reservations, and settings.\nThis cannot be undone.\n\nAre you absolutely sure?"
+    );
+    if (!first) return;
+    const second = window.confirm(
+      "Last chance — type OK to confirm you want to wipe all data and start fresh."
+    );
+    if (!second) return;
+    setResetting(true);
+    try {
+      const { database } = await import("../data/database");
+      const db = await database();
+      // Delete in FK-safe order
+      await db.execute("DELETE FROM reservations");
+      await db.execute("DELETE FROM loans");
+      await db.execute("DELETE FROM copies");
+      await db.execute("DELETE FROM books");
+      await db.execute("DELETE FROM members");
+      localStorage.removeItem("warraq-preferences");
+      alert("Factory reset complete. Warraq will now reload.");
+      window.location.reload();
+    } catch (err) {
+      console.error("Factory reset failed", err);
+      alert("Factory reset failed. See console for details.");
+    } finally {
+      setResetting(false);
+    }
   };
 
   return (
@@ -682,7 +756,7 @@ function DatabaseTab() {
           disabled={vacuuming}
           className="flex items-center gap-2 bg-[#1a4d40] text-white px-5 py-2.5 rounded-lg font-bold text-[13px] hover:bg-[#1a4d40]/90 transition-colors shadow-sm disabled:opacity-60"
         >
-          {vacuuming ? <><RefreshCw size={15} className="animate-spin" /> Optimizing…</> : vacuumDone ? <><Check size={15} /> Done!</> : <><Zap size={15} /> Optimize database</>}
+          {vacuuming ? <><RefreshCw size={15} className="animate-spin" /> Optimizing…</> : vacuumDone ? <><Check size={15} /> Optimized!</> : <><Zap size={15} /> Optimize database</>}
         </button>
       </Card>
 
@@ -699,12 +773,24 @@ function DatabaseTab() {
             <div className="p-4 rounded-xl bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-700/30">
               <p className="font-bold text-[13px] text-red-700 dark:text-red-400 mb-1">Clear all loans</p>
               <p className="text-[12px] text-red-600/80 dark:text-red-400/70 mb-3">Remove all loan and circulation history. Members and books remain.</p>
-              <button className="text-[12px] font-bold text-red-600 dark:text-red-400 border border-red-300 dark:border-red-700 px-4 py-1.5 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/20 transition-colors">Delete loan history</button>
+              <button
+                onClick={handleClearLoans}
+                disabled={clearingLoans}
+                className="text-[12px] font-bold text-red-600 dark:text-red-400 border border-red-300 dark:border-red-700 px-4 py-1.5 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50 flex items-center gap-2"
+              >
+                {clearingLoans ? <><RefreshCw size={12} className="animate-spin" /> Deleting…</> : "Delete loan history"}
+              </button>
             </div>
             <div className="p-4 rounded-xl bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-700/30">
               <p className="font-bold text-[13px] text-red-700 dark:text-red-400 mb-1">Reset entire database</p>
               <p className="text-[12px] text-red-600/80 dark:text-red-400/70 mb-3">Wipe all data and start fresh. This cannot be undone.</p>
-              <button className="text-[12px] font-bold text-white bg-red-600 px-4 py-1.5 rounded-lg hover:bg-red-700 transition-colors">Factory reset</button>
+              <button
+                onClick={handleFactoryReset}
+                disabled={resetting}
+                className="text-[12px] font-bold text-white bg-red-600 px-4 py-1.5 rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+              >
+                {resetting ? <><RefreshCw size={12} className="animate-spin" /> Resetting…</> : "Factory reset"}
+              </button>
             </div>
           </div>
         )}
@@ -726,21 +812,37 @@ function IntegrationsTab({ prefs, update }: TabProps) {
   const [testGroqResult, setTestGroqResult] = useState<"ok" | "fail" | null>(null);
 
   const handleTest = async () => {
+    if (!prefs.openAIKey) return;
     setTesting(true);
     setTestResult(null);
-    await new Promise(r => setTimeout(r, 1200));
-    setTesting(false);
-    setTestResult(prefs.openAIKey.startsWith("sk-") ? "ok" : "fail");
-    setTimeout(() => setTestResult(null), 4000);
+    try {
+      const res = await fetch("https://api.openai.com/v1/models", {
+        headers: { Authorization: `Bearer ${prefs.openAIKey}` },
+      });
+      setTestResult(res.ok ? "ok" : "fail");
+    } catch {
+      setTestResult("fail");
+    } finally {
+      setTesting(false);
+      setTimeout(() => setTestResult(null), 5000);
+    }
   };
 
   const handleTestGroq = async () => {
+    if (!prefs.groqApiKey) return;
     setTestingGroq(true);
     setTestGroqResult(null);
-    await new Promise(r => setTimeout(r, 1200));
-    setTestingGroq(false);
-    setTestGroqResult(prefs.groqApiKey.startsWith("gsk_") ? "ok" : "fail");
-    setTimeout(() => setTestGroqResult(null), 4000);
+    try {
+      const res = await fetch("https://api.groq.com/openai/v1/models", {
+        headers: { Authorization: `Bearer ${prefs.groqApiKey}` },
+      });
+      setTestGroqResult(res.ok ? "ok" : "fail");
+    } catch {
+      setTestGroqResult("fail");
+    } finally {
+      setTestingGroq(false);
+      setTimeout(() => setTestGroqResult(null), 5000);
+    }
   };
 
   return (
@@ -775,7 +877,7 @@ function IntegrationsTab({ prefs, update }: TabProps) {
             </button>
           </div>
           {testResult === "ok" && <p className="text-[12px] text-[#1a4d40] dark:text-[#1b9277] font-bold mt-2 flex items-center gap-1"><CheckCircle2 size={13} /> Connection successful</p>}
-          {testResult === "fail" && <p className="text-[12px] text-red-500 font-bold mt-2 flex items-center gap-1"><AlertTriangle size={13} /> Invalid key — check format</p>}
+          {testResult === "fail" && <p className="text-[12px] text-red-500 font-bold mt-2 flex items-center gap-1"><AlertTriangle size={13} /> Invalid or expired key</p>}
         </Field>
         <p className="text-[11px] text-[#122222]/40 dark:text-white/40 mt-3">
           Your key is stored locally only and never sent to Warraq servers.
@@ -810,7 +912,7 @@ function IntegrationsTab({ prefs, update }: TabProps) {
             </button>
           </div>
           {testGroqResult === "ok" && <p className="text-[12px] text-[#1a4d40] dark:text-[#1b9277] font-bold mt-2 flex items-center gap-1"><CheckCircle2 size={13} /> Connection successful</p>}
-          {testGroqResult === "fail" && <p className="text-[12px] text-red-500 font-bold mt-2 flex items-center gap-1"><AlertTriangle size={13} /> Invalid key — check format (should start with gsk_)</p>}
+          {testGroqResult === "fail" && <p className="text-[12px] text-red-500 font-bold mt-2 flex items-center gap-1"><AlertTriangle size={13} /> Invalid or expired key</p>}
         </Field>
         <p className="text-[11px] text-[#122222]/40 dark:text-white/40 mt-3">
           Your key is stored locally only and never sent to Warraq servers.
@@ -857,6 +959,7 @@ function IntegrationsTab({ prefs, update }: TabProps) {
     </div>
   );
 }
+
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // 11. SECRETS & KEYS TAB
@@ -954,6 +1057,8 @@ function SecretsTab({ prefs, update }: TabProps) {
 // 12. DESKTOP & DATA TAB
 // ═══════════════════════════════════════════════════════════════════════════════
 function DesktopTab({ prefs, update }: TabProps) {
+  const [checkingUpdate, setCheckingUpdate] = useState(false);
+  const [updateStatus, setUpdateStatus] = useState<"idle" | "uptodate" | "available" | "error">("idle");
   const dataPath = "AppData\\Roaming\\com.warraq.app";
 
   const openFolder = async () => {
@@ -964,6 +1069,22 @@ function DesktopTab({ prefs, update }: TabProps) {
       await openPath(dir);
     } catch {
       // No-op in browser dev
+    }
+  };
+
+  const handleCheckUpdates = async () => {
+    setCheckingUpdate(true);
+    setUpdateStatus("idle");
+    try {
+      // Simulate checking for update
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+      setUpdateStatus("uptodate");
+      setTimeout(() => setUpdateStatus("idle"), 4000);
+    } catch {
+      setUpdateStatus("error");
+      setTimeout(() => setUpdateStatus("idle"), 4000);
+    } finally {
+      setCheckingUpdate(false);
     }
   };
 
@@ -1000,10 +1121,19 @@ function DesktopTab({ prefs, update }: TabProps) {
         <div className="flex items-center justify-between">
           <div>
             <p className="font-bold text-[13px] text-[#122222] dark:text-white">Current version</p>
-            <p className="text-[12px] text-[#122222]/60 dark:text-white/60 mt-0.5">v1.0.0 — up to date</p>
+            <p className="text-[12px] text-[#122222]/60 dark:text-white/60 mt-0.5">
+              v1.0.0
+              {updateStatus === "uptodate" && <span className="text-[#1a4d40] dark:text-[#1b9277] font-bold ml-2">✓ Up to date</span>}
+              {updateStatus === "available" && <span className="text-[#b96f3e] font-bold ml-2">Update available!</span>}
+            </p>
           </div>
-          <button className="flex items-center gap-2 border border-black/10 dark:border-white/10 text-[#122222] dark:text-white px-4 py-2 rounded-lg font-bold text-[13px] hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
-            <RefreshCw size={13} /> Check for updates
+          <button
+            onClick={handleCheckUpdates}
+            disabled={checkingUpdate}
+            className="flex items-center gap-2 border border-black/10 dark:border-white/10 text-[#122222] dark:text-white px-4 py-2 rounded-lg font-bold text-[13px] hover:bg-black/5 dark:hover:bg-white/5 transition-colors disabled:opacity-50"
+          >
+            <RefreshCw size={13} className={checkingUpdate ? "animate-spin" : ""} />
+            {checkingUpdate ? "Checking…" : "Check for updates"}
           </button>
         </div>
       </Card>

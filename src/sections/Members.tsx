@@ -14,7 +14,7 @@ import {
 import type { Member } from "../types";
 import { Modal, Input, Button } from "../components/ui/primitives";
 import { toast } from "sonner";
-import { daysLate } from "../utils/dates";
+import { daysLate, formatDisplayDate } from "../utils/dates";
 import { queryClient } from "../app/providers";
 import { useUiStore } from "../store/uiStore";
 import { ImageUpload } from "../components/ui/ImageUpload";
@@ -623,7 +623,7 @@ function MemberSidebar({ member, onClose }: { member: Member; onClose: () => voi
                       </div>
                       <div className="flex justify-between items-center text-[10px]">
                         <span className={`font-bold ${late > 0 ? "text-red-500" : "text-[#122222]/60 dark:text-white/60"}`}>
-                          Due: {loan.due_at} {late > 0 && `(${late}d late)`}
+                          Due: {formatDisplayDate(loan.due_at)} {late > 0 && `(${late}d late)`}
                         </span>
                       </div>
                       <div className="flex gap-2 pt-1 border-t border-black/5">
