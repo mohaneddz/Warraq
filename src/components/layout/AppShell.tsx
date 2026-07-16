@@ -3,8 +3,9 @@ import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useEffect, useState, useRef } from "react";
 import { useUiStore } from "../../store/uiStore";
 import { useQuery } from "@tanstack/react-query";
-import { dashboard } from "../../data/repositories/library";
+import { dashboard, reservations } from "../../data/repositories/library";
 import { formatDisplayDate } from "../../utils/dates";
+import { useTranslation } from "react-i18next";
 
 const links = [
   ["/dashboard", "Dashboard", LayoutDashboard], 
@@ -65,10 +66,24 @@ export function AppShell() {
     };
   }, [isDragging, preferences.locale]);
 
+  const { t } = useTranslation();
+
   // Live queries for overdue alerts
   const { data: dashData } = useQuery({ queryKey: ["dashboard-shell"], queryFn: dashboard });
   const overdueCount = preferences.notifyOverdue ? (dashData?.overdue ?? 0) : 0;
   const overdueList = preferences.notifyOverdue ? (dashData?.overdueLoans ?? []) : [];
+
+  // Live reservations holds ready alert
+  const { data: resData } = useQuery({
+    queryKey: ["reservations-shell"],
+    queryFn: reservations,
+    enabled: preferences.notifyReady
+  });
+  const readyReservations = preferences.notifyReady
+    ? (resData?.filter(r => r.status === "ready") ?? [])
+    : [];
+
+  const totalNotificationsCount = overdueCount + readyReservations.length;
 
   // ── Theme ────────────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -85,6 +100,16 @@ export function AppShell() {
   // ── Accent color → CSS variable ───────────────────────────────────────────
   useEffect(() => {
     document.documentElement.style.setProperty("--color-accent", preferences.accentColor);
+    const darkAccents: Record<string, string> = {
+      "#1a4d40": "#1b9277",
+      "#b96f3e": "#c58a59",
+      "#3b5998": "#5b79b8",
+      "#7c3aed": "#9058f3",
+      "#dc2626": "#e35353",
+      "#0284c7": "#38a4db",
+    };
+    const darkColor = darkAccents[preferences.accentColor] || preferences.accentColor;
+    document.documentElement.style.setProperty("--color-accent-dark", darkColor);
   }, [preferences.accentColor]);
 
   // ── Font size ─────────────────────────────────────────────────────────────
@@ -183,7 +208,7 @@ export function AppShell() {
             {/* Logo & Toggle */}
             <div className="mb-10 w-full">
               {sidebarOpen ? (
-                <div className="flex items-center justify-between w-full">
+                <div className="flex items-center justify-between w-full font-display">
                   <Link to="/dashboard" className="flex min-w-0 items-center gap-3 overflow-hidden">
                     <img src="/brand/warraq-symbol-cream.png" className="h-10 w-10 shrink-0 object-contain" alt="Warraq"/>
                     <div className="flex flex-col">
@@ -222,12 +247,12 @@ export function AppShell() {
                   key={to} 
                   to={to} 
                   className={({ isActive }) => `flex items-center gap-3.5 rounded-lg px-3 py-3 text-[14px] font-medium transition-all duration-200 ${isActive ? "bg-gradient-to-r from-[#b96f3e] to-[#a05b2e] text-white shadow-md shadow-[#b96f3e]/20" : "text-white/60 hover:bg-white/5 hover:text-white"}`} 
-                  title={!sidebarOpen ? label : undefined}
+                  title={!sidebarOpen ? t("nav." + label.toLowerCase()) : undefined}
                 >
                   {({ isActive }) => (
                     <>
                       <Icon size={20} strokeWidth={isActive ? 2.5 : 2}/>
-                      {sidebarOpen && <span>{label}</span>}
+                      {sidebarOpen && <span>{t("nav." + label.toLowerCase())}</span>}
                     </>
                   )}
                 </NavLink>
@@ -248,7 +273,7 @@ export function AppShell() {
                     )}
                     <div className="flex flex-col min-w-0">
                       <span className="text-[13px] font-semibold text-white truncate">{preferences.operatorName || "Librarian"}</span>
-                      <span className="text-[11px] text-white/50 truncate">Library Operator</span>
+                      <span className="text-[11px] text-white/50 truncate">{t("nav.role")}</span>
                     </div>
                   </div>
                   <ChevronDown size={14} className="text-white/40 group-hover:text-white/80" />
@@ -268,8 +293,8 @@ export function AppShell() {
               <input 
                 id="global-search" 
                 aria-label="Global search" 
-                placeholder="Search books, authors, ISBN..." 
-                className="w-full bg-[#F9F8F4] dark:bg-[#111d1a] border border-black/5 dark:border-white/5 rounded-full py-2.5 pl-11 pr-14 text-[14px] text-[#122222] dark:text-[#f0ebe1] outline-none focus:ring-2 focus:ring-[#1a4d40]/20 transition-all" 
+                placeholder={t("nav.quickSearch")} 
+                className="w-full bg-[#F9F8F4] dark:bg-[#111d1a] border border-black/5 dark:border-white/5 rounded-full py-2.5 pl-11 pr-14 text-[14px] text-[#122222] dark:text-[#f0ebe1] outline-none focus:ring-2 focus:ring-emerald/20 transition-all" 
                 onKeyDown={(e) => { if (e.key === "Enter") navigate("/catalog?q=" + encodeURIComponent(e.currentTarget.value)); }}
               />
               <div className="absolute right-3 flex items-center justify-center w-8 h-6 bg-white dark:bg-[#1d2926] border border-black/10 dark:border-white/10 rounded text-[11px] font-medium text-[#122222]/60 dark:text-white/60 cursor-pointer shadow-sm" onClick={() => setPaletteOpen(true)}>
@@ -287,9 +312,9 @@ export function AppShell() {
                   aria-label="Notifications"
                 >
                   <Bell size={20} />
-                  {overdueCount > 0 && (
+                  {totalNotificationsCount > 0 && (
                     <span className="absolute -top-0.5 -right-0.5 bg-[#b96f3e] text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center border-2 border-white dark:border-[#1d2926]">
-                      {overdueCount}
+                      {totalNotificationsCount}
                     </span>
                   )}
                 </button>
@@ -300,28 +325,44 @@ export function AppShell() {
                     <div className="fixed inset-0 z-40" onClick={() => setShowNotifications(false)} />
                     <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-[#1d2926] rounded-xl border border-black/10 dark:border-white/10 shadow-2xl p-4 z-50 text-[13px]">
                       <h4 className="font-bold text-[#122222] dark:text-white mb-3 pb-2 border-b border-black/5 dark:border-white/5 flex justify-between items-center">
-                        <span>Library Notifications</span>
-                        {overdueCount > 0 && <span className="text-[10px] text-red-500 font-bold bg-red-500/10 px-2 py-0.5 rounded">{overdueCount} overdue</span>}
+                        <span>{t("nav.notifications")}</span>
+                        {totalNotificationsCount > 0 && <span className="text-[10px] text-red-500 font-bold bg-red-500/10 px-2 py-0.5 rounded">{t("nav.overdueCount", { count: totalNotificationsCount })}</span>}
                       </h4>
                       <div className="space-y-3 max-h-60 overflow-y-auto pr-1 no-scrollbar">
-                        {overdueList.length > 0 ? (
-                          overdueList.map((loan) => (
-                            <div 
-                              key={loan.id} 
-                              onClick={() => {
-                                navigate("/circulation");
-                                setShowNotifications(false);
-                              }}
-                              className="p-2 rounded-lg hover:bg-[#1a4d40]/5 dark:hover:bg-[#1b9277]/10 transition-colors cursor-pointer border border-black/5 dark:border-white/5"
-                            >
-                              <div className="font-bold text-[#122222] dark:text-white truncate">{loan.title}</div>
-                              <div className="text-[11px] text-[#122222]/60 dark:text-white/60 mt-0.5">Borrowed by: {loan.member_name}</div>
-                              <div className="text-[10px] text-red-500 font-bold mt-1">Due date: {formatDisplayDate(loan.due_at)}</div>
-                            </div>
-                          ))
+                        {totalNotificationsCount > 0 ? (
+                          <>
+                            {overdueList.map((loan) => (
+                              <div 
+                                key={loan.id} 
+                                onClick={() => {
+                                  navigate("/circulation");
+                                  setShowNotifications(false);
+                                }}
+                                className="p-2 rounded-lg hover:bg-emerald/5 dark:hover:bg-emerald-light/10 transition-colors cursor-pointer border border-black/5 dark:border-white/5"
+                              >
+                                <div className="font-bold text-[#122222] dark:text-white truncate">{loan.title}</div>
+                                <div className="text-[11px] text-[#122222]/60 dark:text-white/60 mt-0.5">{t("circulation.selectedMember")}: {loan.member_name}</div>
+                                <div className="text-[10px] text-red-500 font-bold mt-1">{t("circulation.due")}: {formatDisplayDate(loan.due_at)}</div>
+                              </div>
+                            ))}
+                            {readyReservations.map((res) => (
+                              <div 
+                                key={res.id} 
+                                onClick={() => {
+                                  navigate("/reservations");
+                                  setShowNotifications(false);
+                                }}
+                                className="p-2 rounded-lg hover:bg-emerald/5 dark:hover:bg-emerald-light/10 transition-colors cursor-pointer border border-black/5 dark:border-white/5"
+                              >
+                                <div className="font-bold text-[#122222] dark:text-white truncate">{res.title}</div>
+                                <div className="text-[11px] text-[#122222]/60 dark:text-white/60 mt-0.5">{t("circulation.selectedMember")}: {res.member_name}</div>
+                                <div className="text-[10px] text-emerald-600 dark:text-emerald-light font-bold mt-1">{t("dashboard.ready")}</div>
+                              </div>
+                            ))}
+                          </>
                         ) : (
                           <div className="text-center py-6 text-sm text-[#122222]/40 dark:text-white/40">
-                            All clear! No overdue items.
+                            {t("nav.allClear")}
                           </div>
                         )}
                       </div>
