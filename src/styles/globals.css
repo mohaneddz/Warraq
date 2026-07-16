@@ -15,10 +15,17 @@
 }
 
 * { box-sizing: border-box; }
-html { font-family: "Manrope", sans-serif; background: #F9F8F4; }
+
+/* ── User-controlled CSS variables (set from JS in AppShell) ── */
+:root {
+  --color-accent: #1a4d40;
+  --font-size-base: 15px;
+}
+
+html { font-family: "Manrope", sans-serif; background: #F9F8F4; font-size: var(--font-size-base); }
 html.dark { background: #111d1a; }
 html[dir="rtl"] { font-family: "IBM Plex Sans Arabic", "Manrope", sans-serif; }
-body { margin: 0; min-width: 900px; color: #122222; }
+body { margin: 0; min-width: 900px; color: #122222; font-size: var(--font-size-base); }
 button, input, select, textarea { font: inherit; }
 button { cursor: pointer; }
 button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid #b96f3e; outline-offset: 2px; }

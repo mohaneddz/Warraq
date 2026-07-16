@@ -21,7 +21,7 @@ import {
 import { seedDummyData } from "../data/seed";
 import { queryClient } from "../app/providers";
 import { Button, Card, EmptyState, Input, StatusBadge, Modal } from "../components/ui/primitives";
-import { daysLate } from "../utils/dates";
+import { daysLate, formatDisplayDate } from "../utils/dates";
 import { isValidIsbn, normalizeIsbn } from "../utils/isbn";
 import { useUiStore } from "../store/uiStore";
 import { cn } from "../utils/cn";
@@ -191,7 +191,7 @@ export function DashboardPage() {
                     <strong>{loan.title}</strong>
                     <small>Borrowed by {loan.member_name}</small>
                   </div>
-                  <span className="row-meta">Due {new Date(loan.due_at).toLocaleDateString()}</span>
+                  <span className="row-meta">Due {formatDisplayDate(loan.due_at)}</span>
                 </div>
               ))}
             </div>
@@ -983,7 +983,7 @@ function MemberDetailsModal({ member, onClose }: { member: Member; onClose: () =
                     <div className="min-w-0 flex-1 mr-3">
                       <p className="font-semibold text-sm truncate">{loan.title}</p>
                       <p className="text-xs text-ink/65 dark:text-parchment/65 mt-0.5">
-                        Barcode: <span className="font-mono">{loan.barcode}</span> · Due: {loan.due_at} 
+                        Barcode: <span className="font-mono">{loan.barcode}</span> · Due: {formatDisplayDate(loan.due_at)} 
                         {loan.renewed_count > 0 && ` (Renewed ${loan.renewed_count}x)`}
                       </p>
                     </div>
@@ -1228,7 +1228,7 @@ export function CirculationPage() {
                   <p className="text-xs text-ink/55 dark:text-parchment/55">{loan.barcode}</p>
                 </Cell>
                 <Cell>{loan.member_name}</Cell>
-                <Cell>{loan.due_at}</Cell>
+                <Cell>{formatDisplayDate(loan.due_at)}</Cell>
                 <Cell>
                   <div className="flex gap-2">
                     <Button 
@@ -1454,7 +1454,7 @@ export function ReportsPage() {
               <tr key={loan.id}>
                 <Cell>{loan.title}</Cell>
                 <Cell>{loan.member_name}</Cell>
-                <Cell>{loan.due_at}</Cell>
+                <Cell>{formatDisplayDate(loan.due_at)}</Cell>
                 <Cell>{daysLate(loan.due_at)}</Cell>
               </tr>
             ))}
@@ -1475,7 +1475,7 @@ export function ActivityPage() {
       <Table headers={["When", "Actor", "Action", "Entity"]}>
         {result.data?.map((item) => (
           <tr key={item.id}>
-            <Cell>{new Date(item.created_at).toLocaleString()}</Cell>
+            <Cell>{formatDisplayDate(item.created_at)}</Cell>
             <Cell>{item.actor}</Cell>
             <Cell>{item.action}</Cell>
             <Cell>{item.entity_type} · <span className="font-mono text-xs">{item.entity_id.slice(0, 8)}</span></Cell>

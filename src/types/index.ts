@@ -15,6 +15,7 @@ export interface Preferences {
   libraryShortName: string;
   operatorName: string;
   operatorEmail: string;
+  operatorAvatar?: string | null;
   // Library Profile
   libraryAddress: string;
   libraryCity: string;

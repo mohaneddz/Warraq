@@ -7,6 +7,7 @@ const defaults: Preferences = {
   libraryShortName: "",
   operatorName: "",
   operatorEmail: "",
+  operatorAvatar: null,
   libraryAddress: "",
   libraryCity: "Algiers",
   libraryPhone: "",
