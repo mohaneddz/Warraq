@@ -102,7 +102,9 @@
       "title": "العنوان",
       "author": "المؤلف",
       "category": "التصنيف",
-      "isbn": "ردمك (ISBN)"
+      "isbn": "ردمك (ISBN)",
+      "dateAdded": "تاريخ الإضافة",
+      "availability": "حالة التوفر"
     },
     "showing": "عرض من {{start}} إلى {{end}} من أصل {{total}} مراجع",
     "noBooks": "لم يتم العثور على أي كتب في الفهرس.",
@@ -121,8 +123,8 @@
       "description": "نبذة عن الكتاب",
       "recentActivity": "العمليات الأخيرة",
       "edit": "تعديل",
-      "archive": "أرشة",
-      "back": "العودة"
+      "archive": "أرشفة",
+      "back": "رجوع"
     },
     "addModal": {
       "title": "إضافة كتاب جديد",
@@ -144,7 +146,9 @@
       "cancel": "إلغاء",
       "save": "حفظ الكتاب",
       "isbnLabel": "ردمك (ISBN)"
-    }
+    },
+    "availableNow": "متوفر حاليًا",
+    "outOfStock": "غير متوفر"
   },
   "circulation": {
     "title": "الإعارة والإرجاع",
@@ -195,6 +199,25 @@
       "status": "الحالة",
       "cancel": "إلغاء",
       "save": "تسجيل العضو"
+    },
+    "searchPlaceholder": "ابحث عن الأعضاء بالاسم، البريد الإلكتروني، أو الهوية...",
+    "allDepartments": "جميع الأقسام",
+    "sortByName": "ترتيب حسب الاسم",
+    "sortById": "ترتيب حسب رقم العضوية",
+    "sortByJoined": "ترتيب حسب تاريخ الانضمام",
+    "noMembers": "لم يتم العثور على أي أعضاء بالمكتبة.",
+    "avatar": "الصورة الشخصية",
+    "fullName": "الاسم الكامل",
+    "membershipNumber": "رقم العضوية / المعرف",
+    "email": "البريد الإلكتروني",
+    "phone": "رقم الهاتف",
+    "roleLabel": "الدور / الصفة",
+    "departmentLabel": "القسم",
+    "registeredOn": "تاريخ التسجيل",
+    "tabs": {
+      "profile": "الملف الشخصي",
+      "loans": "الإعارات ({{count}})",
+      "holds": "الحجوزات ({{count}})"
     }
   },
   "reservations": {
@@ -210,7 +233,11 @@
       "status": "الحالة",
       "action": "الإجراء"
     },
-    "cancel": "إلغاء طلب الحجز"
+    "cancel": "إلغاء طلب الحجز",
+    "searchPlaceholder": "البحث في الحجوزات...",
+    "requestDate": "تاريخ الطلب",
+    "noReservations": "لم يتم العثور على أي حجوزات.",
+    "noReservationsHelp": "تظهر الحجوزات هنا عندما يقوم الأعضاء بحجز كتب معارة حاليًا."
   },
   "inventory": {
     "title": "الجرد والرفوف",
@@ -227,7 +254,29 @@
     },
     "auditMode": "وضع الجرد الميداني",
     "startAudit": "بدء جرد الرف",
-    "export": "تصدير تقرير الجرد"
+    "export": "تصدير تقرير الجرد",
+    "startScan": "بدء مسح الرف",
+    "metrics": {
+      "available": "متوفر",
+      "onLoan": "معار",
+      "other": "أخرى (محجوز/تالف)"
+    },
+    "searchPlaceholder": "ابحث في الجرد بواسطة الرمز الشريطي أو العنوان...",
+    "allShelves": "جميع الرفوف",
+    "allConditions": "جميع الحالات",
+    "shelfLocation": "موقع الرف",
+    "condition": "حالة النسخة",
+    "noCopies": "لم يتم العثور على أي نسخ فعلية",
+    "noCopiesHelp": "استخدم الفهرس لإضافة الكتب وتسجيل النسخ الفعلية.",
+    "scanInstructions": "أدخل رمز موقع الرف الذي تريد مسحه لبدء عملية مطابقة البيانات.",
+    "targetShelfCode": "رمز الرف المستهدف",
+    "beginSession": "بدء المسح",
+    "scanningShelf": "مسح الرف",
+    "scanningHelp": "امسح الرموز الشريطية للنسخ الفعلية على هذا الرف واحدًا تلو الآخر.",
+    "correctShelf": "الرف الصحيح",
+    "misplaced": "في غير مكانه (يجب أن يكون في {{shelf}})",
+    "willUpdate": "سيتم تحديثه إلى {{target}}",
+    "unknownItem": "نسخة / رمز شريطي غير معروف"
   },
   "reports": {
     "title": "التقارير والإحصائيات",
@@ -247,6 +296,12 @@
     "members": {
       "title": "سجل الأعضاء النشطين",
       "desc": "تصدير تفاصيل بيانات وحالة جميع المشتركين"
+    },
+    "metrics": {
+      "circulation": "حركة الإعارة",
+      "activeMembers": "الأعضاء النشطين",
+      "overdueRate": "نسبة التأخير",
+      "acquisitions": "إجمالي الحيازات"
     }
   },
   "activity": {
@@ -263,13 +318,54 @@
       "action": "نوع العملية",
       "target": "معرف الكيان",
       "details": "التفاصيل"
-    }
+    },
+    "searchPlaceholder": "البحث في سجل العمليات...",
+    "time": "التوقيت",
+    "actor": "منفذ العملية",
+    "action": "نوع العملية",
+    "entity": "معرف الكيان",
+    "noActivity": "لم يتم العثور على أي عمليات",
+    "noActivityHelp": "ستظهر عمليات الكتابة والتعديل في قاعدة البيانات هنا فور حدوثها."
   },
   "settings": {
     "title": "الإعدادات",
     "search": "ابحث في الإعدادات...",
+    "searchPlaceholder": "ابحث في الإعدادات...",
     "proverb": "المخطوط الحي",
     "proverbSub": "المخطوط الحي",
-    "proverbDesc": "من وحي الأصالة. صُمم للمستقبل."
+    "proverbDesc": "من وحي الأصالة. صُمم للمستقبل.",
+    "groups": {
+      "general": "عام",
+      "circulation": "حركة الإعارة",
+      "datasecurity": "البيانات والأمان",
+      "system": "النظام"
+    },
+    "tabs": {
+      "general": "عام",
+      "libraryprofile": "ملف المكتبة",
+      "localization": "اللغة والمنطقة",
+      "appearance": "المظهر",
+      "rules": "قواعد الإعارة",
+      "finesfees": "الغرامات والرسوم",
+      "notifications": "الإشعارات",
+      "backuprestore": "النسخ الاحتياطي والاستعادة",
+      "database": "قاعدة البيانات",
+      "integrationsai": "الربط والذكاء الاصطناعي",
+      "secretskeys": "المفاتيح السرية والأمان",
+      "desktopdata": "بيانات التطبيق",
+      "about": "حول التطبيق"
+    }
+  },
+  "profileCard": {
+    "quickActions": "إجراءات سريعة",
+    "settings": "إعداداتي",
+    "themeLight": "المظهر الفاتح",
+    "themeDark": "المظهر الداكن",
+    "theme": "تبديل المظهر",
+    "backup": "نسخ قاعدة البيانات",
+    "commandPalette": "لوحة الأوامر",
+    "localWorkspace": "بيئة عمل محلية",
+    "backupSuccess": "تم حفظ النسخة الاحتياطية بنجاح.",
+    "backupError": "فشل تصدير النسخة الاحتياطية."
   }
 }

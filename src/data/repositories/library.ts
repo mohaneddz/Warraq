@@ -111,7 +111,9 @@ export async function books(query = ""): Promise<Book[]> {
   return db.select<Book[]>(
     `SELECT b.*, p.name publisher, c.name category, 
      (SELECT GROUP_CONCAT(a.name, ', ') FROM book_authors ba JOIN authors a ON a.id=ba.author_id WHERE ba.book_id=b.id) author,
-     (SELECT GROUP_CONCAT(t.name, ', ') FROM book_tags bt JOIN tags t ON t.id=bt.tag_id WHERE bt.book_id=b.id) tags
+     (SELECT GROUP_CONCAT(t.name, ', ') FROM book_tags bt JOIN tags t ON t.id=bt.tag_id WHERE bt.book_id=b.id) tags,
+     (SELECT COUNT(*) FROM copies WHERE book_id=b.id) total_copies,
+     (SELECT COUNT(*) FROM copies WHERE book_id=b.id AND status='available') available_copies
      FROM books b 
      LEFT JOIN publishers p ON p.id=b.publisher_id 
      LEFT JOIN categories c ON c.id=b.category_id 
@@ -139,41 +141,36 @@ export async function saveBook(input: Omit<Book, "id" | "created_at"> & { author
   const language = cleanText(input.language);
   const callNumber = input.call_number ? cleanText(input.call_number) : null;
 
-  await db.execute("BEGIN IMMEDIATE");
-  try {
-    let publisherId: string | null = null;
-    if (publisher) { const existing = await db.select<{ id: string }[]>("SELECT id FROM publishers WHERE name=?", [publisher]); publisherId = existing[0]?.id ?? id(); if (!existing[0]) await db.execute("INSERT INTO publishers (id,name,created_at,updated_at) VALUES (?,?,?,?)", [publisherId, publisher, now, now]); }
-    let categoryId: string | null = null;
-    if (category) { const existing = await db.select<{ id: string }[]>("SELECT id FROM categories WHERE name=?", [category]); categoryId = existing[0]?.id ?? id(); if (!existing[0]) await db.execute("INSERT INTO categories (id,name) VALUES (?,?)", [categoryId, category]); }
-    await db.execute("INSERT INTO books (id,isbn10,isbn13,title,subtitle,arabic_title,description,language,publisher_id,category_id,call_number,cover_path,source,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", [bookId, isbn10, isbn13, title, subtitle, arabicTitle, description, language, publisherId, categoryId, callNumber, input.cover_path ?? null, "manual", now, now]);
-    if (author) { const normalized = author.toLocaleLowerCase(); const existing = await db.select<{ id: string }[]>("SELECT id FROM authors WHERE normalized_name=?", [normalized]); const authorId = existing[0]?.id ?? id(); if (!existing[0]) await db.execute("INSERT INTO authors (id,name,normalized_name,created_at,updated_at) VALUES (?,?,?,?,?)", [authorId, author, normalized, now, now]); await db.execute("INSERT INTO book_authors (book_id,author_id,author_order) VALUES (?,?,0)", [bookId, authorId]); }
-    if (barcode) await db.execute("INSERT INTO copies (id,book_id,accession_number,barcode,status,condition,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?)", [id(), bookId, accession || `ACC-${Date.now()}`, barcode, "available", "good", now, now]);
-    
-    // Save tags relation
-    if (tags) {
-      const tagsList = tags.split(",").map(t => t.trim()).filter(Boolean);
-      for (const tagName of tagsList) {
-        const existingTag = await db.select<{ id: string }[]>("SELECT id FROM tags WHERE name = ?", [tagName]);
-        let tagId = existingTag[0]?.id;
-        if (!tagId) {
-          tagId = id();
-          const colors = ["#FEE2E2", "#FEF3C7", "#D1FAE5", "#DBEAFE", "#E0E7FF", "#F3E8FF", "#FCE7F3"];
-          const randomColor = colors[Math.floor(Math.random() * colors.length)];
-          await db.execute("INSERT INTO tags (id, name, color) VALUES (?, ?, ?)", [tagId, tagName, randomColor]);
-        }
-        await db.execute("INSERT OR IGNORE INTO book_tags (book_id, tag_id) VALUES (?, ?)", [bookId, tagId]);
+  let publisherId: string | null = null;
+  if (publisher) { const existing = await db.select<{ id: string }[]>("SELECT id FROM publishers WHERE name=?", [publisher]); publisherId = existing[0]?.id ?? id(); if (!existing[0]) await db.execute("INSERT INTO publishers (id,name,created_at,updated_at) VALUES (?,?,?,?)", [publisherId, publisher, now, now]); }
+  let categoryId: string | null = null;
+  if (category) { const existing = await db.select<{ id: string }[]>("SELECT id FROM categories WHERE name=?", [category]); categoryId = existing[0]?.id ?? id(); if (!existing[0]) await db.execute("INSERT INTO categories (id,name) VALUES (?,?)", [categoryId, category]); }
+  await db.execute("INSERT INTO books (id,isbn10,isbn13,title,subtitle,arabic_title,description,language,publisher_id,category_id,call_number,cover_path,source,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", [bookId, isbn10, isbn13, title, subtitle, arabicTitle, description, language, publisherId, categoryId, callNumber, input.cover_path ?? null, "manual", now, now]);
+  if (author) { const normalized = author.toLocaleLowerCase(); const existing = await db.select<{ id: string }[]>("SELECT id FROM authors WHERE normalized_name=?", [normalized]); const authorId = existing[0]?.id ?? id(); if (!existing[0]) await db.execute("INSERT INTO authors (id,name,normalized_name,created_at,updated_at) VALUES (?,?,?,?,?)", [authorId, author, normalized, now, now]); await db.execute("INSERT INTO book_authors (book_id,author_id,author_order) VALUES (?,?,0)", [bookId, authorId]); }
+  if (barcode) await db.execute("INSERT INTO copies (id,book_id,accession_number,barcode,status,condition,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?)", [id(), bookId, accession || `ACC-${Date.now()}`, barcode, "available", "good", now, now]);
+  
+  // Save tags relation
+  if (tags) {
+    const tagsList = tags.split(",").map(t => t.trim()).filter(Boolean);
+    for (const tagName of tagsList) {
+      const existingTag = await db.select<{ id: string }[]>("SELECT id FROM tags WHERE name = ?", [tagName]);
+      let tagId = existingTag[0]?.id;
+      if (!tagId) {
+        tagId = id();
+        const colors = ["#FEE2E2", "#FEF3C7", "#D1FAE5", "#DBEAFE", "#E0E7FF", "#F3E8FF", "#FCE7F3"];
+        const randomColor = colors[Math.floor(Math.random() * colors.length)];
+        await db.execute("INSERT INTO tags (id, name, color) VALUES (?, ?, ?)", [tagId, tagName, randomColor]);
       }
+      await db.execute("INSERT OR IGNORE INTO book_tags (book_id, tag_id) VALUES (?, ?)", [bookId, tagId]);
     }
+  }
 
-    await audit(db, "create", "book", bookId, null, JSON.stringify({ title })); await db.execute("COMMIT");
-  } catch (error) { await db.execute("ROLLBACK"); throw error; }
+  await audit(db, "create", "book", bookId, null, JSON.stringify({ title }));
 }
 
 export async function updateBook(bookId: string, input: Partial<Book> & { author?: string }): Promise<void> {
   const db = await database();
   const now = timestamp();
-  await db.execute("BEGIN IMMEDIATE");
-  try {
     let publisherId: string | null | undefined = undefined;
     if (input.publisher !== undefined) {
       if (input.publisher?.trim()) {
@@ -259,11 +256,6 @@ export async function updateBook(bookId: string, input: Partial<Book> & { author
     }
 
     await audit(db, "update", "book", bookId, null, JSON.stringify(input));
-    await db.execute("COMMIT");
-  } catch (error) {
-    await db.execute("ROLLBACK");
-    throw error;
-  }
 }
 
 export async function deleteBook(bookId: string): Promise<void> {
@@ -411,8 +403,6 @@ export async function getReservationsForMember(memberId: string): Promise<Reserv
 export async function checkout(memberId: string, copyIds: string[], limit: number, days: number): Promise<void> {
   const db = await database();
   const now = timestamp();
-  await db.execute("BEGIN IMMEDIATE");
-  try {
     const member = await db.select<Member[]>("SELECT * FROM members WHERE id=?", [memberId]);
     if (member[0]?.status !== "active") throw new Error("Only active members can borrow.");
     const active = await db.select<{ count: number }[]>("SELECT COUNT(*) count FROM loans WHERE member_id=? AND returned_at IS NULL", [memberId]);
@@ -424,18 +414,11 @@ export async function checkout(memberId: string, copyIds: string[], limit: numbe
       await db.execute("UPDATE copies SET status='on-loan',updated_at=? WHERE id=?", [now, copyId]);
     }
     await audit(db, "checkout", "loan", memberId, null, JSON.stringify({ copyIds }));
-    await db.execute("COMMIT");
-  } catch (error) {
-    await db.execute("ROLLBACK");
-    throw error;
-  }
 }
 
 export async function returnCopies(copyIds: string[], holdDays = 3): Promise<void> {
   const db = await database();
   const now = timestamp();
-  await db.execute("BEGIN IMMEDIATE");
-  try {
     for (const copyId of copyIds) {
       const loan = await db.select<Loan[]>("SELECT * FROM loans WHERE copy_id=? AND returned_at IS NULL", [copyId]);
       if (!loan[0]) throw new Error("No open loan was found for this copy.");
@@ -449,17 +432,10 @@ export async function returnCopies(copyIds: string[], holdDays = 3): Promise<voi
       }
     }
     await audit(db, "return", "loan", copyIds.join(","), null, JSON.stringify({ copyIds }));
-    await db.execute("COMMIT");
-  } catch (error) {
-    await db.execute("ROLLBACK");
-    throw error;
-  }
 }
 
 export async function renewLoan(loanId: string, days: number): Promise<void> {
   const db = await database();
-  await db.execute("BEGIN IMMEDIATE");
-  try {
     const loan = await db.select<Loan[]>("SELECT * FROM loans WHERE id = ?", [loanId]);
     if (!loan[0]) throw new Error("Loan not found");
     
@@ -470,11 +446,6 @@ export async function renewLoan(loanId: string, days: number): Promise<void> {
     
     await db.execute("UPDATE loans SET due_at = ?, renewed_count = renewed_count + 1 WHERE id = ?", [newDueDate, loanId]);
     await audit(db, "renew", "loan", loanId, null, JSON.stringify({ old_due: loan[0].due_at, new_due: newDueDate }));
-    await db.execute("COMMIT");
-  } catch (error) {
-    await db.execute("ROLLBACK");
-    throw error;
-  }
 }
 
 export async function cancelReservation(reservationId: string): Promise<void> {
@@ -501,3 +472,46 @@ export async function auditLog() {
 async function audit(db: Database, action: string, entityType: string, entityId: string, before: string | null, after: string | null) {
   await db.execute("INSERT INTO audit_logs (id,actor,action,entity_type,entity_id,before_json,after_json,created_at) VALUES (?,?,?,?,?,?,?,?)", [id(), "local-operator", action, entityType, entityId, before, after, timestamp()]);
 }
+
+export async function importBooksFromDb(dbPath: string): Promise<{ importedCount: number }> {
+  const db = await database();
+  await db.execute("ATTACH DATABASE ? AS source_db", [dbPath]);
+  try {
+    const newBooks = await db.select<any[]>(
+      "SELECT id FROM source_db.books WHERE id NOT IN (SELECT id FROM main.books)"
+    );
+
+    await db.execute("INSERT OR IGNORE INTO main.publishers SELECT * FROM source_db.publishers");
+    await db.execute("INSERT OR IGNORE INTO main.categories SELECT * FROM source_db.categories");
+    await db.execute("INSERT OR IGNORE INTO main.authors SELECT * FROM source_db.authors");
+    await db.execute("INSERT OR IGNORE INTO main.books SELECT * FROM source_db.books");
+    await db.execute("INSERT OR IGNORE INTO main.book_authors SELECT * FROM source_db.book_authors");
+    await db.execute("INSERT OR IGNORE INTO main.book_tags SELECT * FROM source_db.book_tags");
+    await db.execute("INSERT OR IGNORE INTO main.tags SELECT * FROM source_db.tags");
+    await db.execute("INSERT OR IGNORE INTO main.copies SELECT * FROM source_db.copies");
+
+    return { importedCount: newBooks.length };
+  } finally {
+    try {
+      await db.execute("DETACH DATABASE source_db");
+    } catch (_) {}
+  }
+}
+
+export async function importMembersFromDb(dbPath: string): Promise<{ importedCount: number }> {
+  const db = await database();
+  await db.execute("ATTACH DATABASE ? AS source_db", [dbPath]);
+  try {
+    const newMembers = await db.select<any[]>(
+      "SELECT id FROM source_db.members WHERE id NOT IN (SELECT id FROM main.members)"
+    );
+
+    await db.execute("INSERT OR IGNORE INTO main.members SELECT * FROM source_db.members");
+    return { importedCount: newMembers.length };
+  } finally {
+    try {
+      await db.execute("DETACH DATABASE source_db");
+    } catch (_) {}
+  }
+}
+

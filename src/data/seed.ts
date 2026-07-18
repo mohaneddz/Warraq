@@ -9,16 +9,25 @@ function randomDateBetween(start: Date, end: Date) {
 export async function seedDummyData() {
   const db = await database();
   
-  await db.execute("DELETE FROM audit_logs");
-  await db.execute("DELETE FROM reservations");
+  await db.execute("DELETE FROM fines");
+  await db.execute("DELETE FROM inventory_scans");
+  await db.execute("DELETE FROM inventory_sessions");
   await db.execute("DELETE FROM loans");
+  await db.execute("DELETE FROM reservations");
+  await db.execute("DELETE FROM attachments");
   await db.execute("DELETE FROM copies");
   await db.execute("DELETE FROM book_authors");
-  await db.execute("DELETE FROM authors");
-  await db.execute("DELETE FROM categories");
-  await db.execute("DELETE FROM publishers");
+  await db.execute("DELETE FROM book_tags");
   await db.execute("DELETE FROM books");
+  await db.execute("DELETE FROM authors");
+  await db.execute("DELETE FROM tags");
+  await db.execute("DELETE FROM publishers");
+  await db.execute("DELETE FROM categories");
   await db.execute("DELETE FROM members");
+  await db.execute("DELETE FROM shelves");
+  await db.execute("DELETE FROM audit_logs");
+  await db.execute("DELETE FROM saved_searches");
+  await db.execute("DELETE FROM integration_cache");
 
   const today = new Date();
   const pastWeek = new Date();

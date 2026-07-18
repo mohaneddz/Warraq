@@ -102,7 +102,9 @@
       "title": "TITRE",
       "author": "AUTEUR",
       "category": "CATÉGORIE",
-      "isbn": "ISBN"
+      "isbn": "ISBN",
+      "dateAdded": "Date d'ajout",
+      "availability": "Disponibilité"
     },
     "showing": "Affichage de {{start}} à {{end}} sur {{total}} résultats",
     "noBooks": "Aucun livre trouvé dans le catalogue.",
@@ -144,7 +146,9 @@
       "cancel": "Annuler",
       "save": "Enregistrer le livre",
       "isbnLabel": "ISBN"
-    }
+    },
+    "availableNow": "Disponible",
+    "outOfStock": "En rupture de stock"
   },
   "circulation": {
     "title": "Circulation",
@@ -195,6 +199,25 @@
       "status": "Statut",
       "cancel": "Annuler",
       "save": "Enregistrer le membre"
+    },
+    "searchPlaceholder": "Rechercher des membres par nom, e-mail ou ID...",
+    "allDepartments": "Tous les départements",
+    "sortByName": "Trier par nom",
+    "sortById": "Trier par ID de membre",
+    "sortByJoined": "Trier par date d'adhésion",
+    "noMembers": "Aucun membre de bibliothèque trouvé.",
+    "avatar": "Avatar",
+    "fullName": "Nom complet",
+    "membershipNumber": "Numéro d'adhésion / ID",
+    "email": "Adresse e-mail",
+    "phone": "Numéro de téléphone",
+    "roleLabel": "Rôle",
+    "departmentLabel": "Département",
+    "registeredOn": "Inscrit le",
+    "tabs": {
+      "profile": "Profil",
+      "loans": "Emprunts ({{count}})",
+      "holds": "Réservations ({{count}})"
     }
   },
   "reservations": {
@@ -210,7 +233,11 @@
       "status": "Statut",
       "action": "Action"
     },
-    "cancel": "Annuler la réservation"
+    "cancel": "Annuler la réservation",
+    "searchPlaceholder": "Rechercher des réservations...",
+    "requestDate": "Date de demande",
+    "noReservations": "Aucune réservation trouvée.",
+    "noReservationsHelp": "Les réservations apparaissent ici lorsque les membres réservent des livres actuellement empruntés."
   },
   "inventory": {
     "title": "Inventaire",
@@ -227,7 +254,29 @@
     },
     "auditMode": "Mode audit",
     "startAudit": "Démarrer l'audit",
-    "export": "Exporter le rapport d'audit"
+    "export": "Exporter le rapport d'audit",
+    "startScan": "Démarrer le scan de l'étagère",
+    "metrics": {
+      "available": "Disponible",
+      "onLoan": "Emprunté",
+      "other": "Autre (Réservé/Endommagé)"
+    },
+    "searchPlaceholder": "Rechercher dans l'inventaire par code-barres ou titre...",
+    "allShelves": "Toutes les étagères",
+    "allConditions": "Tous les états",
+    "shelfLocation": "Emplacement sur l'étagère",
+    "condition": "État",
+    "noCopies": "Aucun exemplaire physique trouvé",
+    "noCopiesHelp": "Utilisez le catalogue pour ajouter des livres et enregistrer des exemplaires physiques.",
+    "scanInstructions": "Saisissez le code d'emplacement de l'étagère que vous souhaitez scanner pour commencer le processus de rapprochement.",
+    "targetShelfCode": "Code de l'étagère cible",
+    "beginSession": "Commencer le scan",
+    "scanningShelf": "Scan de l'étagère",
+    "scanningHelp": "Scannez les codes-barres des articles physiques de cette étagère un par un.",
+    "correctShelf": "Étagère correcte",
+    "misplaced": "Mal placé (devrait être sur {{shelf}})",
+    "willUpdate": "Sera mis à jour vers {{target}}",
+    "unknownItem": "Article / Code-barres inconnu"
   },
   "reports": {
     "title": "Rapports",
@@ -247,6 +296,12 @@
     "members": {
       "title": "Membres actifs",
       "desc": "Exporter le statut des membres et les coordonnées"
+    },
+    "metrics": {
+      "circulation": "Circulation",
+      "activeMembers": "Membres actifs",
+      "overdueRate": "Taux de retard",
+      "acquisitions": "Acquisitions totales"
     }
   },
   "activity": {
@@ -263,13 +318,54 @@
       "action": "Action",
       "target": "ID cible",
       "details": "Détails"
-    }
+    },
+    "searchPlaceholder": "Rechercher dans les journaux d'activité...",
+    "time": "Horodatage",
+    "actor": "Acteur",
+    "action": "Action",
+    "entity": "ID cible",
+    "noActivity": "Aucune activité trouvée",
+    "noActivityHelp": "Les écritures et opérations de la base de données apparaîtront ici dès qu'elles se produiront."
   },
   "settings": {
     "title": "Paramètres",
     "search": "Rechercher des paramètres...",
+    "searchPlaceholder": "Rechercher des paramètres...",
     "proverb": "المخطوط الحي",
     "proverbSub": "Le manuscrit vivant",
-    "proverbDesc": "Guidé par le patrimoine. Conçu pour aujourd'hui."
+    "proverbDesc": "Guidé par le patrimoine. Conçu pour aujourd'hui.",
+    "groups": {
+      "general": "Général",
+      "circulation": "Circulation",
+      "datasecurity": "Données & Sécurité",
+      "system": "Système"
+    },
+    "tabs": {
+      "general": "Général",
+      "libraryprofile": "Profil de la bibliothèque",
+      "localization": "Localisation",
+      "appearance": "Apparence",
+      "rules": "Règles",
+      "finesfees": "Frais & Amendes",
+      "notifications": "Notifications",
+      "backuprestore": "Sauvegarde & Restauration",
+      "database": "Base de données",
+      "integrationsai": "Intégrations & IA",
+      "secretskeys": "Clés & Secrets",
+      "desktopdata": "Données de bureau",
+      "about": "À propos"
+    }
+  },
+  "profileCard": {
+    "quickActions": "Actions Rapides",
+    "settings": "Mes Paramètres",
+    "themeLight": "Thème Clair",
+    "themeDark": "Thème Sombre",
+    "theme": "Changer le Thème",
+    "backup": "Sauvegarder la Base",
+    "commandPalette": "Palette de Commandes",
+    "localWorkspace": "Espace de Travail Local",
+    "backupSuccess": "Sauvegarde enregistrée avec succès.",
+    "backupError": "Impossible d'exporter la sauvegarde."
   }
 }

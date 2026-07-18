@@ -42,7 +42,7 @@
     "welcome": "Welcome back, {{name}}",
     "subtitle": "Here's what's happening in your library today.",
     "quote": "العلم يُؤتى ولا يأتي",
-    "quoteTranslation": "KNOWLEDGE IS BESTOWED, NOT SOUGHT",
+    "quoteTranslation": "KNOWLEDGE IS SOUGHT, IT DOES NOT COME TO YOU",
     "metrics": {
       "titles": "Total Titles",
       "copies": "Total Copies",
@@ -102,7 +102,9 @@
       "title": "TITLE",
       "author": "AUTHOR",
       "category": "CATEGORY",
-      "isbn": "ISBN"
+      "isbn": "ISBN",
+      "dateAdded": "Date Added",
+      "availability": "Availability"
     },
     "showing": "Showing {{start}} to {{end}} of {{total}} results",
     "noBooks": "No books found in the catalog.",
@@ -144,7 +146,9 @@
       "cancel": "Cancel",
       "save": "Save book",
       "isbnLabel": "ISBN"
-    }
+    },
+    "availableNow": "Available Now",
+    "outOfStock": "Out of Stock"
   },
   "circulation": {
     "title": "Circulation",
@@ -195,6 +199,25 @@
       "status": "Status",
       "cancel": "Cancel",
       "save": "Save member"
+    },
+    "searchPlaceholder": "Search members by name, email, or ID...",
+    "allDepartments": "All Departments",
+    "sortByName": "Sort by Name",
+    "sortById": "Sort by Member ID",
+    "sortByJoined": "Sort by Join Date",
+    "noMembers": "No library members found.",
+    "avatar": "Avatar",
+    "fullName": "Full Name",
+    "membershipNumber": "Membership Number / ID",
+    "email": "Email Address",
+    "phone": "Phone Number",
+    "roleLabel": "Role",
+    "departmentLabel": "Department",
+    "registeredOn": "Registered On",
+    "tabs": {
+      "profile": "Profile",
+      "loans": "Loans ({{count}})",
+      "holds": "Reservations ({{count}})"
     }
   },
   "reservations": {
@@ -210,7 +233,11 @@
       "status": "Status",
       "action": "Action"
     },
-    "cancel": "Cancel Reservation"
+    "cancel": "Cancel Reservation",
+    "searchPlaceholder": "Search reservations...",
+    "requestDate": "Request Date",
+    "noReservations": "No reservations found.",
+    "noReservationsHelp": "Reservations appear here when members reserve books that are currently checked out."
   },
   "inventory": {
     "title": "Inventory",
@@ -227,7 +254,29 @@
     },
     "auditMode": "Audit Mode",
     "startAudit": "Start Audit",
-    "export": "Export Audit Report"
+    "export": "Export Audit Report",
+    "startScan": "Start Shelf Scan",
+    "metrics": {
+      "available": "Available",
+      "onLoan": "On Loan",
+      "other": "Other (Reserved/Damaged)"
+    },
+    "searchPlaceholder": "Search inventory by barcode or title...",
+    "allShelves": "All Shelves",
+    "allConditions": "All Conditions",
+    "shelfLocation": "Shelf Location",
+    "condition": "Condition",
+    "noCopies": "No physical copies found",
+    "noCopiesHelp": "Use the catalog to add books and record physical copies.",
+    "scanInstructions": "Enter the shelf location code you want to scan to begin the reconciliation process.",
+    "targetShelfCode": "Target Shelf Code",
+    "beginSession": "Begin Scanning",
+    "scanningShelf": "Scanning Shelf",
+    "scanningHelp": "Scan the barcodes of the physical items on this shelf one by one.",
+    "correctShelf": "Correct Shelf",
+    "misplaced": "Misplaced (should be on {{shelf}})",
+    "willUpdate": "Will be updated to {{target}}",
+    "unknownItem": "Unknown Item / Barcode"
   },
   "reports": {
     "title": "Reports",
@@ -247,6 +296,12 @@
     "members": {
       "title": "Active Members",
       "desc": "Export member status and contact details"
+    },
+    "metrics": {
+      "circulation": "Circulation",
+      "activeMembers": "Active Members",
+      "overdueRate": "Overdue Rate",
+      "acquisitions": "Total Acquisitions"
     }
   },
   "activity": {
@@ -263,13 +318,54 @@
       "action": "Action",
       "target": "Target ID",
       "details": "Details"
-    }
+    },
+    "searchPlaceholder": "Search activity logs...",
+    "time": "Timestamp",
+    "actor": "Actor",
+    "action": "Action",
+    "entity": "Target ID",
+    "noActivity": "No activity found",
+    "noActivityHelp": "Database writes and operations will appear here once they occur."
   },
   "settings": {
     "title": "Settings",
     "search": "Search settings...",
+    "searchPlaceholder": "Search settings...",
     "proverb": "المخطوط الحي",
     "proverbSub": "The Living Manuscript",
-    "proverbDesc": "Guided by heritage. Built for today."
+    "proverbDesc": "Guided by heritage. Built for today.",
+    "groups": {
+      "general": "General",
+      "circulation": "Circulation",
+      "datasecurity": "Data & Security",
+      "system": "System"
+    },
+    "tabs": {
+      "general": "General",
+      "libraryprofile": "Library Profile",
+      "localization": "Localization",
+      "appearance": "Appearance",
+      "rules": "Rules",
+      "finesfees": "Fines & Fees",
+      "notifications": "Notifications",
+      "backuprestore": "Backup & Restore",
+      "database": "Database",
+      "integrationsai": "Integrations & AI",
+      "secretskeys": "Secrets & Keys",
+      "desktopdata": "Desktop & Data",
+      "about": "About"
+    }
+  },
+  "profileCard": {
+    "quickActions": "Quick Actions",
+    "settings": "My Settings",
+    "themeLight": "Light Theme",
+    "themeDark": "Dark Theme",
+    "theme": "Toggle Theme",
+    "backup": "Backup Database",
+    "commandPalette": "Command Palette",
+    "localWorkspace": "Local Workspace",
+    "backupSuccess": "Backup saved successfully.",
+    "backupError": "Could not export backup."
   }
 }
