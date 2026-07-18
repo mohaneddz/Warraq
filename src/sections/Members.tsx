@@ -94,7 +94,7 @@ export function MembersPage() {
     mutationFn: async (values: MemberValues) => {
       // Validate unique member number locally before repository insert
       const exists = result.data?.some(m => m.member_number.toUpperCase() === values.member_number.toUpperCase());
-      if (exists) throw new Error("A member with this number already exists.");
+      if (exists) throw new Error(t("members.alerts.exists") || "A member with this number already exists.");
       
       return saveMember({
         full_name: cleanText(values.full_name),
@@ -109,7 +109,7 @@ export function MembersPage() {
     },
     onSuccess: () => {
       invalidate();
-      toast.success("Member saved successfully.");
+      toast.success(t("members.alerts.memberSaved") || "Member saved successfully.");
       addForm.reset();
       setAdding(false);
     },
@@ -122,16 +122,16 @@ export function MembersPage() {
     },
     onSuccess: () => {
       invalidate();
-      toast.success("Selected members archived.");
+      toast.success(t("members.alerts.bulkArchived") || "Selected members archived.");
       setSelectedIds([]);
     },
     onError: (error: any) => {
-      toast.error(error?.message || "Failed to archive members.");
+      toast.error(error?.message || t("members.alerts.bulkArchiveFailed") || "Failed to archive members.");
     }
   });
 
   const handleBulkArchiveMembers = () => {
-    if (confirm(`Are you sure you want to archive ${selectedIds.length} selected member(s)?`)) {
+    if (confirm(t("members.alerts.confirmBulkArchive", { count: selectedIds.length }) || `Are you sure you want to archive ${selectedIds.length} selected member(s)?`)) {
       bulkArchiveMembersMutation.mutate();
     }
   };
@@ -235,7 +235,7 @@ export function MembersPage() {
               }}
               className="cursor-pointer rounded border-black/20 dark:border-white/20 text-emerald focus:ring-emerald h-4 w-4"
             />
-            <span className="text-[12px] font-semibold text-[#122222]/70 dark:text-white/70">Select All</span>
+            <span className="text-[12px] font-semibold text-[#122222]/70 dark:text-white/70">{t("catalog.bulk.selectAll") || "Select All"}</span>
           </div>
 
           {/* Department Select Dropdown */}
@@ -266,7 +266,7 @@ export function MembersPage() {
             className="bg-white dark:bg-[#1d2926] border border-black/5 dark:border-white/5 rounded-lg py-2 px-3 text-[13px] font-semibold text-[#122222]/70 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer"
             title="Toggle sort direction"
           >
-            {sortOrder === "asc" ? "Asc" : "Desc"}
+            {sortOrder === "asc" ? t("asc") || "Asc" : t("desc") || "Desc"}
           </button>
         </div>
 
@@ -467,8 +467,8 @@ export function MembersPage() {
             <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60">
               <span>{t("status")}</span>
               <select {...addForm.register("status")} className="field-select text-[13px] py-2 px-3 mt-1 font-semibold">
-                <option value="active">Active</option>
-                <option value="suspended">Suspended</option>
+                <option value="active">{t("members.active") || "Active"}</option>
+                <option value="suspended">{t("members.suspended") || "Suspended"}</option>
               </select>
             </label>
 
@@ -483,7 +483,7 @@ export function MembersPage() {
       {selectedIds.length > 0 && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-white/90 dark:bg-[#1d2926]/90 backdrop-blur-md px-6 py-3 rounded-full border border-black/10 dark:border-white/10 shadow-lg flex items-center gap-6 z-50 animate-in fade-in slide-in-from-bottom-4 duration-300">
           <span className="text-[13px] font-semibold text-[#122222] dark:text-white">
-            {selectedIds.length} {selectedIds.length === 1 ? 'member' : 'members'} selected
+            {t("members.bulk.selectedCount", { count: selectedIds.length }) || `${selectedIds.length} member(s) selected`}
           </span>
           <div className="h-4 w-px bg-black/10 dark:bg-white/10" />
           <div className="flex items-center gap-2">
@@ -491,20 +491,20 @@ export function MembersPage() {
               onClick={() => setSelectedIds(sortedMembers.map(m => m.id))}
               className="text-[12px] font-bold text-emerald dark:text-emerald-light hover:underline px-2 py-1 cursor-pointer"
             >
-              Select All
+              {t("catalog.bulk.selectAll") || "Select All"}
             </button>
             <button
               onClick={() => setSelectedIds([])}
               className="text-[12px] font-bold text-[#122222]/60 dark:text-white/60 hover:underline px-2 py-1 cursor-pointer"
             >
-              Deselect All
+              {t("catalog.bulk.deselectAll") || "Deselect All"}
             </button>
             <button
               onClick={handleBulkArchiveMembers}
               className="flex items-center gap-1.5 text-[12px] font-bold bg-red-500 hover:bg-red-600 text-white px-4 py-1.5 rounded-full shadow transition-colors cursor-pointer"
             >
               <Trash2 size={13} />
-              Archive Selected
+              {t("catalog.bulk.archiveSelected") || "Archive Selected"}
             </button>
           </div>
         </div>
@@ -558,7 +558,7 @@ function MemberSidebar({ member, onClose, registerClean }: { member: Member; onC
       avatar_path: values.avatar_path || null
     }),
     onSuccess: () => {
-      toast.success("Member profile updated.");
+      toast.success(t("members.alerts.updated") || "Member profile updated.");
       setIsEditing(false);
       invalidate();
       onClose();
@@ -569,7 +569,7 @@ function MemberSidebar({ member, onClose, registerClean }: { member: Member; onC
   const deleteMutation = useMutation({
     mutationFn: () => deleteMember(member.id),
     onSuccess: () => {
-      toast.success("Member record archived.");
+      toast.success(t("members.alerts.archived") || "Member record archived.");
       invalidate();
       onClose();
     },
@@ -579,7 +579,7 @@ function MemberSidebar({ member, onClose, registerClean }: { member: Member; onC
   const renewMutation = useMutation({
     mutationFn: (loanId: string) => renewLoan(loanId, prefs.loanDays),
     onSuccess: () => {
-      toast.success("Loan renewed.");
+      toast.success(t("circulation.alerts.renewSuccess") || "Loan renewed.");
       refetchLoans();
       invalidate();
     },
@@ -589,7 +589,7 @@ function MemberSidebar({ member, onClose, registerClean }: { member: Member; onC
   const returnMutation = useMutation({
     mutationFn: (copyIds: string[]) => returnCopies(copyIds, prefs.reservationHoldDays),
     onSuccess: () => {
-      toast.success("Item returned successfully.");
+      toast.success(t("circulation.alerts.returnSuccess") || "Item returned successfully.");
       refetchLoans();
       invalidate();
     },
@@ -599,7 +599,7 @@ function MemberSidebar({ member, onClose, registerClean }: { member: Member; onC
   const cancelResMutation = useMutation({
     mutationFn: (resId: string) => cancelReservation(resId),
     onSuccess: () => {
-      toast.success("Reservation cancelled.");
+      toast.success(t("members.alerts.reservationCancelled") || "Reservation cancelled.");
       refetchRes();
       invalidate();
     },
@@ -691,7 +691,7 @@ function MemberSidebar({ member, onClose, registerClean }: { member: Member; onC
                   </button>
                   <button 
                     onClick={() => {
-                      if (confirm("Are you sure you want to delete this member? All history is retained, but eligibility ceases.")) {
+                      if (confirm(t("members.alerts.confirmDelete") || "Are you sure you want to delete this member? All history is retained, but eligibility ceases.")) {
                         deleteMutation.mutate();
                       }
                     }}
@@ -731,8 +731,8 @@ function MemberSidebar({ member, onClose, registerClean }: { member: Member; onC
                 </label>
                 <label className="text-[11px] font-semibold text-[#122222]/60 block">{t("status")}
                   <select {...editForm.register("status")} className="field-select text-[13px] py-1.5 px-2.5 mt-1 font-semibold">
-                    <option value="active">Active</option>
-                    <option value="suspended">Suspended</option>
+                    <option value="active">{t("members.active") || "Active"}</option>
+                    <option value="suspended">{t("members.suspended") || "Suspended"}</option>
                   </select>
                 </label>
                 <div className="flex gap-2 justify-end pt-3 border-t border-black/5 dark:border-white/5">
@@ -759,34 +759,34 @@ function MemberSidebar({ member, onClose, registerClean }: { member: Member; onC
                         <span className="text-[10px] text-[#122222]/50 dark:text-white/50 block font-mono mt-0.5">{loan.barcode}</span>
                       </div>
                       <span className={`text-[10px] font-bold ${overdue ? 'text-red-500' : 'text-[#122222]/60'}`}>
-                        {overdue ? "Overdue" : "On loan"}
+                        {overdue ? t("status.overdue") || "Overdue" : t("status.onloan") || "On loan"}
                       </span>
                     </div>
                     <div className="text-[11px] text-[#122222]/65 dark:text-white/65">
-                      Due date: <span className="font-semibold">{formatDisplayDate(loan.due_at)}</span>
+                      {t("circulation.due") || "Due date"}: <span className="font-semibold">{formatDisplayDate(loan.due_at)}</span>
                     </div>
                     <div className="flex gap-2 mt-1">
                       <button 
                         onClick={() => renewMutation.mutate(loan.id)}
                         disabled={renewMutation.isPending || renewDisabled}
                         className="flex-1 flex items-center justify-center gap-1 py-1 text-[11px] font-semibold text-[#122222]/80 dark:text-white/80 bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 rounded cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-                        title={renewDisabled ? "Renewal limit reached" : undefined}
+                        title={renewDisabled ? t("circulation.alerts.renewLimitReached") || "Renewal limit reached" : undefined}
                       >
-                        Renew ({loan.renewed_count}/{prefs.renewLimit})
+                        {t("circulation.renew") || "Renew"} ({loan.renewed_count}/{prefs.renewLimit})
                       </button>
                       <button 
                         onClick={() => returnMutation.mutate([loan.copy_id])}
                         disabled={returnMutation.isPending}
                         className="flex-1 flex items-center justify-center gap-1 py-1 text-[11px] font-semibold text-emerald bg-emerald/10 dark:bg-emerald-light/10 dark:text-emerald-light hover:bg-emerald/20 rounded cursor-pointer"
                       >
-                        Return
+                        {t("circulation.return") || "Return"}
                       </button>
                     </div>
                   </div>
                 );
               })
             ) : (
-              <p className="text-[13px] text-[#122222]/50 text-center py-6">No books currently checked out.</p>
+              <p className="text-[13px] text-[#122222]/50 text-center py-6">{t("members.noActiveLoans") || "No books currently checked out."}</p>
             )}
           </div>
         )}
@@ -807,12 +807,12 @@ function MemberSidebar({ member, onClose, registerClean }: { member: Member; onC
                     disabled={cancelResMutation.isPending}
                     className="text-red-500 hover:text-red-700 text-[11px] font-bold shrink-0 cursor-pointer"
                   >
-                    Cancel
+                    {t("catalog.addModal.cancel") || "Cancel"}
                   </button>
                 </div>
               ))
             ) : (
-              <p className="text-[13px] text-[#122222]/50 text-center py-6">No reservations placed.</p>
+              <p className="text-[13px] text-[#122222]/50 text-center py-6">{t("members.noReservations") || "No reservations placed."}</p>
             )}
           </div>
         )}

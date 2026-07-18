@@ -44,7 +44,7 @@ export function CirculationPage() {
     ),
     onSuccess: () => {
       invalidate();
-      toast.success("Checkout completed successfully.");
+      toast.success(t("circulation.alerts.checkoutSuccess") || "Checkout completed successfully.");
       setScannedCopies([]);
     },
     onError: (err) => toast.error(err.message)
@@ -54,7 +54,7 @@ export function CirculationPage() {
     mutationFn: (copyIds: string[]) => returnCopies(copyIds, prefs.reservationHoldDays),
     onSuccess: () => {
       invalidate();
-      toast.success("Item(s) returned successfully.");
+      toast.success(t("circulation.alerts.returnSuccess") || "Item(s) returned successfully.");
     },
     onError: (err) => toast.error(err.message)
   });
@@ -63,7 +63,7 @@ export function CirculationPage() {
     mutationFn: (loanId: string) => renewLoan(loanId, prefs.loanDays),
     onSuccess: () => {
       invalidate();
-      toast.success("Loan renewed.");
+      toast.success(t("circulation.alerts.renewSuccess") || "Loan renewed.");
     },
     onError: (err) => toast.error(err.message)
   });
@@ -82,11 +82,11 @@ export function CirculationPage() {
 
     if (foundMember) {
       if (foundMember.status !== "active") {
-        toast.error(`Member "${foundMember.full_name}" is currently ${foundMember.status}.`);
+        toast.error(t("circulation.alerts.memberStatus", { name: foundMember.full_name, status: t("status." + foundMember.status) }) || `Member "${foundMember.full_name}" is currently ${foundMember.status}.`);
         return;
       }
       setSelectedMember(foundMember);
-      toast.success(`Active session started for: ${foundMember.full_name}`);
+      toast.success(t("circulation.alerts.sessionStarted", { name: foundMember.full_name }) || `Active session started for: ${foundMember.full_name}`);
       setScanInput("");
       return;
     }
@@ -98,7 +98,7 @@ export function CirculationPage() {
 
     if (activeLoan) {
       returnMutation.mutate([activeLoan.copy_id]);
-      toast.success(`Returned "${activeLoan.title}" (borrower: ${activeLoan.member_name})`);
+      toast.success(t("circulation.alerts.returnedItem", { title: activeLoan.title, name: activeLoan.member_name }) || `Returned "${activeLoan.title}" (borrower: ${activeLoan.member_name})`);
       setScanInput("");
       return;
     }
@@ -111,27 +111,27 @@ export function CirculationPage() {
 
     if (foundCopy) {
       if (foundCopy.status !== "available") {
-        toast.error(`Copy ${foundCopy.barcode} is not available (status: ${foundCopy.status}).`);
+        toast.error(t("circulation.alerts.copyUnavailable", { barcode: foundCopy.barcode, status: t("status." + foundCopy.status) }) || `Copy ${foundCopy.barcode} is not available (status: ${foundCopy.status}).`);
         setScanInput("");
         return;
       }
       if (!selectedMember) {
-        toast.error("Please select or scan a member card first before checking out items.");
+        toast.error(t("circulation.alerts.selectMemberFirst") || "Please select or scan a member card first before checking out items.");
         setScanInput("");
         return;
       }
       // Add copy to pending list if not already there
       if (scannedCopies.some(c => c.id === foundCopy.id)) {
-        toast.warning("Copy is already in the pending checkout list.");
+        toast.warning(t("circulation.alerts.copyAlreadyPending") || "Copy is already in the pending checkout list.");
       } else {
         setScannedCopies([...scannedCopies, foundCopy]);
-        toast.info(`Added "${foundCopy.title}" to pending checkout list.`);
+        toast.info(t("circulation.alerts.copyAddedPending", { title: foundCopy.title }) || `Added "${foundCopy.title}" to pending checkout list.`);
       }
       setScanInput("");
       return;
     }
 
-    toast.error(`"${val}" not recognized as a member number or copy barcode.`);
+    toast.error(t("circulation.alerts.notRecognized", { value: val }) || `"${val}" not recognized as a member number or copy barcode.`);
     setScanInput("");
   };
 
@@ -144,19 +144,19 @@ export function CirculationPage() {
            c.accession_number.toUpperCase() === barcode
     );
     if (!foundCopy) {
-      toast.error(`Barcode "${barcode}" not found.`);
+      toast.error(t("circulation.alerts.barcodeNotFound", { barcode }) || `Barcode "${barcode}" not found.`);
       return;
     }
     if (foundCopy.status !== "available") {
-      toast.error(`Copy is not available (status: ${foundCopy.status}).`);
+      toast.error(t("circulation.alerts.copyUnavailableSimple", { status: t("status." + foundCopy.status) }) || `Copy is not available (status: ${foundCopy.status}).`);
       return;
     }
     if (scannedCopies.some(c => c.id === foundCopy.id)) {
-      toast.warning("Copy is already in checkout list.");
+      toast.warning(t("circulation.alerts.copyAlreadyPending") || "Copy is already in checkout list.");
       return;
     }
     setScannedCopies([...scannedCopies, foundCopy]);
-    toast.info(`Added "${foundCopy.title}" to pending checkout list.`);
+    toast.info(t("circulation.alerts.copyAddedPending", { title: foundCopy.title }) || `Added "${foundCopy.title}" to pending checkout list.`);
     setManualCopyInput("");
   };
 
@@ -198,7 +198,7 @@ export function CirculationPage() {
             }}
             className="border-2 border-red-500/20 text-red-500 rounded-2xl px-6 font-bold text-[14px] hover:bg-red-500/10 transition-colors cursor-pointer"
           >
-            End Session
+            {t("circulation.endSession") || "End Session"}
           </button>
         )}
       </form>
@@ -218,7 +218,7 @@ export function CirculationPage() {
                    </div>
                    <div>
                      <h2 className="text-[18px] font-bold text-[#122222] dark:text-white">{selectedMember.full_name}</h2>
-                     <p className="text-[13px] font-semibold text-emerald dark:text-emerald-light">{selectedMember.role || "Patron"} • {selectedMember.department || "General"}</p>
+                     <p className="text-[13px] font-semibold text-emerald dark:text-emerald-light">{t("members.roles." + selectedMember.role?.toLowerCase()) || selectedMember.role || "Patron"} • {t("members.depts." + selectedMember.department?.toLowerCase()) || selectedMember.department || "General"}</p>
                    </div>
                  </div>
                  <div className="text-right">
@@ -281,9 +281,9 @@ export function CirculationPage() {
                             onClick={() => renewMutation.mutate(loan.id)}
                             disabled={renewMutation.isPending || renewDisabled}
                             className="h-8 px-3 rounded-lg bg-[#fcfbf8] dark:bg-[#111d1a] border border-black/10 dark:border-white/10 text-[11px] font-bold text-[#122222] dark:text-white hover:bg-black/5 dark:hover:bg-white/5 flex items-center gap-1 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-                            title={renewDisabled ? "Renewal limit reached" : undefined}
+                            title={renewDisabled ? t("circulation.alerts.renewLimitReached") || "Renewal limit reached" : undefined}
                           >
-                            <RotateCw size={12} /> {renewDisabled ? "Limit reached" : `${t("circulation.renew")} (${loan.renewed_count}/${prefs.renewLimit})`}
+                            <RotateCw size={12} /> {renewDisabled ? t("circulation.limitReached") || "Limit reached" : `${t("circulation.renew")} (${loan.renewed_count}/${prefs.renewLimit})`}
                           </button>
                           <button 
                             onClick={() => returnMutation.mutate([loan.copy_id])}
@@ -336,7 +336,7 @@ export function CirculationPage() {
                 ) : (
                   <div className="flex flex-col items-center justify-center h-full text-center py-10 text-[#122222]/40">
                      <ScanLine size={32} className="mb-2 opacity-50" />
-                     <p className="text-[13px]">No copies scanned yet. Use scanner or manual entry below.</p>
+                     <p className="text-[13px]">{t("circulation.noScannedCopies") || "No copies scanned yet. Use scanner or manual entry below."}</p>
                   </div>
                 )}
               </div>
@@ -349,13 +349,13 @@ export function CirculationPage() {
                   </div>
                   <input 
                     type="text"
-                    placeholder="Enter copy barcode..."
+                    placeholder={t("circulation.enterBarcodePlaceholder") || "Enter copy barcode..."}
                     value={manualCopyInput}
                     onChange={(e) => setManualCopyInput(e.target.value)}
                     className="w-full bg-[#fcfbf8] dark:bg-[#111d1a] border border-black/10 dark:border-white/10 rounded-xl py-3 pl-10 pr-4 text-[14px] text-[#122222] dark:text-white outline-none focus:border-emerald font-semibold"
                   />
                 </div>
-                <button type="submit" className="bg-emerald text-white rounded-xl px-4 font-bold text-[13px] cursor-pointer">Add</button>
+                <button type="submit" className="bg-emerald text-white rounded-xl px-4 font-bold text-[13px] cursor-pointer">{t("add") || "Add"}</button>
               </form>
             </div>
 
@@ -365,7 +365,7 @@ export function CirculationPage() {
                 disabled={scannedCopies.length === 0 || checkoutMutation.isPending}
                 className="w-full bg-emerald text-white py-4 rounded-xl font-bold text-[15px] hover:bg-emerald/90 transition-colors shadow-sm flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
               >
-                {checkoutMutation.isPending ? "Completing..." : `${t("circulation.completeCheckout")} (${scannedCopies.length} ${t("circulation.items", { count: scannedCopies.length })})`} <ArrowRight size={18} />
+                {checkoutMutation.isPending ? t("circulation.completingCheckout") || "Completing..." : `${t("circulation.completeCheckout") || "Complete Checkout"} (${scannedCopies.length} ${t("circulation.items", { count: scannedCopies.length })})`} <ArrowRight size={18} />
               </button>
             </div>
           </div>
@@ -376,7 +376,7 @@ export function CirculationPage() {
           <div className="w-24 h-24 bg-black/5 dark:bg-white/5 rounded-full flex items-center justify-center text-[#122222]/40 dark:text-white/40 mb-6">
             <ScanLine size={40} />
           </div>
-          <h2 className="text-[20px] font-bold text-[#122222] dark:text-white mb-2">Ready for circulation</h2>
+          <h2 className="text-[20px] font-bold text-[#122222] dark:text-white mb-2">{t("circulation.readyTitle") || "Ready for circulation"}</h2>
           <p className="text-[14px] text-[#122222]/60 dark:text-white/60">{t("circulation.scanHelp")}</p>
         </div>
       )}

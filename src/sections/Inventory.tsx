@@ -55,16 +55,16 @@ export function InventoryPage() {
     },
     onSuccess: () => {
       invalidate();
-      toast.success("Selected copies archived.");
+      toast.success(t("inventory.alerts.bulkArchived") || "Selected copies archived.");
       setSelectedIds([]);
     },
     onError: (err: any) => {
-      toast.error(err.message || "Failed to archive copies.");
+      toast.error(err.message || t("inventory.alerts.bulkArchiveFailed") || "Failed to archive copies.");
     }
   });
 
   const handleBulkArchive = () => {
-    if (confirm(`Are you sure you want to archive ${selectedIds.length} selected copy/copies?`)) {
+    if (confirm(t("inventory.alerts.confirmBulkArchive", { count: selectedIds.length }) || `Are you sure you want to archive ${selectedIds.length} selected copy/copies?`)) {
       bulkArchiveMutation.mutate();
     }
   };
@@ -141,7 +141,7 @@ export function InventoryPage() {
     e.preventDefault();
     const cleanShelf = cleanText(targetShelf);
     if (!cleanShelf) {
-      toast.warning("Please specify a shelf code.");
+      toast.warning(t("inventory.alerts.specifyShelf") || "Please specify a shelf code.");
       return;
     }
     setTargetShelf(cleanShelf);
@@ -157,7 +157,7 @@ export function InventoryPage() {
 
     // Check if barcode is already scanned in this session
     if (scannedItems.some(item => item.barcode === barcode)) {
-      toast.warning("This barcode has already been scanned in this session.");
+      toast.warning(t("inventory.alerts.alreadyScanned") || "This barcode has already been scanned in this session.");
       setBarcodeInput("");
       return;
     }
@@ -172,24 +172,24 @@ export function InventoryPage() {
         {
           barcode,
           title: matched.title,
-          currentShelf: matchShelf || "Unassigned",
+          currentShelf: matchShelf || t("inventory.unassigned") || "Unassigned",
           result: isCorrectShelf ? "found" : "misplaced",
           copyId: matched.id
         },
         ...prev
       ]);
-      toast.success(`Scanned: ${matched.title}`);
+      toast.success(t("inventory.alerts.scannedSuccess", { title: matched.title }) || `Scanned: ${matched.title}`);
     } else {
       setScannedItems(prev => [
         {
           barcode,
-          title: "Unknown Item",
+          title: t("inventory.unknownItem") || "Unknown Item",
           currentShelf: "Unknown",
           result: "unknown"
         },
         ...prev
       ]);
-      toast.error(`Barcode "${barcode}" not recognized in system.`);
+      toast.error(t("inventory.alerts.notRecognized", { barcode }) || `Barcode "${barcode}" not recognized in system.`);
     }
 
     setBarcodeInput("");
@@ -205,7 +205,7 @@ export function InventoryPage() {
       }
     },
     onSuccess: () => {
-      toast.success("Audit complete. Locations updated for misplaced books.");
+      toast.success(t("inventory.alerts.auditComplete") || "Audit complete. Locations updated for misplaced books.");
       setActiveSession(false);
       setScannedItems([]);
       setTargetShelf("");
@@ -270,7 +270,7 @@ export function InventoryPage() {
           >
             <option value="All Conditions">{t("inventory.allConditions")}</option>
             {conditionsList.map(cond => (
-              <option key={cond} value={cond}>{cond.charAt(0).toUpperCase() + cond.slice(1)}</option>
+              <option key={cond} value={cond}>{t("catalog.condition." + cond?.toLowerCase()) || cond}</option>
             ))}
           </select>
         </div>
@@ -329,10 +329,10 @@ export function InventoryPage() {
                     <td className="px-6 py-3 font-mono font-bold text-[#122222] dark:text-white">{copy.barcode}</td>
                     <td className="px-6 py-3 font-semibold text-[#122222]/80 dark:text-white/80">{copy.title}</td>
                     <td className="px-6 py-3 text-[#122222]/75 dark:text-white/75 font-semibold">
-                      {copy.shelf ? `Shelf ${copy.shelf}` : "Unassigned"}
+                      {copy.shelf ? `Shelf ${copy.shelf}` : t("inventory.unassigned") || "Unassigned"}
                     </td>
                     <td className="px-6 py-3 text-[#122222]/70 dark:text-white/70">
-                      <span className="capitalize">{copy.condition}</span>
+                      <span className="capitalize">{t("catalog.condition." + copy.condition?.toLowerCase()) || copy.condition}</span>
                     </td>
                     <td className="px-6 py-3">
                       <StatusBadge value={copy.status} />
@@ -416,7 +416,7 @@ export function InventoryPage() {
               <input 
                 ref={scanInputRef}
                 type="text"
-                placeholder="Scan or enter book barcode..."
+                placeholder={t("inventory.enterBarcodePlaceholder") || "Scan or enter book barcode..."}
                 value={barcodeInput}
                 onChange={(e) => setBarcodeInput(e.target.value)}
                 className="flex-1 bg-white dark:bg-[#1d2926] border border-black/15 dark:border-white/15 rounded-lg py-2.5 px-3 text-[14px] text-[#122222] dark:text-white outline-none focus:border-emerald font-semibold"
@@ -467,7 +467,7 @@ export function InventoryPage() {
               ) : (
                 <div className="text-center py-12 text-[#122222]/40 dark:text-white/40 flex flex-col items-center justify-center">
                   <ScanIcon size={32} className="animate-pulse mb-3 opacity-60 text-emerald" />
-                  <span>Ready to scan. Place cursor in input field and scan copies.</span>
+                  <span>{t("inventory.readyToScanHelp") || "Ready to scan. Place cursor in input field and scan copies."}</span>
                 </div>
               )}
             </div>
@@ -478,21 +478,21 @@ export function InventoryPage() {
                 type="button" 
                 variant="ghost" 
                 onClick={() => {
-                  if (confirm("Discard all scanning progress in this session?")) {
+                  if (confirm(t("inventory.alerts.confirmDiscardSession") || "Discard all scanning progress in this session?")) {
                     setActiveSession(false);
                     setScannedItems([]);
                   }
                 }}
                 className="text-red-500 hover:bg-red-500/10 cursor-pointer"
               >
-                Cancel Session
+                {t("inventory.cancelSession") || "Cancel Session"}
               </Button>
               <Button 
                 onClick={() => finishSessionMutation.mutate()} 
                 disabled={finishSessionMutation.isPending}
                 className="cursor-pointer"
               >
-                {finishSessionMutation.isPending ? "Updating library..." : `Finish & Update Locations (${scannedItems.filter(i => i.result === 'misplaced').length})`}
+                {finishSessionMutation.isPending ? t("circulation.completingCheckout") || "Completing..." : t("inventory.finishSession", { count: scannedItems.filter(i => i.result === 'misplaced').length }) || `Finish & Update Locations (${scannedItems.filter(i => i.result === 'misplaced').length})`}
               </Button>
             </div>
           </div>
@@ -501,7 +501,7 @@ export function InventoryPage() {
       {selectedIds.length > 0 && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-white/90 dark:bg-[#1d2926]/90 backdrop-blur-md px-6 py-3 rounded-full border border-black/10 dark:border-white/10 shadow-lg flex items-center gap-6 z-50 animate-in fade-in slide-in-from-bottom-4 duration-300">
           <span className="text-[13px] font-semibold text-[#122222] dark:text-white">
-            {selectedIds.length} {selectedIds.length === 1 ? 'copy' : 'copies'} selected
+            {t("inventory.bulk.selectedCount", { count: selectedIds.length }) || `${selectedIds.length} copies selected`}
           </span>
           <div className="h-4 w-px bg-black/10 dark:bg-white/10" />
           <div className="flex items-center gap-2">
@@ -509,20 +509,20 @@ export function InventoryPage() {
               onClick={() => setSelectedIds(filteredCopies.map(c => c.id))}
               className="text-[12px] font-bold text-emerald dark:text-emerald-light hover:underline px-2 py-1 cursor-pointer"
             >
-              Select All
+              {t("catalog.bulk.selectAll") || "Select All"}
             </button>
             <button
               onClick={() => setSelectedIds([])}
               className="text-[12px] font-bold text-[#122222]/60 dark:text-white/60 hover:underline px-2 py-1 cursor-pointer"
             >
-              Deselect All
+              {t("catalog.bulk.deselectAll") || "Deselect All"}
             </button>
             <button
               onClick={handleBulkArchive}
               className="flex items-center gap-1.5 text-[12px] font-bold bg-red-500 hover:bg-red-600 text-white px-4 py-1.5 rounded-full shadow transition-colors cursor-pointer"
             >
               <Trash2 size={13} />
-              Archive Selected
+              {t("catalog.bulk.archiveSelected") || "Archive Selected"}
             </button>
           </div>
         </div>
@@ -545,47 +545,47 @@ function CopyEditModal({ copy, onClose }: { copy: Copy & { title: string }; onCl
   const mutation = useMutation({
     mutationFn: (values: any) => updateCopy(copy.id, values),
     onSuccess: () => {
-      toast.success("Copy details updated.");
+      toast.success(t("inventory.alerts.copyUpdated") || "Copy details updated.");
       onClose();
     },
     onError: (err: any) => toast.error(err.message)
   });
 
   return (
-    <Modal isOpen={true} onClose={onClose} title={`Edit Copy: ${copy.barcode}`}>
+    <Modal isOpen={true} onClose={onClose} title={t("inventory.editCopyTitle", { barcode: copy.barcode }) || `Edit Copy: ${copy.barcode}`}>
       <form onSubmit={form.handleSubmit((v) => mutation.mutate(v))} className="space-y-4 text-[13px]">
         <div>
-          <p className="text-xs text-ink/40 dark:text-parchment/40 uppercase tracking-wider font-semibold">Title</p>
+          <p className="text-xs text-ink/40 dark:text-parchment/40 uppercase tracking-wider font-semibold">{t("catalog.headers.title")}</p>
           <p className="text-sm font-semibold mt-0.5">{copy.title}</p>
         </div>
         
-        <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">Shelf Location (Code)
-          <Input {...form.register("shelf")} placeholder="e.g. A-12" />
+        <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">{t("inventory.shelfLocationLabel") || "Shelf Location (Code)"}
+          <Input {...form.register("shelf")} placeholder={t("catalog.details.copyShelfPlaceholder") || "e.g. A-12"} />
         </label>
 
-        <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">Condition
+        <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">{t("catalog.details.copyCondition")}
           <select {...form.register("condition")} className="field-select text-[13px] py-2 px-3 mt-1 font-semibold">
-            <option value="mint">Mint</option>
-            <option value="good">Good</option>
-            <option value="fair">Fair</option>
-            <option value="worn">Worn</option>
-            <option value="damaged">Damaged</option>
+            <option value="mint">{t("catalog.condition.mint") || "Mint"}</option>
+            <option value="good">{t("catalog.condition.good") || "Good"}</option>
+            <option value="fair">{t("catalog.condition.fair") || "Fair"}</option>
+            <option value="worn">{t("catalog.condition.worn") || "Worn"}</option>
+            <option value="damaged">{t("catalog.condition.damaged") || "Damaged"}</option>
           </select>
         </label>
 
-        <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">Status
+        <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">{t("status")}
           <select {...form.register("status")} className="field-select text-[13px] py-2 px-3 mt-1 font-semibold">
-            <option value="available">Available</option>
-            <option value="on-loan">On Loan</option>
-            <option value="reserved">Reserved</option>
-            <option value="repair">In Repair</option>
-            <option value="lost">Lost</option>
+            <option value="available">{t("status.available")}</option>
+            <option value="on-loan">{t("status.onloan")}</option>
+            <option value="reserved">{t("status.reserved")}</option>
+            <option value="repair">{t("status.repair") || "In Repair"}</option>
+            <option value="lost">{t("status.lost") || "Lost"}</option>
           </select>
         </label>
 
         <div className="flex gap-2 justify-end pt-4 border-t border-black/5 dark:border-white/5">
           <Button type="button" variant="ghost" onClick={onClose}>{t("catalog.addModal.cancel")}</Button>
-          <Button type="submit" disabled={mutation.isPending}>Save Changes</Button>
+          <Button type="submit" disabled={mutation.isPending}>{t("inventory.saveChanges") || "Save Changes"}</Button>
         </div>
       </form>
     </Modal>

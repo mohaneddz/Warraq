@@ -33,7 +33,7 @@ export function ReservationsPage() {
     mutationFn: (id: string) => cancelReservation(id),
     onSuccess: () => {
       invalidate();
-      toast.success("Reservation cancelled.");
+      toast.success(t("members.alerts.reservationCancelled") || "Reservation cancelled.");
     },
     onError: (err) => toast.error(err.message)
   });
@@ -44,16 +44,16 @@ export function ReservationsPage() {
     },
     onSuccess: () => {
       invalidate();
-      toast.success("Selected reservations cancelled.");
+      toast.success(t("reservations.alerts.bulkCancelled") || "Selected reservations cancelled.");
       setSelectedIds([]);
     },
     onError: (err: any) => {
-      toast.error(err.message || "Failed to cancel reservations.");
+      toast.error(err.message || t("reservations.alerts.bulkCancelFailed") || "Failed to cancel reservations.");
     }
   });
 
   const handleBulkCancel = () => {
-    if (confirm(`Are you sure you want to cancel ${selectedIds.length} selected reservation(s)?`)) {
+    if (confirm(t("reservations.alerts.confirmBulkCancel", { count: selectedIds.length }) || `Are you sure you want to cancel ${selectedIds.length} selected reservation(s)?`)) {
       bulkCancelMutation.mutate();
     }
   };
@@ -82,9 +82,9 @@ export function ReservationsPage() {
               className="w-full bg-white dark:bg-[#1d2926] border border-black/10 dark:border-white/10 rounded-lg py-2 pl-9 pr-3 text-[13px] text-[#122222] dark:text-[#f0ebe1] outline-none focus:border-emerald focus:ring-1 focus:ring-emerald" 
             />
           </div>
-          <FilterSelect placeholder="All Statuses" />
+          <FilterSelect placeholder={t("reservations.allStatuses") || "All Statuses"} />
           <button className="flex items-center gap-2 text-[#122222]/60 dark:text-white/60 text-[13px] font-semibold px-3 py-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg ml-auto cursor-pointer">
-            <Filter size={16} /> More filters
+            <Filter size={16} /> {t("reservations.moreFilters") || "More filters"}
           </button>
         </div>
 
@@ -157,21 +157,21 @@ export function ReservationsPage() {
                           ? 'bg-copper/10 text-copper'
                           : 'bg-gray-500/10 text-gray-500'
                       }`}>
-                        {res.status.charAt(0).toUpperCase() + res.status.slice(1)}
+                        {res.status === 'ready' ? t("reservations.status.ready") || "Ready" : res.status === 'queued' ? t("reservations.status.queued") || "Queued" : res.status}
                       </span>
                     </td>
                     <td className="px-6 py-3">
                       {(res.status === 'queued' || res.status === 'ready') && (
                         <button 
                           onClick={() => {
-                            if (confirm("Cancel this reservation?")) {
+                            if (confirm(t("reservations.alerts.confirmCancel") || "Cancel this reservation?")) {
                               cancelMutation.mutate(res.id);
                             }
                           }}
                           className="text-red-500 hover:text-red-700 font-bold text-[11px] cursor-pointer"
                           disabled={cancelMutation.isPending}
                         >
-                          Cancel
+                          {t("catalog.addModal.cancel") || "Cancel"}
                         </button>
                       )}
                     </td>
@@ -193,7 +193,7 @@ export function ReservationsPage() {
       {selectedIds.length > 0 && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-white/90 dark:bg-[#1d2926]/90 backdrop-blur-md px-6 py-3 rounded-full border border-black/10 dark:border-white/10 shadow-lg flex items-center gap-6 z-50 animate-in fade-in slide-in-from-bottom-4 duration-300">
           <span className="text-[13px] font-semibold text-[#122222] dark:text-white">
-            {selectedIds.length} {selectedIds.length === 1 ? 'reservation' : 'reservations'} selected
+            {t("reservations.bulk.selectedCount", { count: selectedIds.length }) || `${selectedIds.length} reservations selected`}
           </span>
           <div className="h-4 w-px bg-black/10 dark:bg-white/10" />
           <div className="flex items-center gap-2">
@@ -201,20 +201,20 @@ export function ReservationsPage() {
               onClick={() => setSelectedIds(filteredReservations.map(r => r.id))}
               className="text-[12px] font-bold text-emerald dark:text-emerald-light hover:underline px-2 py-1 cursor-pointer"
             >
-              Select All
+              {t("catalog.bulk.selectAll") || "Select All"}
             </button>
             <button
               onClick={() => setSelectedIds([])}
               className="text-[12px] font-bold text-[#122222]/60 dark:text-white/60 hover:underline px-2 py-1 cursor-pointer"
             >
-              Deselect All
+              {t("catalog.bulk.deselectAll") || "Deselect All"}
             </button>
             <button
               onClick={handleBulkCancel}
               className="flex items-center gap-1.5 text-[12px] font-bold bg-red-500 hover:bg-red-600 text-white px-4 py-1.5 rounded-full shadow transition-colors cursor-pointer"
             >
               <Trash2 size={13} />
-              Cancel Selected
+              {t("reservations.cancelSelected") || "Cancel Selected"}
             </button>
           </div>
         </div>

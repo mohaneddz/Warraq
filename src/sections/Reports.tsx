@@ -100,7 +100,7 @@ export function ReportsPage() {
             onClick={() => window.print()}
             className="flex items-center gap-2 bg-white dark:bg-[#1d2926] border border-black/10 dark:border-white/10 text-[#122222] dark:text-white px-4 py-2 rounded-lg font-bold text-[13px] hover:bg-black/5 dark:hover:bg-white/5 transition-colors shadow-sm cursor-pointer"
           >
-            <Printer size={16} /> Print
+            <Printer size={16} /> {t("reports.print") || "Print"}
           </button>
         </div>
       </div>
@@ -108,35 +108,35 @@ export function ReportsPage() {
       {/* Tabs & Filters */}
       <div className="flex items-center justify-between mb-8 select-none">
         <div className="flex gap-2 p-1 bg-black/5 dark:bg-white/5 rounded-xl">
-          <Tab label="Overview" active={activeTab === "Overview"} onClick={() => setActiveTab("Overview")} />
-          <Tab label="Circulation" active={activeTab === "Circulation"} onClick={() => setActiveTab("Circulation")} />
-          <Tab label="Inventory" active={activeTab === "Inventory"} onClick={() => setActiveTab("Inventory")} />
-          <Tab label="Members" active={activeTab === "Members"} onClick={() => setActiveTab("Members")} />
+          <Tab label={t("reports.tabs.overview") || "Overview"} active={activeTab === "Overview"} onClick={() => setActiveTab("Overview")} />
+          <Tab label={t("reports.tabs.circulation") || "Circulation"} active={activeTab === "Circulation"} onClick={() => setActiveTab("Circulation")} />
+          <Tab label={t("reports.tabs.inventory") || "Inventory"} active={activeTab === "Inventory"} onClick={() => setActiveTab("Inventory")} />
+          <Tab label={t("reports.tabs.members") || "Members"} active={activeTab === "Members"} onClick={() => setActiveTab("Members")} />
         </div>
         <div className="flex items-center gap-3">
           <button className="flex items-center gap-2 bg-white dark:bg-[#1d2926] border border-black/5 dark:border-white/5 rounded-lg py-2 px-4 text-[13px] font-semibold text-[#122222] dark:text-white shadow-sm hover:border-emerald/30 transition-colors cursor-pointer">
-            <Calendar size={14} className="text-emerald dark:text-emerald-light"/> This Month
+            <Calendar size={14} className="text-emerald dark:text-emerald-light"/> {t("reports.thisMonth") || "This Month"}
           </button>
         </div>
       </div>
 
       {/* Metric Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <MetricCard title={t("reports.metrics.circulation")} value={stats.totalLoans.toLocaleString(prefs.locale)} label="All-time checkouts" />
-        <MetricCard title={t("reports.metrics.activeMembers")} value={stats.activeMembers.toLocaleString(prefs.locale)} label="Registered borrowers" />
-        <MetricCard title={t("reports.metrics.overdueRate")} value={stats.overdueRate} label="Overdue vs open loans" />
-        <MetricCard title={t("reports.metrics.acquisitions")} value={stats.acquisitions.toLocaleString(prefs.locale)} label="Physical holdings" />
+        <MetricCard title={t("reports.metrics.circulation")} value={stats.totalLoans.toLocaleString(prefs.locale)} label={t("reports.labels.allTimeCheckouts") || "All-time checkouts"} />
+        <MetricCard title={t("reports.metrics.activeMembers")} value={stats.activeMembers.toLocaleString(prefs.locale)} label={t("reports.labels.registeredBorrowers") || "Registered borrowers"} />
+        <MetricCard title={t("reports.metrics.overdueRate")} value={stats.overdueRate} label={t("reports.labels.overdueVsOpen") || "Overdue vs open loans"} />
+        <MetricCard title={t("reports.metrics.acquisitions")} value={stats.acquisitions.toLocaleString(prefs.locale)} label={t("reports.labels.physicalHoldings") || "Physical holdings"} />
       </div>
 
       {/* Charts Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1">
         {/* Main Chart */}
         <div className="lg:col-span-2 bg-white dark:bg-[#1d2926] p-6 rounded-2xl border border-black/5 dark:border-white/5 shadow-card flex flex-col">
-          <h3 className="font-bold text-[15px] text-[#122222] dark:text-white mb-6">Circulation Activity (Recent days)</h3>
+          <h3 className="font-bold text-[15px] text-[#122222] dark:text-white mb-6">{t("reports.activityChartTitle") || "Circulation Activity (Recent days)"}</h3>
           <div className="flex-1 min-h-[300px]">
             {dashQuery.isLoading ? (
               <div className="flex items-center justify-center h-full text-zinc-500 text-[13px]">
-                <RefreshCw size={16} className="animate-spin mr-2" /> Loading stats...
+                <RefreshCw size={16} className="animate-spin mr-2" /> {t("reports.loadingStats") || "Loading stats..."}
               </div>
             ) : (
               <ResponsiveContainer width="100%" height="100%">
@@ -160,7 +160,7 @@ export function ReportsPage() {
         {/* Sidebar Chart info: popular categories */}
         <div className="bg-white dark:bg-[#1d2926] p-6 rounded-2xl border border-black/5 dark:border-white/5 shadow-card flex flex-col">
           <h3 className="font-bold text-[15px] text-[#122222] dark:text-white mb-6 flex items-center gap-2">
-            <BarChart2 size={18} className="text-emerald dark:text-emerald-light" /> Popular categories
+            <BarChart2 size={18} className="text-emerald dark:text-emerald-light" /> {t("reports.popularCategories") || "Popular categories"}
           </h3>
           <div className="flex-1 flex flex-col justify-between py-2 space-y-4">
             {categoriesList.map((item) => {
@@ -169,7 +169,7 @@ export function ReportsPage() {
                 <div key={item.name} className="flex flex-col gap-2">
                   <div className="flex justify-between items-center text-[12px] font-semibold text-[#122222] dark:text-white">
                     <span className="truncate">{item.name}</span>
-                    <span className="font-bold text-[12px] text-[#122222]/60 dark:text-white/60">{item.value} loans</span>
+                    <span className="font-bold text-[12px] text-[#122222]/60 dark:text-white/60">{t("reports.loansCount", { count: item.value }) || `${item.value} loans`}</span>
                   </div>
                   <div className="w-full h-2 bg-black/5 dark:bg-white/5 rounded-full overflow-hidden">
                     <div className="h-full bg-emerald" style={{ width: `${percent}%` }} />
