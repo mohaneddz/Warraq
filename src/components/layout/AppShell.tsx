@@ -101,7 +101,7 @@ export function AppShell() {
     };
   }, [isDragging, preferences.locale]);
 
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   // Live queries for overdue alerts
   const { data: dashData } = useQuery({ queryKey: ["dashboard-shell"], queryFn: dashboard });
@@ -153,11 +153,12 @@ export function AppShell() {
     document.documentElement.style.setProperty("--font-size-base", size);
   }, [preferences.fontSize]);
 
-  // ── Locale → html lang + dir ──────────────────────────────────────────────
+  // ── Locale → html lang + dir + i18n ──────────────────────────────────────
   useEffect(() => {
     document.documentElement.lang = preferences.locale;
     document.documentElement.dir = preferences.locale === "ar" ? "rtl" : "ltr";
-  }, [preferences.locale]);
+    i18n.changeLanguage(preferences.locale);
+  }, [preferences.locale, i18n]);
 
   // ── Close-to-tray ─────────────────────────────────────────────────────────
   useEffect(() => {

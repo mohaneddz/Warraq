@@ -3,6 +3,10 @@ use tauri::menu::{MenuBuilder, MenuItemBuilder};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri_plugin_sql::{Migration, MigrationKind};
 use url::Url;
+use std::sync::atomic::{AtomicBool, Ordering};
+use tauri::State;
+
+pub struct TrayConfig(pub AtomicBool);
 
 fn migrations() -> Vec<Migration> {
     vec![
@@ -28,6 +32,11 @@ fn validate_provider_url(value: String) -> Result<(), String> {
 #[tauri::command]
 fn application_diagnostics() -> serde_json::Value {
     serde_json::json!({ "database": "sqlite:warraq.db", "mode": "local-first", "secrets": "stronghold" })
+}
+
+#[tauri::command]
+fn set_close_to_tray(config: State<'_, TrayConfig>, enabled: bool) {
+    config.0.store(enabled, Ordering::Relaxed);
 }
 
 fn focus_main_window(app: &tauri::AppHandle) {
@@ -91,6 +100,7 @@ pub fn run() {
         .plugin(tauri_plugin_log::Builder::default().build())
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
+            app.manage(TrayConfig(AtomicBool::new(true)));
             let salt = app.path().app_local_data_dir()?.join("stronghold.salt");
             app.handle().plugin(tauri_plugin_stronghold::Builder::with_argon2(&salt).build())?;
             install_tray(app)?;
@@ -98,11 +108,15 @@ pub fn run() {
         })
         .on_window_event(|window, event| {
             if let WindowEvent::CloseRequested { api, .. } = event {
-                api.prevent_close();
-                let _ = window.hide();
+                let config = window.try_state::<TrayConfig>();
+                let close_to_tray = config.map(|c| c.0.load(Ordering::Relaxed)).unwrap_or(true);
+                if close_to_tray {
+                    api.prevent_close();
+                    let _ = window.hide();
+                }
             }
         })
-        .invoke_handler(tauri::generate_handler![validate_provider_url, application_diagnostics])
+        .invoke_handler(tauri::generate_handler![validate_provider_url, application_diagnostics, set_close_to_tray])
         .run(tauri::generate_context!())
         .expect("error while running Warraq");
 }

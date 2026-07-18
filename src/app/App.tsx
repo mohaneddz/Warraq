@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { HashRouter, Navigate, Route, Routes, useNavigate } from "react-router-dom";
 import { ErrorBoundary } from "react-error-boundary";
+import { useTranslation } from "react-i18next";
 import { initializeDatabase } from "../data/database";
 import { members } from "../data/repositories/library";
 import { seedDummyData } from "../data/seed";
@@ -53,6 +54,7 @@ function TrayListener() {
 }
 
 function Boot() {
+  const { t } = useTranslation();
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<unknown>();
   const [loadingStep, setLoadingStep] = useState(0);
@@ -84,6 +86,20 @@ function Boot() {
         // Step 3: Loading preferences & indexing
         setLoadingStep(2);
         setProgress(95);
+        try {
+          const { invoke } = await import("@tauri-apps/api/core");
+          const storedPrefs = localStorage.getItem("warraq-preferences");
+          let closeToTray = true;
+          if (storedPrefs) {
+            const parsed = JSON.parse(storedPrefs);
+            if (parsed.closeToTray !== undefined) {
+              closeToTray = parsed.closeToTray;
+            }
+          }
+          await invoke("set_close_to_tray", { enabled: closeToTray });
+        } catch (e) {
+          console.warn("Failed to sync close-to-tray preference on boot:", e);
+        }
         await new Promise(r => setTimeout(r, 400));
         
         // Step 4: Finishing up
@@ -145,10 +161,10 @@ function Boot() {
 
           {/* Status step text */}
           <p className="text-[12px] text-white/55 mt-3.5 font-medium tracking-wide min-h-[18px]">
-            {loadingStep === 0 && "Connecting to SQLite database…"}
-            {loadingStep === 1 && "Verifying system preferences & configurations…"}
-            {loadingStep === 2 && "Optimizing catalog indices & seed data…"}
-            {loadingStep === 3 && "Loading application modules…"}
+            {loadingStep === 0 && t("boot.database")}
+            {loadingStep === 1 && t("boot.preferences")}
+            {loadingStep === 2 && t("boot.optimizing")}
+            {loadingStep === 3 && t("boot.loading")}
           </p>
         </div>
       </main>

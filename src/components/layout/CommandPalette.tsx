@@ -49,41 +49,41 @@ export function CommandPalette() {
   // Structured commands list
   const commandList = [
     // Page Navigations
-    { label: t("nav.dashboard") || "Dashboard", subtitle: "Go to home dashboard", route: "/dashboard", icon: LayoutDashboard },
-    { label: t("nav.catalog") || "Catalog", subtitle: "Browse book inventory", route: "/catalog", icon: BookOpen },
-    { label: t("nav.members") || "Members", subtitle: "Manage library members", route: "/members", icon: Users },
-    { label: t("nav.reservations") || "Reservations", subtitle: "Hold queue & reservations", route: "/reservations", icon: CalendarClock },
-    { label: t("nav.inventory") || "Inventory", subtitle: "Physical shelves audit", route: "/inventory", icon: Warehouse },
-    { label: t("nav.reports") || "Reports", subtitle: "Excel exports & metrics", route: "/reports", icon: ClipboardList },
-    { label: t("nav.activity") || "Activity", subtitle: "Database audit logs", route: "/activity", icon: ClipboardList },
-    { label: t("nav.settings") || "Settings", subtitle: "General app settings", route: "/settings", icon: Cog },
+    { label: t("nav.dashboard") || "Dashboard", subtitle: t("commandPalette.subtitles.dashboard"), route: "/dashboard", icon: LayoutDashboard },
+    { label: t("nav.catalog") || "Catalog", subtitle: t("commandPalette.subtitles.catalog"), route: "/catalog", icon: BookOpen },
+    { label: t("nav.members") || "Members", subtitle: t("commandPalette.subtitles.members"), route: "/members", icon: Users },
+    { label: t("nav.reservations") || "Reservations", subtitle: t("commandPalette.subtitles.reservations"), route: "/reservations", icon: CalendarClock },
+    { label: t("nav.inventory") || "Inventory", subtitle: t("commandPalette.subtitles.inventory"), route: "/inventory", icon: Warehouse },
+    { label: t("nav.reports") || "Reports", subtitle: t("commandPalette.subtitles.reports"), route: "/reports", icon: ClipboardList },
+    { label: t("nav.activity") || "Activity", subtitle: t("commandPalette.subtitles.activity"), route: "/activity", icon: ClipboardList },
+    { label: t("nav.settings") || "Settings", subtitle: t("commandPalette.subtitles.settings"), route: "/settings", icon: Cog },
 
     // Quick Actions
-    { label: "Search book or author", subtitle: "Search in catalog", route: "/catalog?focus=search", icon: Search },
-    { label: "Search library member", subtitle: "Search in members", route: "/members?focus=search", icon: Search },
-    { label: "Add a new book", subtitle: "Register new catalog title", route: "/catalog?action=add-book", icon: Plus },
-    { label: "Register new member", subtitle: "Add new membership card", route: "/members?action=add-member", icon: Plus },
-    { label: "New checkout / Loan book", subtitle: "Issue a book to a member", route: "/circulation", icon: ScanLine },
-    { label: "Return a book / Check in", subtitle: "Process returned book copy", route: "/circulation", icon: ScanLine },
-    { label: "Renew active loan", subtitle: "Extend loan duration", route: "/circulation", icon: ScanLine },
+    { label: t("commandPalette.actions.searchBook"), subtitle: t("commandPalette.actions.searchBookSub"), route: "/catalog?focus=search", icon: Search },
+    { label: t("commandPalette.actions.searchMember"), subtitle: t("commandPalette.actions.searchMemberSub"), route: "/members?focus=search", icon: Search },
+    { label: t("commandPalette.actions.addBook"), subtitle: t("commandPalette.actions.addBookSub"), route: "/catalog?action=add-book", icon: Plus },
+    { label: t("commandPalette.actions.addMember"), subtitle: t("commandPalette.actions.addMemberSub"), route: "/members?action=add-member", icon: Plus },
+    { label: t("commandPalette.actions.checkout"), subtitle: t("commandPalette.actions.checkoutSub"), route: "/circulation", icon: ScanLine },
+    { label: t("commandPalette.actions.return"), subtitle: t("commandPalette.actions.returnSub"), route: "/circulation", icon: ScanLine },
+    { label: t("commandPalette.actions.renew"), subtitle: t("commandPalette.actions.renewSub"), route: "/circulation", icon: ScanLine },
 
     // Native Actions
-    { label: "Backup database", subtitle: "Export local .db copy", action: handleBackup, icon: HardDrive },
-    { label: "Toggle dark mode", subtitle: "Switch visual theme", action: toggleTheme, icon: preferences.theme === "dark" ? Sun : Moon },
+    { label: t("commandPalette.actions.backup"), subtitle: t("commandPalette.actions.backupSub"), action: handleBackup, icon: HardDrive },
+    { label: t("commandPalette.actions.toggleTheme"), subtitle: t("commandPalette.actions.toggleThemeSub"), action: toggleTheme, icon: preferences.theme === "dark" ? Sun : Moon },
     
     // Language Switches
-    { label: "Switch language to English", subtitle: "Change UI to English", action: () => changeLanguage("en"), icon: Globe },
-    { label: "Switch language to Arabic", subtitle: "تغيير واجهة التطبيق إلى العربية", action: () => changeLanguage("ar"), icon: Globe },
-    { label: "Switch language to French", subtitle: "Changer l'interface en français", action: () => changeLanguage("fr"), icon: Globe },
+    { label: t("commandPalette.actions.langEn"), subtitle: t("commandPalette.actions.langEnSub"), action: () => changeLanguage("en"), icon: Globe },
+    { label: t("commandPalette.actions.langAr"), subtitle: t("commandPalette.actions.langArSub"), action: () => changeLanguage("ar"), icon: Globe },
+    { label: t("commandPalette.actions.langFr"), subtitle: t("commandPalette.actions.langFrSub"), action: () => changeLanguage("fr"), icon: Globe },
 
     // Settings Shortcuts
-    { label: "Library Profile settings", subtitle: "Address, name, contact details", route: "/settings?tab=profile", icon: Cog },
-    { label: "Appearance settings", subtitle: "Colors, themes, font sizes", route: "/settings?tab=appearance", icon: Cog },
-    { label: "Localization settings", subtitle: "Language & date formatting", route: "/settings?tab=localization", icon: Globe },
-    { label: "Circulation rules settings", subtitle: "Loan days, renewal limits", route: "/settings?tab=rules", icon: BookMarked },
-    { label: "Backup & Restore settings", subtitle: "Database tools", route: "/settings?tab=backup", icon: Database },
-    { label: "Integrations & AI settings", subtitle: "Configure LLMs & Groq keys", route: "/settings?tab=integrations", icon: Zap },
-    { label: "Secrets & API keys", subtitle: "Manage developer tokens", route: "/settings?tab=secrets", icon: Shield }
+    { label: t("commandPalette.actions.profile"), subtitle: t("commandPalette.actions.profileSub"), route: "/settings?tab=profile", icon: Cog },
+    { label: t("commandPalette.actions.appearance"), subtitle: t("commandPalette.actions.appearanceSub"), route: "/settings?tab=appearance", icon: Cog },
+    { label: t("commandPalette.actions.localization"), subtitle: t("commandPalette.actions.localizationSub"), route: "/settings?tab=localization", icon: Globe },
+    { label: t("commandPalette.actions.rules"), subtitle: t("commandPalette.actions.rulesSub"), route: "/settings?tab=rules", icon: BookMarked },
+    { label: t("commandPalette.actions.backupTab"), subtitle: t("commandPalette.actions.backupTabSub"), route: "/settings?tab=backup", icon: Database },
+    { label: t("commandPalette.actions.integrations"), subtitle: t("commandPalette.actions.integrationsSub"), route: "/settings?tab=integrations", icon: Zap },
+    { label: t("commandPalette.actions.secrets"), subtitle: t("commandPalette.actions.secretsSub"), route: "/settings?tab=secrets", icon: Shield }
   ];
 
   return (
@@ -97,12 +97,12 @@ export function CommandPalette() {
       >
         <Command.Input 
           autoFocus 
-          placeholder="Search pages and actions..." 
+          placeholder={t("commandPalette.placeholder") || "Search pages and actions..."} 
           className="w-full border-b border-black/5 dark:border-white/5 p-4 outline-none text-[14px] text-[#122222] dark:text-white placeholder:text-[#122222]/40 dark:placeholder:white/40"
         />
         <Command.List className="max-h-96 overflow-y-auto p-2 no-scrollbar">
           <Command.Empty className="p-4 text-sm text-[#122222]/60 dark:text-white/60">
-            No matching command.
+            {t("commandPalette.empty") || "No matching command."}
           </Command.Empty>
           
           {commandList.map((item, index) => {
@@ -127,11 +127,12 @@ export function CommandPalette() {
                     <span className="text-[10px] text-[#122222]/40 dark:text-white/40 font-medium leading-tight mt-0.5">{item.subtitle}</span>
                   </div>
                 </div>
-                <span className="text-[10px] opacity-40 font-mono">Action</span>
+                <span className="text-[10px] opacity-40 font-mono">{t("commandPalette.action") || "Action"}</span>
               </Command.Item>
             );
           })}
         </Command.List>
+
       </Command>
     </div>
   );

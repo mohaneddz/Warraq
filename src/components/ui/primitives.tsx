@@ -1,6 +1,7 @@
 import type { ButtonHTMLAttributes, InputHTMLAttributes, PropsWithChildren } from "react";
 import { cn } from "../../utils/cn";
 import { X } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 export function Button({ className, variant = "primary", ...props }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: "primary" | "secondary" | "danger" | "ghost" }) {
   const variants = { 
@@ -21,12 +22,13 @@ export function Card({ children, className }: PropsWithChildren<{ className?: st
 }
 
 export function StatusBadge({ value }: { value: string }) { 
+  const { t } = useTranslation();
   const color = value === "available" || value === "active" || value === "ready" 
     ? "bg-emerald/15 text-emerald" 
     : value === "on-loan" || value === "queued" 
       ? "bg-copper/15 text-copper" 
       : "bg-ink/10 text-ink dark:bg-parchment/10 dark:text-parchment"; 
-  return <span className={cn("inline-flex rounded-full px-2.5 py-1 text-xs font-semibold capitalize", color)}>{value.replace("-", " ")}</span>; 
+  return <span className={cn("inline-flex rounded-full px-2.5 py-1 text-xs font-semibold capitalize", color)}>{t("status." + value) || value.replace("-", " ")}</span>; 
 }
 
 export function EmptyState({ title, description, action, icon: Icon }: { title: string; description: string; action?: React.ReactNode; icon?: React.ElementType }) { 
@@ -48,6 +50,7 @@ interface ModalProps {
 }
 
 export function Modal({ isOpen, onClose, title, children }: ModalProps) {
+  const { t } = useTranslation();
   if (!isOpen) return null;
   return (
     <div 
@@ -63,7 +66,7 @@ export function Modal({ isOpen, onClose, title, children }: ModalProps) {
           <button 
             onClick={onClose} 
             className="p-1.5 rounded-control text-ink/60 hover:bg-ink/5 dark:text-parchment/60 dark:hover:bg-parchment/5 transition" 
-            aria-label="Close dialog"
+            aria-label={t("common.closeDialog") || "Close dialog"}
           >
             <X size={18} />
           </button>

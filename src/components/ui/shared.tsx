@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { Input } from "./primitives";
 import { cn } from "../../utils/cn";
+import { useTranslation } from "react-i18next";
 
 export const PageTitle = ({ title, detail, action }: { title: string; detail: string; action?: React.ReactNode }) => (
   <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
@@ -46,6 +47,7 @@ export function SearchableSelect<T>({
   onChange: (val: string) => void;
   subLabelKey?: keyof T;
 }) {
+  const { t } = useTranslation();
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
 
@@ -82,7 +84,7 @@ export function SearchableSelect<T>({
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Type to filter..."
+              placeholder={t("common.typeToFilter") || "Type to filter..."}
               className="mb-2"
               autoFocus
             />
@@ -113,7 +115,7 @@ export function SearchableSelect<T>({
                   </div>
                 ))
               ) : (
-                <div className="px-3 py-2 text-xs text-ink/50 dark:text-parchment/50">No results found</div>
+                <div className="px-3 py-2 text-xs text-ink/50 dark:text-parchment/50">{t("common.noResults") || "No results found"}</div>
               )}
             </div>
           </div>
