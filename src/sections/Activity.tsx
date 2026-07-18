@@ -65,7 +65,7 @@ export function ActivityPage() {
   // Export filtered logs to CSV
   const handleExportCSV = () => {
     if (!filteredLogs.length) {
-      toast.warning("No activities match the current filters to export.");
+      toast.warning(t("activity.alerts.noActivitiesToExport") || "No activities match the current filters to export.");
       return;
     }
 
@@ -92,9 +92,9 @@ export function ActivityPage() {
       link.click();
       document.body.removeChild(link);
       
-      toast.success(`Successfully exported ${filteredLogs.length} audit logs as CSV.`);
+      toast.success(t("activity.alerts.exportSuccess", { count: filteredLogs.length }) || `Successfully exported ${filteredLogs.length} audit logs as CSV.`);
     } catch (e: any) {
-      toast.error("Failed to export CSV: " + e.message);
+      toast.error(t("activity.alerts.exportFailed", { error: e.message }) || "Failed to export CSV: " + e.message);
     }
   };
 
@@ -111,7 +111,7 @@ export function ActivityPage() {
             onClick={handleExportCSV}
             className="flex items-center gap-2 bg-white dark:bg-[#1d2926] border border-black/10 dark:border-white/10 text-[#122222] dark:text-white px-4 py-2 rounded-lg font-bold text-[13px] hover:bg-black/5 dark:hover:bg-white/5 transition-colors shadow-card cursor-pointer"
           >
-            <Download size={16} /> Export CSV
+            <Download size={16} /> {t("activity.exportCsv") || "Export CSV"}
           </button>
         </div>
       </div>
@@ -141,7 +141,7 @@ export function ActivityPage() {
                className="bg-transparent text-[13px] font-semibold text-[#122222]/70 dark:text-white/70 outline-none cursor-pointer"
              />
              {dateFilter && (
-               <button onClick={() => setDateFilter("")} className="text-red-500 hover:text-red-700 ml-1 text-xs cursor-pointer">Clear</button>
+               <button onClick={() => setDateFilter("")} className="text-red-500 hover:text-red-700 ml-1 text-xs cursor-pointer">{t("catalog.addModal.cancel") || "Clear"}</button>
              )}
           </div>
 
@@ -151,7 +151,7 @@ export function ActivityPage() {
             onChange={(e) => setActorFilter(e.target.value)}
             className="bg-white dark:bg-[#1d2926] border border-black/5 dark:border-white/5 rounded-lg py-2 px-4 text-[13px] font-semibold text-[#122222]/70 dark:text-white/70 outline-none cursor-pointer hover:border-emerald/30 transition-colors"
           >
-            <option value="All Users">All Users</option>
+            <option value="All Users">{t("activity.allUsers") || "All Users"}</option>
             {usersList.map(user => (
               <option key={user} value={user}>{user}</option>
             ))}
@@ -163,7 +163,7 @@ export function ActivityPage() {
             onChange={(e) => setActionFilter(e.target.value)}
             className="bg-white dark:bg-[#1d2926] border border-black/5 dark:border-white/5 rounded-lg py-2 px-4 text-[13px] font-semibold text-[#122222]/70 dark:text-white/70 outline-none cursor-pointer hover:border-emerald/30 transition-colors"
           >
-            <option value="All Actions">All Actions</option>
+            <option value="All Actions">{t("activity.allActions") || "All Actions"}</option>
             {actionsList.map(act => (
               <option key={act} value={act}>{act}</option>
             ))}
@@ -174,7 +174,7 @@ export function ActivityPage() {
         <div className="flex-1 overflow-auto font-sans">
           {result.isLoading ? (
             <div className="flex items-center justify-center py-20 text-zinc-500 text-[13px]">
-              <RefreshCw size={16} className="animate-spin mr-2" /> Loading audit history...
+              <RefreshCw size={16} className="animate-spin mr-2" /> {t("activity.loading") || "Loading audit history..."}
             </div>
           ) : filteredLogs.length ? (
             <table className="w-full text-left text-[13px]">

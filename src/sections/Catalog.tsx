@@ -110,7 +110,7 @@ export function CatalogPage() {
   const addMutation = useMutation({
     mutationFn: async (values: BookValues) => {
       const isbn = normalizeIsbn(values.isbn ?? "");
-      if (isbn && !isValidIsbn(isbn)) throw new Error("Enter a valid ISBN-10 or ISBN-13.");
+      if (isbn && !isValidIsbn(isbn)) throw new Error(t("catalog.alerts.invalidIsbn") || "Enter a valid ISBN-10 or ISBN-13.");
       return saveBook({
         title: cleanText(values.title),
         language: cleanText(values.language),
@@ -130,13 +130,13 @@ export function CatalogPage() {
     },
     onSuccess: () => {
       invalidate();
-      toast.success("Book saved to the catalog.");
+      toast.success(t("catalog.alerts.bookSaved") || "Book saved to the catalog.");
       addForm.reset();
       setAdding(false);
     },
     onError: (error: any) => {
       console.error("Save book error detail:", error);
-      toast.error(error?.message || String(error) || "An unknown error occurred while saving the book.");
+      toast.error(error?.message || String(error) || t("catalog.alerts.saveError") || "An unknown error occurred while saving the book.");
     }
   });
 
@@ -146,16 +146,16 @@ export function CatalogPage() {
     },
     onSuccess: () => {
       invalidate();
-      toast.success("Selected books archived.");
+      toast.success(t("catalog.alerts.bulkArchived") || "Selected books archived.");
       setSelectedIds([]);
     },
     onError: (error: any) => {
-      toast.error(error?.message || "Failed to archive books.");
+      toast.error(error?.message || t("catalog.alerts.bulkArchiveFailed") || "Failed to archive books.");
     }
   });
 
   const handleBulkArchive = () => {
-    if (confirm(`Are you sure you want to archive ${selectedIds.length} selected book(s)? This will archive all of their copies.`)) {
+    if (confirm(t("catalog.alerts.confirmBulkArchive", { count: selectedIds.length }) || `Are you sure you want to archive ${selectedIds.length} selected book(s)? This will archive all of their copies.`)) {
       bulkArchiveMutation.mutate();
     }
   };
@@ -165,11 +165,11 @@ export function CatalogPage() {
     const titleVal = addForm.getValues("title");
     const queryVal = isbnVal?.trim() || titleVal?.trim();
     if (!queryVal) {
-      toast.warning("Please type an ISBN or book title to fetch details.");
+      toast.warning(t("catalog.alerts.typeQuery") || "Please type an ISBN or book title to fetch details.");
       return;
     }
     setLookupLoading(true);
-    const toastId = toast.loading("Querying metadata provider...");
+    const toastId = toast.loading(t("catalog.alerts.querying") || "Querying metadata provider...");
 
     let meta: any = null;
     let queryError: any = null;
@@ -183,19 +183,19 @@ export function CatalogPage() {
     const apiKey = useUiStore.getState().preferences.groqApiKey;
 
     if (!meta && !apiKey) {
-      toast.error(queryError?.message || "Could not find any metadata matches for this query.", { id: toastId });
+      toast.error(queryError?.message || t("catalog.alerts.notFound") || "Could not find any metadata matches for this query.", { id: toastId });
       setLookupLoading(false);
       return;
     }
 
     try {
       if (apiKey) {
-        toast.loading("Enriching metadata with Groq AI...", { id: toastId });
+        toast.loading(t("catalog.alerts.enriching") || "Enriching metadata with Groq AI...", { id: toastId });
         meta = await enrichMetadataWithGroq(queryVal, meta || {}, apiKey);
-        toast.success("Book metadata auto-filled & enriched with Groq AI!", { id: toastId });
+        toast.success(t("catalog.alerts.enriched") || "Book metadata auto-filled & enriched with Groq AI!", { id: toastId });
       } else {
-        toast.success("Book metadata auto-filled!", { id: toastId });
-        toast.info("Tip: Configure your Groq API Key in Settings to get auto-translated Arabic titles, detailed descriptions, and targeted tags.", {
+        toast.success(t("catalog.alerts.autofilled") || "Book metadata auto-filled!", { id: toastId });
+        toast.info(t("catalog.alerts.groqTip") || "Tip: Configure your Groq API Key in Settings to get auto-translated Arabic titles, detailed descriptions, and targeted tags.", {
           duration: 8000
         });
       }
@@ -220,7 +220,7 @@ export function CatalogPage() {
         // Download cover url and convert to base64
         if (meta.cover_url) {
           try {
-            toast.loading("Downloading book cover image...", { id: toastId });
+            toast.loading(t("catalog.alerts.downloadingCover") || "Downloading book cover image...", { id: toastId });
             const response = await fetch(meta.cover_url);
             if (response.ok) {
               const blob = await response.blob();
@@ -228,7 +228,7 @@ export function CatalogPage() {
               reader.onloadend = () => {
                 const base64data = reader.result as string;
                 addForm.setValue("cover_path", base64data);
-                toast.success("Book cover downloaded!", { id: toastId });
+                toast.success(t("catalog.alerts.coverDownloaded") || "Book cover downloaded!", { id: toastId });
               };
               reader.readAsDataURL(blob);
             } else {
@@ -377,9 +377,9 @@ export function CatalogPage() {
             className="bg-white dark:bg-[#1d2926] border border-black/5 dark:border-white/5 rounded-lg py-2 px-4 text-[13px] font-semibold text-[#122222]/70 dark:text-white/70 outline-none cursor-pointer hover:border-emerald/30 transition-colors"
           >
             <option value="All Languages">{t("catalog.allLanguages")}</option>
-            <option value="English">English</option>
-            <option value="Arabic">Arabic</option>
-            <option value="French">French</option>
+            <option value="English">{t("languages.english") || "English"}</option>
+            <option value="Arabic">{t("languages.arabic") || "Arabic"}</option>
+            <option value="French">{t("languages.french") || "French"}</option>
           </select>
         </div>
 
@@ -499,7 +499,7 @@ export function CatalogPage() {
                         </div>
                       </td>
                       <td className="px-4 py-3 text-[#122222]/70 dark:text-white/70">{book.author || "—"}</td>
-                      <td className="px-4 py-3 text-[#122222]/70 dark:text-white/70">{book.category || "Uncategorized"}</td>
+                      <td className="px-4 py-3 text-[#122222]/70 dark:text-white/70">{book.category || t("catalog.uncategorized") || "Uncategorized"}</td>
                       <td className="px-4 py-3 text-[#122222]/70 dark:text-white/70 font-mono text-[12px]">{formatIsbn(book.isbn13 || book.isbn10) || "—"}</td>
                       <td className="px-4 py-3 text-[#122222]/70 dark:text-white/70 whitespace-nowrap">{formatDisplayDate(book.created_at)}</td>
                       <td className="px-4 py-3 text-[#122222]/70 dark:text-white/70 whitespace-nowrap">
@@ -642,7 +642,7 @@ export function CatalogPage() {
       {selectedIds.length > 0 && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-white/90 dark:bg-[#1d2926]/90 backdrop-blur-md px-6 py-3 rounded-full border border-black/10 dark:border-white/10 shadow-lg flex items-center gap-6 z-50 animate-in fade-in slide-in-from-bottom-4 duration-300">
           <span className="text-[13px] font-semibold text-[#122222] dark:text-white">
-            {selectedIds.length} {selectedIds.length === 1 ? 'book' : 'books'} selected
+            {t("catalog.bulk.selectedCount", { count: selectedIds.length }) || `${selectedIds.length} book(s) selected`}
           </span>
           <div className="h-4 w-px bg-black/10 dark:bg-white/10" />
           <div className="flex items-center gap-2">
@@ -650,20 +650,20 @@ export function CatalogPage() {
               onClick={() => setSelectedIds(sortedBooks.map(b => b.id))}
               className="text-[12px] font-bold text-emerald dark:text-emerald-light hover:underline px-2 py-1 cursor-pointer"
             >
-              Select All
+              {t("catalog.bulk.selectAll") || "Select All"}
             </button>
             <button
               onClick={() => setSelectedIds([])}
               className="text-[12px] font-bold text-[#122222]/60 dark:text-white/60 hover:underline px-2 py-1 cursor-pointer"
             >
-              Deselect All
+              {t("catalog.bulk.deselectAll") || "Deselect All"}
             </button>
             <button
               onClick={handleBulkArchive}
               className="flex items-center gap-1.5 text-[12px] font-bold bg-red-500 hover:bg-red-600 text-white px-4 py-1.5 rounded-full shadow transition-colors cursor-pointer"
             >
               <Trash2 size={13} />
-              Archive Selected
+              {t("catalog.bulk.archiveSelected") || "Archive Selected"}
             </button>
           </div>
         </div>
@@ -739,21 +739,21 @@ function BookSidebar({ book, onClose, registerClean }: { book: Book; onClose: ()
       });
     },
     onSuccess: () => {
-      toast.success("Book metadata updated.");
+      toast.success(t("catalog.alerts.updated") || "Book metadata updated.");
       setIsEditing(false);
       invalidate();
       onClose();
     },
     onError: (err: any) => {
       console.error("Update book error detail:", err);
-      toast.error(err?.message || String(err) || "An unknown error occurred while updating the book.");
+      toast.error(err?.message || String(err) || t("catalog.alerts.updateError") || "An unknown error occurred while updating the book.");
     }
   });
 
   const deleteBookMutation = useMutation({
     mutationFn: () => deleteBook(book.id),
     onSuccess: () => {
-      toast.success("Book and all copies archived.");
+      toast.success(t("catalog.alerts.archived") || "Book and all copies archived.");
       invalidate();
       onClose();
     },
@@ -763,7 +763,7 @@ function BookSidebar({ book, onClose, registerClean }: { book: Book; onClose: ()
   const addCopyMutation = useMutation({
     mutationFn: (values: any) => addCopy(book.id, cleanBarcode(values.barcode), cleanAccession(values.accession), values.condition, cleanText(values.shelf)),
     onSuccess: () => {
-      toast.success("Copy added.");
+      toast.success(t("catalog.alerts.copyAdded") || "Copy added.");
       copyForm.reset();
       setAddCopyOpen(false);
       refetchCopies();
@@ -775,7 +775,7 @@ function BookSidebar({ book, onClose, registerClean }: { book: Book; onClose: ()
   const deleteCopyMutation = useMutation({
     mutationFn: (copyId: string) => deleteCopy(copyId),
     onSuccess: () => {
-      toast.success("Copy archived.");
+      toast.success(t("catalog.alerts.copyArchived") || "Copy archived.");
       refetchCopies();
       invalidate();
     },
@@ -785,7 +785,7 @@ function BookSidebar({ book, onClose, registerClean }: { book: Book; onClose: ()
   const reserveMutation = useMutation({
     mutationFn: () => addReservation(book.id, reservingMemberId),
     onSuccess: () => {
-      toast.success("Reservation placed.");
+      toast.success(t("catalog.alerts.reservationPlaced") || "Reservation placed.");
       setReservingMemberId("");
       invalidate();
     },
@@ -858,7 +858,7 @@ function BookSidebar({ book, onClose, registerClean }: { book: Book; onClose: ()
                 </div>
                 <div className="space-y-3">
                   <InfoRow label={t("catalog.details.author")} value={book.author || "—"} />
-                  <InfoRow label={t("catalog.details.category")} value={book.category || "Uncategorized"} />
+                  <InfoRow label={t("catalog.details.category")} value={book.category || t("catalog.uncategorized") || "Uncategorized"} />
                   <InfoRow label={t("catalog.details.language")} value={book.language} />
                   <InfoRow label={t("catalog.details.publisher")} value={book.publisher || "—"} />
                   <div className="grid grid-cols-2 gap-4">
@@ -884,7 +884,7 @@ function BookSidebar({ book, onClose, registerClean }: { book: Book; onClose: ()
                   </button>
                   <button
                     onClick={() => {
-                      if (confirm("Are you sure you want to delete this book? This will archive all of its copies.")) {
+                      if (confirm(t("catalog.alerts.confirmDelete") || "Are you sure you want to delete this book? This will archive all of its copies.")) {
                         deleteBookMutation.mutate();
                       }
                     }}
@@ -981,12 +981,12 @@ function BookSidebar({ book, onClose, registerClean }: { book: Book; onClose: ()
         {activeTab === "copies" && (
           <div className="w-full space-y-4">
             <div className="flex justify-between items-center shrink-0">
-              <h3 className="font-bold text-[14px] text-[#122222] dark:text-white">Physical copies</h3>
+              <h3 className="font-bold text-[14px] text-[#122222] dark:text-white">{t("catalog.details.physicalCopies") || "Physical copies"}</h3>
               <button
                 onClick={() => setAddCopyOpen(true)}
                 className="flex items-center gap-1 text-[11px] font-bold text-emerald hover:underline cursor-pointer"
               >
-                <Plus size={12} /> Add copy
+                <Plus size={12} /> {t("catalog.details.addCopy") || "Add copy"}
               </button>
             </div>
 
@@ -1006,7 +1006,7 @@ function BookSidebar({ book, onClose, registerClean }: { book: Book; onClose: ()
                     <StatusBadge value={copy.status} />
                     <button
                       onClick={() => {
-                        if (confirm("Are you sure you want to archive this copy?")) {
+                        if (confirm(t("catalog.alerts.confirmArchiveCopy") || "Are you sure you want to archive this copy?")) {
                           deleteCopyMutation.mutate(copy.id);
                         }
                       }}
@@ -1020,30 +1020,30 @@ function BookSidebar({ book, onClose, registerClean }: { book: Book; onClose: ()
             </div>
 
             {addCopyOpen && (
-              <Modal isOpen={addCopyOpen} onClose={() => setAddCopyOpen(false)} title="Add Physical Copy">
+              <Modal isOpen={addCopyOpen} onClose={() => setAddCopyOpen(false)} title={t("catalog.details.addCopyTitle") || "Add Physical Copy"}>
                 <form onSubmit={copyForm.handleSubmit((v) => addCopyMutation.mutate(v))} className="space-y-4 text-[13px]">
-                  <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">Barcode
-                    <Input {...registerClean(copyForm, "barcode", cleanBarcode)} placeholder="Scan or enter copy barcode" required />
+                  <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">{t("catalog.details.copyBarcode") || "Barcode"}
+                    <Input {...registerClean(copyForm, "barcode", cleanBarcode)} placeholder={t("catalog.details.copyBarcodePlaceholder") || "Scan or enter copy barcode"} required />
                   </label>
-                  <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">Accession number
-                    <Input {...registerClean(copyForm, "accession", cleanAccession)} placeholder="Auto-generated if blank" />
+                  <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">{t("catalog.details.copyAccession") || "Accession number"}
+                    <Input {...registerClean(copyForm, "accession", cleanAccession)} placeholder={t("catalog.details.copyAccessionPlaceholder") || "Auto-generated if blank"} />
                   </label>
                   <div className="grid grid-cols-2 gap-4">
-                    <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">Shelf location
-                      <Input {...registerClean(copyForm, "shelf", cleanText)} placeholder="e.g. A-12" />
+                    <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">{t("catalog.details.copyShelf") || "Shelf location"}
+                      <Input {...registerClean(copyForm, "shelf", cleanText)} placeholder={t("catalog.details.copyShelfPlaceholder") || "e.g. A-12"} />
                     </label>
-                    <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">Condition
+                    <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">{t("catalog.details.copyCondition") || "Condition"}
                       <select {...copyForm.register("condition")} className="field-select mt-1 text-[13px] py-2 px-3">
-                        <option value="mint">Mint</option>
-                        <option value="good">Good</option>
-                        <option value="worn">Worn</option>
-                        <option value="damaged">Damaged</option>
+                        <option value="mint">{t("catalog.condition.mint") || "Mint"}</option>
+                        <option value="good">{t("catalog.condition.good") || "Good"}</option>
+                        <option value="worn">{t("catalog.condition.worn") || "Worn"}</option>
+                        <option value="damaged">{t("catalog.condition.damaged") || "Damaged"}</option>
                       </select>
                     </label>
                   </div>
                   <div className="flex gap-2 justify-end pt-3 border-t border-black/5 dark:border-white/5">
                     <Button type="button" variant="ghost" onClick={() => setAddCopyOpen(false)}>{t("catalog.addModal.cancel")}</Button>
-                    <Button type="submit" disabled={addCopyMutation.isPending}>Add copy</Button>
+                    <Button type="submit" disabled={addCopyMutation.isPending}>{t("catalog.details.addCopyBtn") || "Add copy"}</Button>
                   </div>
                 </form>
               </Modal>
@@ -1053,18 +1053,18 @@ function BookSidebar({ book, onClose, registerClean }: { book: Book; onClose: ()
 
         {activeTab === "reserve" && (
           <div className="w-full space-y-4">
-            <h3 className="font-bold text-[14px] text-[#122222] dark:text-white mb-1">Place reservation hold</h3>
-            <p className="text-[12px] text-[#122222]/65 dark:text-parchment/65">If all copies are checked out, you can place a reservation hold for a member. They will be notified when a copy is returned.</p>
+            <h3 className="font-bold text-[14px] text-[#122222] dark:text-white mb-1">{t("catalog.details.reserveTitle") || "Place reservation hold"}</h3>
+            <p className="text-[12px] text-[#122222]/65 dark:text-parchment/65">{t("catalog.details.reserveDesc") || "If all copies are checked out, you can place a reservation hold for a member. They will be notified when a copy is returned."}</p>
 
             <label className="text-[11px] font-bold text-[#122222]/50 dark:text-white/50 uppercase tracking-wider block">
-              Search member
+              {t("catalog.details.searchMember") || "Search member"}
               <div className="mt-1">
                 <SearchableSelect
                   options={membersQuery.data ?? []}
                   labelKey="full_name"
                   valueKey="id"
                   subLabelKey="member_number"
-                  placeholder="Type name or membership number..."
+                  placeholder={t("catalog.details.searchMemberPlaceholder") || "Type name or membership number..."}
                   value={reservingMemberId}
                   onChange={(val) => setReservingMemberId(val)}
                 />
@@ -1076,7 +1076,7 @@ function BookSidebar({ book, onClose, registerClean }: { book: Book; onClose: ()
               disabled={!reservingMemberId || reserveMutation.isPending}
               className="w-full bg-[#1a4d40] text-white py-2.5 rounded-lg font-bold text-[13px] hover:bg-[#1a4d40]/90 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             >
-              Confirm Reservation Hold
+              {t("catalog.details.confirmReserve") || "Confirm Reservation Hold"}
             </button>
           </div>
         )}
@@ -1095,11 +1095,12 @@ function InfoRow({ label, value }: { label: string; value: string }) {
 }
 
 function ActivityRow({ date, action, actor }: { date: string; action: string; actor: string }) {
+  const { t } = useTranslation();
   return (
     <div className="flex justify-between text-[11px] border-b border-black/5 dark:border-white/5 pb-2 last:border-b-0 last:pb-0">
       <div>
         <span className="font-semibold capitalize text-[#122222] dark:text-white">{action}</span>
-        <span className="text-[#122222]/50 dark:text-white/50 ml-1">by {actor}</span>
+        <span className="text-[#122222]/50 dark:text-white/50 ml-1">{t("catalog.details.byActor", { actor: actor }) || `by ${actor}`}</span>
       </div>
       <span className="text-[#122222]/40 dark:text-white/40">{date}</span>
     </div>
