@@ -46,9 +46,17 @@ fn install_tray(app: &tauri::App) -> tauri::Result<()> {
     let settings = MenuItemBuilder::with_id("settings", "Settings").build(app)?;
     let quit = MenuItemBuilder::with_id("quit", "Quit").build(app)?;
     let menu = MenuBuilder::new(app).items(&[&show, &search, &checkout, &return_book, &settings, &quit]).build()?;
-    TrayIconBuilder::with_id("warraq-tray")
+    let tray_builder = TrayIconBuilder::with_id("warraq-tray")
         .menu(&menu)
-        .tooltip("Warraq")
+        .tooltip("Warraq");
+
+    let tray_builder = if let Some(icon) = app.default_window_icon() {
+        tray_builder.icon(icon.clone())
+    } else {
+        tray_builder
+    };
+
+    tray_builder
         .on_menu_event(|app, event| match event.id.as_ref() {
             "quit" => app.exit(0),
             "show" => focus_main_window(app),

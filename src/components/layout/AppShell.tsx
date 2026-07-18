@@ -1,4 +1,4 @@
-import { BookOpen, CalendarClock, ChartNoAxesCombined, ClipboardList, Cog, LayoutDashboard, Search, Bell, Minus, ScanLine, Square, Users, Warehouse, X, ChevronDown, Menu } from "lucide-react";
+import { BookOpen, CalendarClock, ChartNoAxesCombined, ClipboardList, Cog, LayoutDashboard, Search, Bell, Minus, ScanLine, Square, Users, Warehouse, X, ChevronDown, Menu, Moon, Sun, HardDrive, Sparkles } from "lucide-react";
 import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useEffect, useState, useRef } from "react";
 import { useUiStore } from "../../store/uiStore";
@@ -23,6 +23,41 @@ export function AppShell() {
   const { sidebarOpen, toggleSidebar, setPaletteOpen, preferences, updatePreferences } = useUiStore();
   const navigate = useNavigate(); 
   const [showNotifications, setShowNotifications] = useState(false);
+
+  // Profile hover cards states
+  const [showTopbarProfileCard, setShowTopbarProfileCard] = useState(false);
+  const [showSidebarProfileCard, setShowSidebarProfileCard] = useState(false);
+
+  const topbarHoverTimeoutRef = useRef<number | null>(null);
+  const sidebarHoverTimeoutRef = useRef<number | null>(null);
+
+  const handleTopbarMouseEnter = () => {
+    if (topbarHoverTimeoutRef.current) {
+      clearTimeout(topbarHoverTimeoutRef.current);
+      topbarHoverTimeoutRef.current = null;
+    }
+    setShowTopbarProfileCard(true);
+  };
+
+  const handleTopbarMouseLeave = () => {
+    topbarHoverTimeoutRef.current = window.setTimeout(() => {
+      setShowTopbarProfileCard(false);
+    }, 200);
+  };
+
+  const handleSidebarMouseEnter = () => {
+    if (sidebarHoverTimeoutRef.current) {
+      clearTimeout(sidebarHoverTimeoutRef.current);
+      sidebarHoverTimeoutRef.current = null;
+    }
+    setShowSidebarProfileCard(true);
+  };
+
+  const handleSidebarMouseLeave = () => {
+    sidebarHoverTimeoutRef.current = window.setTimeout(() => {
+      setShowSidebarProfileCard(false);
+    }, 200);
+  };
   const [sidebarWidth, setSidebarWidth] = useState(() => {
     const saved = localStorage.getItem("warraq-sidebar-width");
     return saved ? parseInt(saved, 10) : 260;
@@ -262,21 +297,39 @@ export function AppShell() {
             {/* Bottom Profile */}
             {sidebarOpen && (
               <div className="mt-8 border-t border-white/10 pt-6 pb-2">
-                <div className="flex items-center justify-between group cursor-pointer hover:bg-white/5 p-2 -mx-2 rounded-lg transition-colors" onClick={() => navigate("/settings")}>
-                  <div className="flex items-center gap-3">
-                    {preferences.operatorAvatar ? (
-                      <img src={preferences.operatorAvatar} alt="" className="h-9 w-9 rounded-full object-cover shrink-0" />
-                    ) : (
-                      <div className="h-9 w-9 rounded-full bg-[#b96f3e] text-white flex items-center justify-center text-[12px] font-bold shrink-0">
-                        {(preferences.operatorName || "Librarian").substring(0,2).toUpperCase()}
+                <div 
+                  className="relative"
+                  onMouseEnter={handleSidebarMouseEnter}
+                  onMouseLeave={handleSidebarMouseLeave}
+                >
+                  <div className="flex items-center justify-between group cursor-pointer hover:bg-white/5 p-2 -mx-2 rounded-lg transition-colors" onClick={() => navigate("/settings")}>
+                    <div className="flex items-center gap-3">
+                      {preferences.operatorAvatar ? (
+                        <img src={preferences.operatorAvatar} alt="" className="h-9 w-9 rounded-full object-cover shrink-0" />
+                      ) : (
+                        <div className="h-9 w-9 rounded-full bg-[#b96f3e] text-white flex items-center justify-center text-[12px] font-bold shrink-0">
+                          {(preferences.operatorName || "Librarian").substring(0,2).toUpperCase()}
+                        </div>
+                      )}
+                      <div className="flex flex-col min-w-0">
+                        <span className="text-[13px] font-semibold text-white truncate">{preferences.operatorName || "Librarian"}</span>
+                        <span className="text-[11px] text-white/50 truncate">{t("nav.role")}</span>
                       </div>
-                    )}
-                    <div className="flex flex-col min-w-0">
-                      <span className="text-[13px] font-semibold text-white truncate">{preferences.operatorName || "Librarian"}</span>
-                      <span className="text-[11px] text-white/50 truncate">{t("nav.role")}</span>
                     </div>
+                    <ChevronDown size={14} className="text-white/40 group-hover:text-white/80" />
                   </div>
-                  <ChevronDown size={14} className="text-white/40 group-hover:text-white/80" />
+
+                  {showSidebarProfileCard && (
+                    <ProfileCard 
+                      position="sidebar" 
+                      onClose={() => setShowSidebarProfileCard(false)} 
+                      preferences={preferences}
+                      updatePreferences={updatePreferences}
+                      setPaletteOpen={setPaletteOpen}
+                      navigate={navigate}
+                      t={t}
+                    />
+                  )}
                 </div>
               </div>
             )}
@@ -374,18 +427,36 @@ export function AppShell() {
               <div className="h-6 w-px bg-black/5 dark:bg-white/5"></div>
               
               {/* Profile Dropdown */}
-              <div className="flex items-center gap-2 cursor-pointer p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition-colors" onClick={() => navigate("/settings")}>
-                {preferences.operatorAvatar ? (
-                  <img src={preferences.operatorAvatar} alt="" className="h-8 w-8 rounded-full object-cover shrink-0" />
-                ) : (
-                  <div className="h-8 w-8 rounded-full bg-[#122222] dark:bg-white/10 text-white flex items-center justify-center text-[12px] font-bold shrink-0">
-                    <User size={14} />
-                  </div>
+              <div 
+                className="relative"
+                onMouseEnter={handleTopbarMouseEnter}
+                onMouseLeave={handleTopbarMouseLeave}
+              >
+                <div className="flex items-center gap-2 cursor-pointer p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition-colors" onClick={() => navigate("/settings")}>
+                  {preferences.operatorAvatar ? (
+                    <img src={preferences.operatorAvatar} alt="" className="h-8 w-8 rounded-full object-cover shrink-0" />
+                  ) : (
+                    <div className="h-8 w-8 rounded-full bg-[#122222] dark:bg-white/10 text-white flex items-center justify-center text-[12px] font-bold shrink-0">
+                      <User size={14} />
+                    </div>
+                  )}
+                  <span className="text-[14px] font-semibold text-[#122222] dark:text-white hidden sm:block truncate max-w-[80px]">
+                    {preferences.operatorName || "Librarian"}
+                  </span>
+                  <ChevronDown size={14} className="text-[#122222]/40 dark:text-white/40" />
+                </div>
+
+                {showTopbarProfileCard && (
+                  <ProfileCard 
+                    position="topbar" 
+                    onClose={() => setShowTopbarProfileCard(false)} 
+                    preferences={preferences}
+                    updatePreferences={updatePreferences}
+                    setPaletteOpen={setPaletteOpen}
+                    navigate={navigate}
+                    t={t}
+                  />
                 )}
-                <span className="text-[14px] font-semibold text-[#122222] dark:text-white hidden sm:block truncate max-w-[80px]">
-                  {preferences.operatorName || "Librarian"}
-                </span>
-                <ChevronDown size={14} className="text-[#122222]/40 dark:text-white/40" />
               </div>
 
               {/* Language Selector Overlay Dropdown */}
@@ -422,4 +493,158 @@ export function AppShell() {
 
 function User({ size }: { size: number }) {
   return <Users size={size} />;
+}
+
+function ProfileCard({ 
+  position, 
+  onClose, 
+  preferences, 
+  updatePreferences, 
+  setPaletteOpen, 
+  navigate, 
+  t 
+}: { 
+  position: "topbar" | "sidebar"; 
+  onClose: () => void; 
+  preferences: any; 
+  updatePreferences: any; 
+  setPaletteOpen: any; 
+  navigate: any; 
+  t: any; 
+}) {
+  const [backingUp, setBackingUp] = useState(false);
+  const isRtl = preferences.locale === "ar";
+
+  const handleBackup = async () => {
+    try {
+      setBackingUp(true);
+      const { save } = await import("@tauri-apps/plugin-dialog");
+      const { copyFile } = await import("@tauri-apps/plugin-fs");
+      const { appDataDir } = await import("@tauri-apps/api/path");
+      const dir = await appDataDir();
+      const dest = await save({ 
+        defaultPath: "warraq-backup.db", 
+        filters: [{ name: "Database", extensions: ["db"] }] 
+      });
+      if (dest) {
+        await copyFile(`${dir}/warraq.db`, dest);
+        alert(t("profileCard.backupSuccess") || "Backup saved successfully.");
+      }
+    } catch (err) {
+      alert(t("profileCard.backupError") || "Could not export backup.");
+    } finally {
+      setBackingUp(false);
+    }
+  };
+
+  const toggleTheme = () => {
+    const nextTheme = preferences.theme === "dark" ? "light" : "dark";
+    updatePreferences({ theme: nextTheme });
+  };
+
+  // Card classes
+  const alignmentClass = position === "topbar" 
+    ? (isRtl ? "left-0 top-[100%] mt-2" : "right-0 top-[100%] mt-2")
+    : (isRtl ? "right-[100%] bottom-0 mr-4" : "left-[100%] bottom-0 ml-4");
+
+  return (
+    <div 
+      className={`absolute ${alignmentClass} w-64 bg-white dark:bg-[#1d2926] border border-black/5 dark:border-white/5 rounded-2xl p-4 shadow-2xl z-50 text-[13px] text-[#122222] dark:text-[#f0ebe1] transition-all`}
+      onClick={(e) => e.stopPropagation()}
+    >
+      {/* Header Profile Section */}
+      <div className={`flex items-center gap-3 pb-3 border-b border-black/5 dark:border-white/5 ${isRtl ? "text-right" : "text-left"}`}>
+        {preferences.operatorAvatar ? (
+          <img src={preferences.operatorAvatar} alt="" className="h-11 w-11 rounded-full object-cover shrink-0 border border-black/5" />
+        ) : (
+          <div className="h-11 w-11 rounded-full bg-[#b96f3e] text-white flex items-center justify-center text-[13px] font-bold shrink-0 shadow-sm">
+            {(preferences.operatorName || "Librarian").substring(0, 2).toUpperCase()}
+          </div>
+        )}
+        <div className="flex flex-col min-w-0">
+          <span className="font-bold text-[14px] leading-tight truncate">{preferences.operatorName || "Librarian"}</span>
+          <span className="text-[11px] text-[#122222]/50 dark:text-white/50 leading-tight mt-0.5">{t("nav.role")}</span>
+          <span className="text-[10px] text-[#b96f3e] dark:text-[#c58a59] font-bold tracking-wider uppercase mt-1 truncate">
+            {preferences.libraryShortName || preferences.libraryName || "Warraq Library"}
+          </span>
+        </div>
+      </div>
+
+      {/* Action Links */}
+      <div className="mt-3 space-y-1">
+        <h4 className={`text-[10px] font-bold text-[#122222]/40 dark:text-white/40 uppercase tracking-wider mb-1.5 px-1 ${isRtl ? "text-right" : "text-left"}`}>{t("profileCard.quickActions")}</h4>
+        
+        {/* Settings */}
+        <button 
+          onClick={() => {
+            navigate("/settings");
+            onClose();
+          }}
+          className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-[#122222]/80 dark:text-[#f0ebe1]/80 hover:bg-[#b96f3e]/10 hover:text-[#b96f3e] dark:hover:bg-white/5 dark:hover:text-white transition-all group ${isRtl ? "text-right flex-row-reverse" : "text-left"}`}
+        >
+          <div className={`flex items-center gap-2.5 ${isRtl ? "flex-row-reverse" : ""}`}>
+            <span className="w-6 h-6 rounded-lg bg-black/5 dark:bg-white/5 flex items-center justify-center text-[#122222]/60 dark:text-white/60 group-hover:bg-[#b96f3e]/20 group-hover:text-[#b96f3e] dark:group-hover:bg-[#b96f3e]/20 dark:group-hover:text-[#b96f3e] transition-colors">
+              <Cog size={14} />
+            </span>
+            <span className="font-semibold text-[13px]">{t("profileCard.settings")}</span>
+          </div>
+        </button>
+
+        {/* Toggle Theme */}
+        <button 
+          onClick={toggleTheme}
+          className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-[#122222]/80 dark:text-[#f0ebe1]/80 hover:bg-[#b96f3e]/10 hover:text-[#b96f3e] dark:hover:bg-white/5 dark:hover:text-white transition-all group ${isRtl ? "text-right flex-row-reverse" : "text-left"}`}
+        >
+          <div className={`flex items-center gap-2.5 ${isRtl ? "flex-row-reverse" : ""}`}>
+            <span className="w-6 h-6 rounded-lg bg-black/5 dark:bg-white/5 flex items-center justify-center text-[#122222]/60 dark:text-white/60 group-hover:bg-[#b96f3e]/20 group-hover:text-[#b96f3e] dark:group-hover:bg-[#b96f3e]/20 dark:group-hover:text-[#b96f3e] transition-colors">
+              {preferences.theme === "dark" ? <Sun size={14} /> : <Moon size={14} />}
+            </span>
+            <span className="font-semibold text-[13px]">
+              {preferences.theme === "dark" ? t("profileCard.themeLight") : t("profileCard.themeDark")}
+            </span>
+          </div>
+        </button>
+
+        {/* Database Backup */}
+        <button 
+          onClick={handleBackup}
+          disabled={backingUp}
+          className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-[#122222]/80 dark:text-[#f0ebe1]/80 hover:bg-[#b96f3e]/10 hover:text-[#b96f3e] dark:hover:bg-white/5 dark:hover:text-white transition-all group disabled:opacity-50 ${isRtl ? "text-right flex-row-reverse" : "text-left"}`}
+        >
+          <div className={`flex items-center gap-2.5 ${isRtl ? "flex-row-reverse" : ""}`}>
+            <span className="w-6 h-6 rounded-lg bg-black/5 dark:bg-white/5 flex items-center justify-center text-[#122222]/60 dark:text-white/60 group-hover:bg-[#b96f3e]/20 group-hover:text-[#b96f3e] dark:group-hover:bg-[#b96f3e]/20 dark:group-hover:text-[#b96f3e] transition-colors">
+              <HardDrive size={14} />
+            </span>
+            <span className="font-semibold text-[13px]">{t("profileCard.backup")}</span>
+          </div>
+        </button>
+
+        {/* Command Palette */}
+        <button 
+          onClick={() => {
+            setPaletteOpen(true);
+            onClose();
+          }}
+          className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-[#122222]/80 dark:text-[#f0ebe1]/80 hover:bg-[#b96f3e]/10 hover:text-[#b96f3e] dark:hover:bg-white/5 dark:hover:text-white transition-all group ${isRtl ? "text-right flex-row-reverse" : "text-left"}`}
+        >
+          <div className={`flex items-center gap-2.5 ${isRtl ? "flex-row-reverse" : ""}`}>
+            <span className="w-6 h-6 rounded-lg bg-black/5 dark:bg-white/5 flex items-center justify-center text-[#122222]/60 dark:text-white/60 group-hover:bg-[#b96f3e]/20 group-hover:text-[#b96f3e] dark:group-hover:bg-[#b96f3e]/20 dark:group-hover:text-[#b96f3e] transition-colors">
+              <Sparkles size={14} />
+            </span>
+            <span className="font-semibold text-[13px]">{t("profileCard.commandPalette")}</span>
+          </div>
+          <span className="text-[10px] text-[#122222]/40 dark:text-white/40 font-semibold bg-black/5 dark:bg-white/5 px-1.5 py-0.5 rounded">⌘K</span>
+        </button>
+      </div>
+
+      {/* Footer Info */}
+      <div className={`mt-4 pt-3 border-t border-black/5 dark:border-white/5 flex items-center justify-between text-[10px] text-[#122222]/40 dark:text-white/40 ${isRtl ? "flex-row-reverse" : ""}`}>
+        <span>Warraq v0.1.0</span>
+        <span className="flex items-center gap-1 font-semibold text-emerald-600 dark:text-emerald-light">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+          {t("profileCard.localWorkspace")}
+        </span>
+      </div>
+    </div>
+  );
 }

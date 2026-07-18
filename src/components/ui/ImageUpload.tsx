@@ -254,13 +254,13 @@ export function ImageUpload({ value, onChange, shape = "cover", label }: ImageUp
 
   const aspectClass =
     shape === "circle"
-      ? "aspect-square rounded-full max-w-[140px]"
+      ? "aspect-square rounded-full w-20 h-20"
       : shape === "rect"
         ? "aspect-[1.6] rounded-xl w-32 h-20"
         : "aspect-[2/3] rounded-xl w-full max-w-[200px]";
 
   return (
-    <div className="flex flex-col items-center justify-center w-full space-y-2 select-none">
+    <div className="flex flex-col items-center justify-center w-fit space-y-2 select-none">
       {label && (
         <span className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 self-start">
           {label}
@@ -281,26 +281,28 @@ export function ImageUpload({ value, onChange, shape = "cover", label }: ImageUp
           {value ? (
             <>
               <img src={value} alt="Preview" className="w-full h-full object-cover transition duration-300" />
-              <div className="absolute inset-0 bg-black/50 opacity-0 hover:opacity-100 transition-opacity duration-200 flex flex-col items-center justify-center gap-2 p-2">
+              <div className="absolute inset-0 bg-black/45 opacity-0 hover:opacity-100 transition-opacity duration-200 flex items-center justify-center gap-1.5 p-1">
                 <button
                   type="button"
+                  title="Recrop image"
                   onClick={(e) => {
                     e.stopPropagation();
                     handleRecrop();
                   }}
-                  className="px-2.5 py-1 bg-white hover:bg-white/90 text-[#122222] font-bold text-[10px] rounded shadow-sm flex items-center gap-1.5 transition-colors cursor-pointer w-full max-w-[85px] justify-center"
+                  className="w-7 h-7 flex items-center justify-center bg-white hover:bg-[#f4ebdd] text-[#122222] rounded-full shadow-md transition-all duration-150 hover:scale-105 active:scale-95 cursor-pointer shrink-0"
                 >
-                  <Edit size={10} /> Recrop
+                  <Edit size={12} />
                 </button>
                 <button
                   type="button"
+                  title="Upload new image"
                   onClick={(e) => {
                     e.stopPropagation();
                     triggerSelect();
                   }}
-                  className="px-2.5 py-1 bg-[#1a4d40] hover:bg-[#1a4d40]/90 text-white font-bold text-[10px] rounded shadow-sm flex items-center gap-1.5 transition-colors cursor-pointer w-full max-w-[85px] justify-center"
+                  className="w-7 h-7 flex items-center justify-center bg-[#1a4d40] hover:bg-[#1a4d40]/90 text-white rounded-full shadow-md transition-all duration-150 hover:scale-105 active:scale-95 cursor-pointer shrink-0"
                 >
-                  <Upload size={10} /> Upload
+                  <Upload size={12} />
                 </button>
               </div>
             </>
