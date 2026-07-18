@@ -10,6 +10,8 @@ export interface ExternalBookMetadata {
   language: string;
   description?: string;
   cover_url?: string | null;
+  isbn10?: string | null;
+  isbn13?: string | null;
 }
 
 function cleanCategory(cat: string): string {
@@ -91,30 +93,70 @@ function generateFallbackTags(title: string, category: string): string {
   return Array.from(new Set(tags)).join(", ");
 }
 
-export async function fetchBookMetadataByIsbn(isbn: string): Promise<ExternalBookMetadata> {
-  const cleanIsbn = isbn.replace(/[- ]/g, "").trim();
-  if (!cleanIsbn) {
-    throw new Error("Please enter a non-empty ISBN.");
+function extractIsbnsFromGoogleIdentifiers(identifiers?: { type: string; identifier: string }[]) {
+  let isbn10: string | null = null;
+  let isbn13: string | null = null;
+  if (identifiers) {
+    for (const id of identifiers) {
+      if (id.type === "ISBN_10") isbn10 = id.identifier.replace(/[^0-9Xx]/g, "");
+      if (id.type === "ISBN_13") isbn13 = id.identifier.replace(/[^0-9Xx]/g, "");
+    }
   }
+  return { isbn10, isbn13 };
+}
+
+function extractIsbnsFromOlArray(isbns?: string[]) {
+  let isbn10: string | null = null;
+  let isbn13: string | null = null;
+  if (isbns) {
+    for (const val of isbns) {
+      const clean = val.replace(/[^0-9Xx]/g, "");
+      if (clean.length === 10 && !isbn10) isbn10 = clean;
+      if (clean.length === 13 && !isbn13) isbn13 = clean;
+    }
+  }
+  return { isbn10, isbn13 };
+}
+
+export async function fetchBookMetadata(query: string): Promise<ExternalBookMetadata> {
+  const trimmed = query.trim();
+  if (!trimmed) {
+    throw new Error("Please enter a non-empty ISBN or search query.");
+  }
+
+  const clean = trimmed.replace(/[- ]/g, "");
+  const queryIsIsbn = (clean.length === 10 || clean.length === 13) && /^\d+$/.test(clean.substring(0, 9));
 
   let googleMeta: Partial<ExternalBookMetadata> = {};
   let olMeta: Partial<ExternalBookMetadata> = {};
 
-  // Fetch Google Books in parallel
   const googlePromise = (async () => {
     try {
-      const googleUrl = `https://www.googleapis.com/books/v1/volumes?q=isbn:${cleanIsbn}`;
+      const googleUrl = queryIsIsbn
+        ? `https://www.googleapis.com/books/v1/volumes?q=isbn:${clean}`
+        : `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(trimmed)}&maxResults=5`;
       const response = await fetch(googleUrl);
       if (response.ok) {
         const data = await response.json();
         if (data.items && data.items.length > 0) {
-          const info = data.items[0].volumeInfo;
+          let chosenItem = data.items[0];
+          if (!queryIsIsbn) {
+            for (const item of data.items) {
+              const idfs = item.volumeInfo?.industryIdentifiers;
+              if (idfs && idfs.some((id: any) => id.type === "ISBN_10" || id.type === "ISBN_13")) {
+                chosenItem = item;
+                break;
+              }
+            }
+          }
+          const info = chosenItem.volumeInfo;
           let publicationYear: number | undefined;
           if (info.publishedDate) {
             const year = parseInt(info.publishedDate.substring(0, 4), 10);
             if (!isNaN(year)) publicationYear = year;
           }
           const cover = info.imageLinks?.thumbnail || info.imageLinks?.smallThumbnail || null;
+          const { isbn10, isbn13 } = extractIsbnsFromGoogleIdentifiers(info.industryIdentifiers);
           googleMeta = {
             title: info.title || "",
             subtitle: info.subtitle || "",
@@ -124,7 +166,9 @@ export async function fetchBookMetadataByIsbn(isbn: string): Promise<ExternalBoo
             category: info.categories ? info.categories.join(", ") : "",
             language: info.language === "en" ? "English" : info.language === "ar" ? "Arabic" : info.language === "fr" ? "French" : info.language || "English",
             description: info.description || "",
-            cover_url: cover ? cover.replace("http://", "https://") : null
+            cover_url: cover ? cover.replace("http://", "https://") : null,
+            isbn10,
+            isbn13
           };
         }
       }
@@ -133,37 +177,82 @@ export async function fetchBookMetadataByIsbn(isbn: string): Promise<ExternalBoo
     }
   })();
 
-  // Fetch Open Library in parallel
   const olPromise = (async () => {
     try {
-      const olUrl = `https://openlibrary.org/api/books?bibkeys=ISBN:${cleanIsbn}&jscmd=data&format=json`;
-      const response = await fetch(olUrl);
-      if (response.ok) {
-        const data = await response.json();
-        const bookKey = `ISBN:${cleanIsbn}`;
-        if (data[bookKey]) {
-          const info = data[bookKey];
-          let publicationYear: number | undefined;
-          if (info.publish_date) {
-            const match = info.publish_date.match(/\d{4}/);
-            if (match) {
-              const year = parseInt(match[0], 10);
-              if (!isNaN(year)) publicationYear = year;
+      if (queryIsIsbn) {
+        const olUrl = `https://openlibrary.org/api/books?bibkeys=ISBN:${clean}&jscmd=data&format=json`;
+        const response = await fetch(olUrl);
+        if (response.ok) {
+          const data = await response.json();
+          const bookKey = `ISBN:${clean}`;
+          if (data[bookKey]) {
+            const info = data[bookKey];
+            let publicationYear: number | undefined;
+            if (info.publish_date) {
+              const match = info.publish_date.match(/\d{4}/);
+              if (match) {
+                const year = parseInt(match[0], 10);
+                if (!isNaN(year)) publicationYear = year;
+              }
             }
+            const authorNames = info.authors ? info.authors.map((a: any) => a.name).join(", ") : "";
+            const publisherNames = info.publishers ? info.publishers.map((p: any) => p.name).join(", ") : "";
+            const categoryNames = info.subjects ? info.subjects.slice(0, 3).map((s: any) => s.name).join(", ") : "";
+            const cover = info.cover?.large || info.cover?.medium || info.cover?.small || `https://covers.openlibrary.org/b/isbn/${clean}-L.jpg`;
+            olMeta = {
+              title: info.title || "",
+              subtitle: info.subtitle || "",
+              author: authorNames,
+              publisher: publisherNames,
+              publicationYear,
+              category: categoryNames,
+              cover_url: cover,
+              isbn10: clean.length === 10 ? clean : null,
+              isbn13: clean.length === 13 ? clean : null
+            };
           }
-          const authorNames = info.authors ? info.authors.map((a: any) => a.name).join(", ") : "";
-          const publisherNames = info.publishers ? info.publishers.map((p: any) => p.name).join(", ") : "";
-          const categoryNames = info.subjects ? info.subjects.slice(0, 3).map((s: any) => s.name).join(", ") : "";
-          const cover = info.cover?.large || info.cover?.medium || info.cover?.small || `https://covers.openlibrary.org/b/isbn/${cleanIsbn}-L.jpg`;
-          olMeta = {
-            title: info.title || "",
-            subtitle: info.subtitle || "",
-            author: authorNames,
-            publisher: publisherNames,
-            publicationYear,
-            category: categoryNames,
-            cover_url: cover
-          };
+        }
+      } else {
+        const olUrl = `https://openlibrary.org/search.json?q=${encodeURIComponent(trimmed)}&limit=5`;
+        const response = await fetch(olUrl);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.docs && data.docs.length > 0) {
+            let doc = data.docs[0];
+            for (const d of data.docs) {
+              if (d.isbn && d.isbn.length > 0) {
+                doc = d;
+                break;
+              }
+            }
+            let publicationYear: number | undefined;
+            if (doc.first_publish_year) {
+              publicationYear = doc.first_publish_year;
+            } else if (doc.publish_year && doc.publish_year.length > 0) {
+              publicationYear = doc.publish_year[0];
+            }
+            const authorNames = doc.author_name ? doc.author_name.join(", ") : "";
+            const publisherNames = doc.publisher ? doc.publisher[0] : "";
+            const categoryNames = doc.subject ? doc.subject.slice(0, 3).join(", ") : "";
+            const { isbn10, isbn13 } = extractIsbnsFromOlArray(doc.isbn);
+            const firstIsbn = isbn13 || isbn10;
+            const cover = doc.cover_i 
+              ? `https://covers.openlibrary.org/b/id/${doc.cover_i}-L.jpg`
+              : firstIsbn 
+                ? `https://covers.openlibrary.org/b/isbn/${firstIsbn}-L.jpg`
+                : null;
+            olMeta = {
+              title: doc.title || "",
+              subtitle: doc.subtitle || "",
+              author: authorNames,
+              publisher: publisherNames,
+              publicationYear,
+              category: categoryNames,
+              cover_url: cover,
+              isbn10,
+              isbn13
+            };
+          }
         }
       }
     } catch (err) {
@@ -171,13 +260,12 @@ export async function fetchBookMetadataByIsbn(isbn: string): Promise<ExternalBoo
     }
   })();
 
-  // Wait for both
   await Promise.all([googlePromise, olPromise]);
 
   const title = googleMeta.title || olMeta.title || "";
   const category = cleanCategory(googleMeta.category || olMeta.category || "");
   const subtitle = googleMeta.subtitle || olMeta.subtitle || getFallbackSubtitle(title);
-  const arabic_title = getFallbackArabicTitle(title);
+  const arabic_title = /[\u0600-\u06FF]/.test(title) ? title : getFallbackArabicTitle(title);
   const tags = generateFallbackTags(title, category);
 
   let description = googleMeta.description || olMeta.description || "";
@@ -188,8 +276,16 @@ export async function fetchBookMetadataByIsbn(isbn: string): Promise<ExternalBoo
     }
   }
 
+  const finalIsbn10 = googleMeta.isbn10 || olMeta.isbn10 || null;
+  const finalIsbn13 = googleMeta.isbn13 || olMeta.isbn13 || null;
+
   if (!title && !googleMeta.author && !olMeta.author) {
-    throw new Error("Could not find any metadata matches for this ISBN.");
+    throw new Error("Could not find any metadata matches for this query.");
+  }
+
+  let cover_url = googleMeta.cover_url || olMeta.cover_url || null;
+  if (!cover_url && (finalIsbn13 || finalIsbn10)) {
+    cover_url = `https://covers.openlibrary.org/b/isbn/${finalIsbn13 || finalIsbn10}-L.jpg`;
   }
 
   return {
@@ -203,12 +299,18 @@ export async function fetchBookMetadataByIsbn(isbn: string): Promise<ExternalBoo
     category,
     language: googleMeta.language || olMeta.language || "English",
     description,
-    cover_url: googleMeta.cover_url || olMeta.cover_url || `https://covers.openlibrary.org/b/isbn/${cleanIsbn}-L.jpg`
+    cover_url,
+    isbn10: finalIsbn10,
+    isbn13: finalIsbn13
   };
 }
 
+export async function fetchBookMetadataByIsbn(isbn: string): Promise<ExternalBookMetadata> {
+  return fetchBookMetadata(isbn);
+}
+
 export async function enrichMetadataWithGroq(
-  isbn: string,
+  queryOrIsbn: string,
   existingMetadata: Partial<ExternalBookMetadata>,
   apiKey: string
 ): Promise<ExternalBookMetadata> {
@@ -224,12 +326,14 @@ export async function enrichMetadataWithGroq(
       language: existingMetadata.language || "English",
       description: existingMetadata.description || "",
       publicationYear: existingMetadata.publicationYear,
-      cover_url: existingMetadata.cover_url || null
+      cover_url: existingMetadata.cover_url || null,
+      isbn10: existingMetadata.isbn10 || null,
+      isbn13: existingMetadata.isbn13 || null
     };
   }
 
   const prompt = `You are a professional library cataloging assistant.
-A book lookup for ISBN "${isbn}" returned the following partial/existing information:
+A book lookup for query or ISBN "${queryOrIsbn}" returned the following partial/existing information:
 ${JSON.stringify(existingMetadata, null, 2)}
 
 Your task is to identify the book and fill in any missing or empty fields, or correct/refine existing ones if they are clearly incorrect or incomplete.
@@ -244,8 +348,10 @@ Specifically, you MUST return a valid JSON object with the following keys and va
 - "language": string (The primary language of the book, e.g. "English", "Arabic", "French")
 - "description": string (A comprehensive, detailed description and summary of the book, 1-2 paragraphs, at least 100-200 words, including themes, plot, and historical value)
 - "publicationYear": number (The 4-digit publication year of the book, as a number, or null if unknown)
+- "isbn10": string (The 10-digit ISBN of the book containing only digits and X, or empty string if unknown)
+- "isbn13": string (The 13-digit ISBN of the book containing only digits, or empty string if unknown)
 
-If Google/OpenLibrary returned nothing, use your knowledge about the ISBN "${isbn}" to fill in all the details.
+If Google/OpenLibrary returned nothing, use your knowledge about the book "${queryOrIsbn}" to fill in all the details.
 Return ONLY the JSON object. Do not include any explanations, introduction, markdown blocks, or other text outside the JSON.`;
 
   try {
@@ -289,7 +395,9 @@ Return ONLY the JSON object. Do not include any explanations, introduction, mark
         language: parsed.language || existingMetadata.language || "English",
         description: parsed.description || existingMetadata.description || "",
         publicationYear: parsed.publicationYear ? Number(parsed.publicationYear) : existingMetadata.publicationYear,
-        cover_url: existingMetadata.cover_url || null
+        cover_url: existingMetadata.cover_url || null,
+        isbn10: parsed.isbn10 || existingMetadata.isbn10 || null,
+        isbn13: parsed.isbn13 || existingMetadata.isbn13 || null
       };
     }
   } catch (error) {
@@ -307,6 +415,8 @@ Return ONLY the JSON object. Do not include any explanations, introduction, mark
     language: existingMetadata.language || "English",
     description: existingMetadata.description || "",
     publicationYear: existingMetadata.publicationYear,
-    cover_url: existingMetadata.cover_url || null
+    cover_url: existingMetadata.cover_url || null,
+    isbn10: existingMetadata.isbn10 || null,
+    isbn13: existingMetadata.isbn13 || null
   };
 }
