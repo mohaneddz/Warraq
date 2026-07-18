@@ -1,17 +1,18 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
-import { copies, updateCopy } from "../data/repositories/library";
+import { copies, updateCopy, deleteCopy } from "../data/repositories/library";
 import { Modal, Input, Button, StatusBadge } from "../components/ui/primitives";
 import { toast } from "sonner";
 import { queryClient } from "../app/providers";
 import type { Copy } from "../types";
 import { useTranslation } from "react-i18next";
 import { cleanBarcode, cleanText } from "../utils/isbn";
+import { useUiStore } from "../store/uiStore";
 
 // lucide-react imports for icons
 import { 
-  ScanLine as ScanIcon, MoreHorizontal as MoreIcon, ChevronLeft as LeftIcon, ChevronRight as RightIcon, BookCopy as CopyIcon, CheckCircle2 as CheckIcon, AlertTriangle as AlertIcon, HelpCircle as HelpIcon
+  ScanLine as ScanIcon, MoreHorizontal as MoreIcon, ChevronLeft as LeftIcon, ChevronRight as RightIcon, BookCopy as CopyIcon, CheckCircle2 as CheckIcon, AlertTriangle as AlertIcon, HelpCircle as HelpIcon, Trash2
 } from "lucide-react";
 
 
@@ -42,10 +43,31 @@ export function InventoryPage() {
   const [shelfFilter, setShelfFilter] = useState("All Shelves");
   const [conditionFilter, setConditionFilter] = useState("All Conditions");
   const [page, setPage] = useState(1);
-  const itemsPerPage = 8;
+  const itemsPerPage = useUiStore((state) => state.preferences.pageSize) || 10;
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   // Queries
   const result = useQuery({ queryKey: ["copies", "inventory"], queryFn: () => copies() });
+
+  const bulkArchiveMutation = useMutation({
+    mutationFn: async () => {
+      await Promise.all(selectedIds.map(id => deleteCopy(id)));
+    },
+    onSuccess: () => {
+      invalidate();
+      toast.success("Selected copies archived.");
+      setSelectedIds([]);
+    },
+    onError: (err: any) => {
+      toast.error(err.message || "Failed to archive copies.");
+    }
+  });
+
+  const handleBulkArchive = () => {
+    if (confirm(`Are you sure you want to archive ${selectedIds.length} selected copy/copies?`)) {
+      bulkArchiveMutation.mutate();
+    }
+  };
 
   // Focus scan input when session becomes active
   useEffect(() => {
@@ -259,6 +281,20 @@ export function InventoryPage() {
             <table className="w-full text-left text-[13px]">
               <thead className="bg-[#fcfbf8] dark:bg-[#111d1a] sticky top-0 border-b border-black/5 dark:border-white/5 text-[11px] font-bold text-[#122222]/50 dark:text-white/50 uppercase tracking-wider select-none">
                 <tr>
+                  <th className="px-6 py-3 w-10">
+                    <input
+                      type="checkbox"
+                      checked={filteredCopies.length > 0 && selectedIds.length === filteredCopies.length}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedIds(filteredCopies.map(c => c.id));
+                        } else {
+                          setSelectedIds([]);
+                        }
+                      }}
+                      className="cursor-pointer rounded border-black/25 dark:border-white/25 text-emerald focus:ring-emerald h-4 w-4"
+                    />
+                  </th>
                   <th className="px-6 py-3">{t("circulation.barcode")}</th>
                   <th className="px-6 py-3">{t("catalog.headers.title")}</th>
                   <th className="px-6 py-3">{t("inventory.shelfLocation")}</th>
@@ -272,8 +308,24 @@ export function InventoryPage() {
                   <tr 
                     key={copy.id} 
                     onClick={() => setSelectedCopy(copy)}
-                    className="hover:bg-black/5 dark:hover:bg-white/5 transition-colors group cursor-pointer"
+                    className={`hover:bg-black/5 dark:hover:bg-white/5 transition-colors group cursor-pointer ${
+                      selectedIds.includes(copy.id) ? "bg-emerald/5 dark:bg-emerald-light/5" : ""
+                    }`}
                   >
+                    <td className="px-6 py-3 w-10" onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.includes(copy.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedIds(prev => [...prev, copy.id]);
+                          } else {
+                            setSelectedIds(prev => prev.filter(id => id !== copy.id));
+                          }
+                        }}
+                        className="cursor-pointer rounded border-black/25 dark:border-white/25 text-emerald focus:ring-emerald h-4 w-4"
+                      />
+                    </td>
                     <td className="px-6 py-3 font-mono font-bold text-[#122222] dark:text-white">{copy.barcode}</td>
                     <td className="px-6 py-3 font-semibold text-[#122222]/80 dark:text-white/80">{copy.title}</td>
                     <td className="px-6 py-3 text-[#122222]/75 dark:text-white/75 font-semibold">
@@ -344,7 +396,7 @@ export function InventoryPage() {
                 className="mt-1"
               />
             </label>
-            <div className="flex gap-2 justify-end pt-4 border-t border-black/5 dark:border-white/5">
+            <div className="flex gap-2 justify-end pt-4 pb-4 border-t border-black/5 dark:border-white/5">
               <Button type="button" variant="ghost" onClick={() => setScanInitOpen(false)}>{t("catalog.addModal.cancel")}</Button>
               <Button type="submit">{t("inventory.beginSession")}</Button>
             </div>
@@ -421,7 +473,7 @@ export function InventoryPage() {
             </div>
 
             {/* Actions */}
-            <div className="flex justify-between items-center pt-4 border-t border-black/5 dark:border-white/5">
+            <div className="flex justify-between items-center pt-4 pb-4 border-t border-black/5 dark:border-white/5">
               <Button 
                 type="button" 
                 variant="ghost" 
@@ -445,6 +497,35 @@ export function InventoryPage() {
             </div>
           </div>
         </Modal>
+      )}
+      {selectedIds.length > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-white/90 dark:bg-[#1d2926]/90 backdrop-blur-md px-6 py-3 rounded-full border border-black/10 dark:border-white/10 shadow-lg flex items-center gap-6 z-50 animate-in fade-in slide-in-from-bottom-4 duration-300">
+          <span className="text-[13px] font-semibold text-[#122222] dark:text-white">
+            {selectedIds.length} {selectedIds.length === 1 ? 'copy' : 'copies'} selected
+          </span>
+          <div className="h-4 w-px bg-black/10 dark:bg-white/10" />
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setSelectedIds(filteredCopies.map(c => c.id))}
+              className="text-[12px] font-bold text-emerald dark:text-emerald-light hover:underline px-2 py-1 cursor-pointer"
+            >
+              Select All
+            </button>
+            <button
+              onClick={() => setSelectedIds([])}
+              className="text-[12px] font-bold text-[#122222]/60 dark:text-white/60 hover:underline px-2 py-1 cursor-pointer"
+            >
+              Deselect All
+            </button>
+            <button
+              onClick={handleBulkArchive}
+              className="flex items-center gap-1.5 text-[12px] font-bold bg-red-500 hover:bg-red-600 text-white px-4 py-1.5 rounded-full shadow transition-colors cursor-pointer"
+            >
+              <Trash2 size={13} />
+              Archive Selected
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );

@@ -5,6 +5,7 @@ const defaults: Preferences = {
   onboardingComplete: false,
   libraryName: "Mustapha Bacha Hospital Library",
   libraryShortName: "",
+  libraryLogo: null,
   operatorName: "",
   operatorEmail: "",
   operatorAvatar: null,
@@ -45,6 +46,7 @@ const defaults: Preferences = {
   closeToTray: true,
   autosaveEnabled: true,
   autosaveInterval: 60,
+  pageSize: 10,
 };
 const stored = typeof localStorage === "undefined" ? null : localStorage.getItem("warraq-preferences");
 export const useUiStore = create<{ preferences: Preferences; sidebarOpen: boolean; paletteOpen: boolean; updatePreferences: (values: Partial<Preferences>) => void; setPaletteOpen: (value: boolean) => void; toggleSidebar: () => void }>((set) => ({

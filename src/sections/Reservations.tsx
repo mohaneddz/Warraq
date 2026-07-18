@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Search, Filter, Bookmark, Clock } from "lucide-react";
+import { Search, Filter, Bookmark, Clock, Trash2 } from "lucide-react";
 import { reservations, cancelReservation } from "../data/repositories/library";
 import { queryClient } from "../app/providers";
 import { toast } from "sonner";
@@ -12,6 +12,7 @@ const invalidate = () => queryClient.invalidateQueries();
 export function ReservationsPage() {
   const { t } = useTranslation();
   const [term, setTerm] = useState("");
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   
   // Queries
   const result = useQuery({ queryKey: ["reservations"], queryFn: reservations }); 
@@ -36,6 +37,26 @@ export function ReservationsPage() {
     },
     onError: (err) => toast.error(err.message)
   });
+
+  const bulkCancelMutation = useMutation({
+    mutationFn: async () => {
+      await Promise.all(selectedIds.map(id => cancelReservation(id)));
+    },
+    onSuccess: () => {
+      invalidate();
+      toast.success("Selected reservations cancelled.");
+      setSelectedIds([]);
+    },
+    onError: (err: any) => {
+      toast.error(err.message || "Failed to cancel reservations.");
+    }
+  });
+
+  const handleBulkCancel = () => {
+    if (confirm(`Are you sure you want to cancel ${selectedIds.length} selected reservation(s)?`)) {
+      bulkCancelMutation.mutate();
+    }
+  };
 
   return (
     <div className="flex flex-col h-full w-full">
@@ -71,8 +92,22 @@ export function ReservationsPage() {
         <div className="flex-1 overflow-auto">
           {filteredReservations.length ? (
             <table className="w-full text-left text-[13px]">
-              <thead className="bg-[#fcfbf8] dark:bg-[#111d1a] sticky top-0 border-b border-black/5 dark:border-white/5 text-[11px] font-bold text-[#122222]/50 dark:text-white/50 uppercase tracking-wider">
+              <thead className="bg-[#fcfbf8] dark:bg-[#111d1a] sticky top-0 border-b border-black/5 dark:border-white/5 text-[11px] font-bold text-[#122222]/50 dark:text-white/50 uppercase tracking-wider select-none">
                 <tr>
+                  <th className="px-6 py-3 w-10">
+                    <input
+                      type="checkbox"
+                      checked={filteredReservations.length > 0 && selectedIds.length === filteredReservations.length}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedIds(filteredReservations.map(r => r.id));
+                        } else {
+                          setSelectedIds([]);
+                        }
+                      }}
+                      className="cursor-pointer rounded border-black/25 dark:border-white/25 text-emerald focus:ring-emerald h-4 w-4"
+                    />
+                  </th>
                   <th className="px-6 py-3">{t("catalog.headers.title")}</th>
                   <th className="px-6 py-3">{t("circulation.selectedMember")}</th>
                   <th className="px-6 py-3">{t("reservations.requestDate")}</th>
@@ -82,7 +117,26 @@ export function ReservationsPage() {
               </thead>
               <tbody className="divide-y divide-black/5 dark:divide-white/5">
                 {filteredReservations.map((res) => (
-                  <tr key={res.id} className="hover:bg-black/5 dark:hover:bg-white/5 transition-colors group">
+                  <tr 
+                    key={res.id} 
+                    className={`hover:bg-black/5 dark:hover:bg-white/5 transition-colors group ${
+                      selectedIds.includes(res.id) ? "bg-emerald/5 dark:bg-emerald-light/5" : ""
+                    }`}
+                  >
+                    <td className="px-6 py-3 w-10" onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.includes(res.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedIds(prev => [...prev, res.id]);
+                          } else {
+                            setSelectedIds(prev => prev.filter(id => id !== res.id));
+                          }
+                        }}
+                        className="cursor-pointer rounded border-black/25 dark:border-white/25 text-emerald focus:ring-emerald h-4 w-4"
+                      />
+                    </td>
                     <td className="px-6 py-3 font-semibold text-[#122222] dark:text-white">
                       {res.title || "—"}
                     </td>
@@ -136,6 +190,35 @@ export function ReservationsPage() {
           )}
         </div>
       </div>
+      {selectedIds.length > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-white/90 dark:bg-[#1d2926]/90 backdrop-blur-md px-6 py-3 rounded-full border border-black/10 dark:border-white/10 shadow-lg flex items-center gap-6 z-50 animate-in fade-in slide-in-from-bottom-4 duration-300">
+          <span className="text-[13px] font-semibold text-[#122222] dark:text-white">
+            {selectedIds.length} {selectedIds.length === 1 ? 'reservation' : 'reservations'} selected
+          </span>
+          <div className="h-4 w-px bg-black/10 dark:bg-white/10" />
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setSelectedIds(filteredReservations.map(r => r.id))}
+              className="text-[12px] font-bold text-emerald dark:text-emerald-light hover:underline px-2 py-1 cursor-pointer"
+            >
+              Select All
+            </button>
+            <button
+              onClick={() => setSelectedIds([])}
+              className="text-[12px] font-bold text-[#122222]/60 dark:text-white/60 hover:underline px-2 py-1 cursor-pointer"
+            >
+              Deselect All
+            </button>
+            <button
+              onClick={handleBulkCancel}
+              className="flex items-center gap-1.5 text-[12px] font-bold bg-red-500 hover:bg-red-600 text-white px-4 py-1.5 rounded-full shadow transition-colors cursor-pointer"
+            >
+              <Trash2 size={13} />
+              Cancel Selected
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

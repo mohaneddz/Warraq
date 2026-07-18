@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import {
   Settings as SettingsIcon, Search, CheckCircle2, ChevronRight,
   BookOpen, Database, UserCircle, Monitor, Globe, Bell, Shield,
@@ -41,6 +42,33 @@ export function SettingsPage() {
   const [activeTab, setActiveTab] = useState<Tab>("General");
   const [search, setSearch] = useState("");
   const { preferences, updatePreferences } = useUiStore();
+  const location = useLocation();
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const tabParam = params.get("tab");
+    if (tabParam) {
+      const tabMap: Record<string, Tab> = {
+        general: "General",
+        profile: "Library Profile",
+        localization: "Localization",
+        appearance: "Appearance",
+        rules: "Rules",
+        fines: "Fines & Fees",
+        notifications: "Notifications",
+        backup: "Backup & Restore",
+        database: "Database",
+        integrations: "Integrations & AI",
+        secrets: "Secrets & Keys",
+        desktop: "Desktop & Data",
+        about: "About"
+      };
+      const matched = tabMap[tabParam.toLowerCase()];
+      if (matched) {
+        setActiveTab(matched);
+      }
+    }
+  }, [location.search]);
 
   const allTabs: { group: string; items: Tab[] }[] = [
     { group: "General", items: ["General", "Library Profile", "Localization", "Appearance"] },
@@ -57,9 +85,8 @@ export function SettingsPage() {
     <div className="flex h-full w-full">
       {/* ── Left Nav ─────────────────────────────────────────────────────────── */}
       <div className="w-[260px] shrink-0 border-r border-black/5 dark:border-white/5 pr-6 mr-6 flex flex-col h-full overflow-y-auto no-scrollbar">
-        <div className="flex items-center gap-2 mb-6 text-[#b96f3e]">
-          <SettingsIcon size={20} />
-          <h1 className="font-display text-[22px] font-bold text-[#122222] dark:text-white leading-tight">{t("nav.settings")}</h1>
+        <div className="flex items-center gap-2.5 mb-6 text-[#b96f3e]">
+          <h1 className="font-display text-[28px] font-bold text-[#122222] dark:text-white leading-tight">{t("nav.settings")}</h1>
         </div>
 
         <div className="relative mb-6">
@@ -77,12 +104,12 @@ export function SettingsPage() {
           {filtered.map(group => (
             <NavGroup key={group.group} title={t("settings.groups." + group.group.toLowerCase().replace(/[^a-z0-9]/g, '')) || group.group}>
               {group.items.map(item => (
-                <NavItem 
-                  key={item} 
-                  label={t("settings.tabs." + item.toLowerCase().replace(/[^a-z0-9]/g, '')) || item} 
-                  icon={tabIcons[item]} 
-                  active={activeTab === item} 
-                  onClick={() => setActiveTab(item)} 
+                <NavItem
+                  key={item}
+                  label={t("settings.tabs." + item.toLowerCase().replace(/[^a-z0-9]/g, '')) || item}
+                  icon={tabIcons[item]}
+                  active={activeTab === item}
+                  onClick={() => setActiveTab(item)}
                 />
               ))}
             </NavGroup>
@@ -147,10 +174,12 @@ function GeneralTab({ prefs, update }: TabProps) {
         </div>
         <Field label="Library logo (optional)">
           <div className="flex items-center gap-4">
-            <div className="w-32 h-20 border-2 border-dashed border-[#1a4d40]/10 rounded-xl flex flex-col items-center justify-center text-[#1a4d40]/40 gap-1 bg-[#1a4d40]/5 select-none pointer-events-none">
-              <span className="text-[11px] font-bold">Managed by OS</span>
-            </div>
-            <p className="text-[11px] text-[#122222]/40 dark:text-white/40">Library application icon is configured<br />in native desktop launcher.</p>
+            <ImageUpload
+              value={prefs.libraryLogo}
+              onChange={val => update({ libraryLogo: val })}
+              shape="rect"
+            />
+            <p className="text-[11px] text-[#122222]/40 dark:text-white/40">Recommended: Landscape or Square logo<br />Max size: 2 MB</p>
           </div>
         </Field>
       </Card>
@@ -604,6 +633,8 @@ function BackupTab() {
     return localStorage.getItem("warraq-last-backup-timestamp");
   });
   const [restoring, setRestoring] = useState(false);
+  const [importingBooks, setImportingBooks] = useState(false);
+  const [importingMembers, setImportingMembers] = useState(false);
 
   const handleExport = async () => {
     try {
@@ -640,6 +671,117 @@ function BackupTab() {
     }
   };
 
+  const handleImportBooks = async () => {
+    try {
+      setImportingBooks(true);
+      const { open } = await import("@tauri-apps/plugin-dialog");
+      const { readTextFile } = await import("@tauri-apps/plugin-fs");
+      const { saveBook, importBooksFromDb } = await import("../data/repositories/library");
+      
+      const file = await open({
+        filters: [{ name: "Data File", extensions: ["json", "db"] }]
+      });
+      if (!file) return;
+
+      if (file.endsWith(".json")) {
+        const text = await readTextFile(file);
+        const data = JSON.parse(text);
+        if (!Array.isArray(data)) {
+          alert("Invalid JSON: Expected an array of books.");
+          return;
+        }
+
+        let count = 0;
+        for (const item of data) {
+          if (!item.title) continue;
+          try {
+            await saveBook({
+              title: item.title,
+              subtitle: item.subtitle || null,
+              arabic_title: item.arabic_title || null,
+              author: item.author || null,
+              isbn10: item.isbn10 || (item.isbn && item.isbn.length === 10 ? item.isbn : null),
+              isbn13: item.isbn13 || (item.isbn && item.isbn.length === 13 ? item.isbn : null),
+              publisher: item.publisher || null,
+              category: item.category || null,
+              description: item.description || null,
+              language: item.language || "English",
+              call_number: item.call_number || null,
+              barcode: item.barcode || null,
+              accession: item.accession || null,
+              tags: item.tags || null,
+              cover_path: item.cover_path || null,
+              publication_year: item.publication_year || null
+            });
+            count++;
+          } catch (err) {
+            console.error("Failed to import book:", item.title, err);
+          }
+        }
+        alert(`Successfully imported ${count} of ${data.length} books from JSON.`);
+      } else if (file.endsWith(".db")) {
+        const res = await importBooksFromDb(file);
+        alert(`Successfully imported ${res.importedCount} new books from database.`);
+      }
+    } catch (err: any) {
+      console.error(err);
+      alert(`Import failed: ${err.message || String(err)}`);
+    } finally {
+      setImportingBooks(false);
+    }
+  };
+
+  const handleImportMembers = async () => {
+    try {
+      setImportingMembers(true);
+      const { open } = await import("@tauri-apps/plugin-dialog");
+      const { readTextFile } = await import("@tauri-apps/plugin-fs");
+      const { saveMember, importMembersFromDb } = await import("../data/repositories/library");
+      
+      const file = await open({
+        filters: [{ name: "Data File", extensions: ["json", "db"] }]
+      });
+      if (!file) return;
+
+      if (file.endsWith(".json")) {
+        const text = await readTextFile(file);
+        const data = JSON.parse(text);
+        if (!Array.isArray(data)) {
+          alert("Invalid JSON: Expected an array of members.");
+          return;
+        }
+
+        let count = 0;
+        for (const item of data) {
+          if (!item.full_name) continue;
+          try {
+            await saveMember({
+              full_name: item.full_name,
+              email: item.email || null,
+              phone: item.phone || null,
+              role: item.role || null,
+              department: item.department || null,
+              status: item.status || "active",
+              member_number: item.member_number || undefined
+            });
+            count++;
+          } catch (err) {
+            console.error("Failed to import member:", item.full_name, err);
+          }
+        }
+        alert(`Successfully imported ${count} of ${data.length} members from JSON.`);
+      } else if (file.endsWith(".db")) {
+        const res = await importMembersFromDb(file);
+        alert(`Successfully imported ${res.importedCount} new members from database.`);
+      }
+    } catch (err: any) {
+      console.error(err);
+      alert(`Import failed: ${err.message || String(err)}`);
+    } finally {
+      setImportingMembers(false);
+    }
+  };
+
   return (
     <div className="max-w-2xl">
       <PageHeader title="Backup & Restore" desc="Export or restore your Warraq database." />
@@ -673,6 +815,30 @@ function BackupTab() {
         <button onClick={handleImport} disabled={restoring} className="flex items-center gap-2 border border-[#122222]/15 dark:border-white/15 text-[#122222] dark:text-white px-5 py-2.5 rounded-lg font-bold text-[13px] hover:bg-black/5 dark:hover:bg-white/5 transition-colors disabled:opacity-50">
           {restoring ? <><RefreshCw size={15} className="animate-spin" /> Restoring…</> : <><Upload size={15} /> Import backup file</>}
         </button>
+      </Card>
+
+      <Card title="Import books or members" icon={<FileText size={16} className="text-emerald dark:text-[#1b9277]" />}>
+        <p className="text-[12px] text-[#122222]/70 dark:text-white/70 mb-4">
+          Import books or members from a JSON file (containing an array of objects) or another Warraq SQLite database (.db) file.
+        </p>
+        <div className="flex flex-wrap gap-3">
+          <button 
+            onClick={handleImportBooks} 
+            disabled={importingBooks || importingMembers || restoring} 
+            className="flex items-center gap-2 bg-[#1a4d40] text-white px-5 py-2.5 rounded-lg font-bold text-[13px] hover:bg-[#1a4d40]/90 transition-colors shadow-sm disabled:opacity-50 cursor-pointer"
+          >
+            {importingBooks ? <RefreshCw size={15} className="animate-spin" /> : <Download size={15} className="rotate-180" />} 
+            Import Books (.json / .db)
+          </button>
+          <button 
+            onClick={handleImportMembers} 
+            disabled={importingBooks || importingMembers || restoring} 
+            className="flex items-center gap-2 border border-[#1a4d40]/25 text-[#1a4d40] dark:text-[#1b9277] dark:border-[#1b9277]/25 px-5 py-2.5 rounded-lg font-bold text-[13px] hover:bg-black/5 dark:hover:bg-white/5 transition-colors disabled:opacity-50 cursor-pointer"
+          >
+            {importingMembers ? <RefreshCw size={15} className="animate-spin" /> : <Upload size={15} />} 
+            Import Members (.json / .db)
+          </button>
+        </div>
       </Card>
     </div>
   );
@@ -1130,6 +1296,27 @@ function DesktopTab({ prefs, update }: TabProps) {
         />
       </Card>
 
+      <Card title="Page settings" icon={<LayoutGrid size={16} className="text-[#1a4d40]" />}>
+        <div className="flex items-center justify-between text-[13px]">
+          <div>
+            <p className="font-bold text-[#122222] dark:text-white">Items per page</p>
+            <p className="text-[12px] text-[#122222]/60 dark:text-white/60 mt-0.5">
+              Control the maximum number of items shown per page in the catalog, members list, inventory list, etc.
+            </p>
+          </div>
+          <select
+            value={prefs.pageSize || 10}
+            onChange={(e) => update({ pageSize: Number(e.target.value) })}
+            className="bg-white dark:bg-[#1d2926] border border-black/10 dark:border-white/10 rounded-lg py-1.5 px-3 font-semibold text-[#122222]/70 dark:text-white/70 outline-none cursor-pointer"
+          >
+            <option value={10}>10 items</option>
+            <option value={20}>20 items</option>
+            <option value={50}>50 items</option>
+            <option value={100}>100 items</option>
+          </select>
+        </div>
+      </Card>
+
       <Card title="Data location" icon={<FolderOpen size={16} className="text-[#b96f3e]" />}>
         <p className="text-[12px] text-[#122222]/70 dark:text-white/70 mb-4">
           Warraq stores its database and settings in your system's AppData directory.
@@ -1511,13 +1698,12 @@ function NavItem({ label, icon: Icon, active, onClick }: { label: string; icon: 
       onClick={onClick}
       className={`w-full text-start px-3 py-2 rounded-lg text-[13px] font-semibold transition-colors flex items-center gap-2.5 ${active ? "bg-[#1a4d40]/10 dark:bg-[#1b9277]/10 text-[#1a4d40] dark:text-[#1b9277]" : "text-[#122222]/70 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/5"}`}
     >
-      <Icon 
-        size={15} 
-        className={`shrink-0 transition-colors ${
-          active 
-            ? "text-[#1a4d40] dark:text-[#1b9277]" 
+      <Icon
+        size={15}
+        className={`shrink-0 transition-colors ${active
+            ? "text-[#1a4d40] dark:text-[#1b9277]"
             : "text-[#122222]/40 dark:text-white/40"
-        }`} 
+          }`}
       />
       <span>{label}</span>
     </button>

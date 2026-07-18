@@ -1,4 +1,5 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -48,7 +49,26 @@ export function MembersPage() {
   const [savedView, setSavedView] = useState("All Members");
   const [deptFilter, setDeptFilter] = useState("All Departments");
   const [page, setPage] = useState(1);
-  const itemsPerPage = 8;
+  const itemsPerPage = useUiStore((state) => state.preferences.pageSize) || 10;
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const location = useLocation();
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const action = params.get("action");
+    if (action === "add-member") {
+      setAdding(true);
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+
+    const focus = params.get("focus");
+    if (focus === "search") {
+      setTimeout(() => {
+        document.getElementById("members-page-search")?.focus();
+      }, 100);
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, [location.search]);
 
   // Form input standardizer helper
   const registerClean = (form: any, name: any, cleaner: (val: string) => string) => {
@@ -95,6 +115,26 @@ export function MembersPage() {
     },
     onError: (err: any) => toast.error(err.message)
   });
+
+  const bulkArchiveMembersMutation = useMutation({
+    mutationFn: async () => {
+      await Promise.all(selectedIds.map(id => deleteMember(id)));
+    },
+    onSuccess: () => {
+      invalidate();
+      toast.success("Selected members archived.");
+      setSelectedIds([]);
+    },
+    onError: (error: any) => {
+      toast.error(error?.message || "Failed to archive members.");
+    }
+  });
+
+  const handleBulkArchiveMembers = () => {
+    if (confirm(`Are you sure you want to archive ${selectedIds.length} selected member(s)?`)) {
+      bulkArchiveMembersMutation.mutate();
+    }
+  };
 
   // Extract departments list dynamically
   const departmentsList = useMemo(() => {
@@ -172,12 +212,30 @@ export function MembersPage() {
           <div className="flex-1 relative">
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#122222]/40" />
             <input 
+              id="members-page-search"
               type="text" 
               placeholder={t("members.searchPlaceholder")}
               value={term}
               onChange={(e) => { setTerm(e.target.value); setPage(1); }}
               className="w-full bg-white dark:bg-[#1d2926] border border-black/5 dark:border-white/5 rounded-lg py-2 pl-9 pr-3 text-[13px] text-[#122222] dark:text-[#f0ebe1] outline-none focus:border-emerald focus:ring-1 focus:ring-emerald" 
             />
+          </div>
+
+          {/* Select All Checkbox */}
+          <div className="flex items-center gap-2 bg-white dark:bg-[#1d2926] border border-black/5 dark:border-white/5 rounded-lg py-2 px-3 hover:bg-black/5 dark:hover:bg-white/5 transition-colors cursor-pointer select-none">
+            <input 
+              type="checkbox" 
+              checked={sortedMembers.length > 0 && selectedIds.length === sortedMembers.length}
+              onChange={(e) => {
+                if (e.target.checked) {
+                  setSelectedIds(sortedMembers.map(m => m.id));
+                } else {
+                  setSelectedIds([]);
+                }
+              }}
+              className="cursor-pointer rounded border-black/20 dark:border-white/20 text-emerald focus:ring-emerald h-4 w-4"
+            />
+            <span className="text-[12px] font-semibold text-[#122222]/70 dark:text-white/70">Select All</span>
           </div>
 
           {/* Department Select Dropdown */}
@@ -252,21 +310,27 @@ export function MembersPage() {
                       key={member.id} 
                       onClick={() => setSelectedMember(member)}
                       className={`relative flex flex-col p-5 bg-white dark:bg-[#1d2926] border rounded-2xl shadow-card transition-all duration-300 cursor-pointer ${
-                        selectedMember?.id === member.id 
-                          ? 'border-emerald dark:border-emerald-light ring-2 ring-emerald dark:ring-emerald-light bg-emerald/5 dark:bg-emerald/10' 
-                          : 'border-black/5 dark:border-white/5 hover:border-black/15 dark:hover:border-white/15 hover:shadow-md hover:-translate-y-0.5'
+                        selectedIds.includes(member.id)
+                          ? 'border-emerald dark:border-emerald-light ring-2 ring-emerald dark:ring-emerald-light bg-emerald/5 dark:bg-emerald/10'
+                          : selectedMember?.id === member.id
+                            ? 'border-emerald/50 dark:border-emerald-light/50 ring-1 ring-emerald/30 dark:ring-emerald-light/30 bg-[#122222]/5 dark:bg-white/5'
+                            : 'border-black/5 dark:border-white/5 hover:border-black/15 dark:hover:border-white/15 hover:shadow-md hover:-translate-y-0.5'
                       }`}
                     >
                       {/* Header: Checkbox & Status */}
                       <div className="flex justify-between items-start mb-4">
                         <input 
                           type="checkbox" 
-                          checked={selectedMember?.id === member.id} 
+                          checked={selectedIds.includes(member.id)} 
                           onChange={(e) => {
                             e.stopPropagation();
-                            setSelectedMember(selectedMember?.id === member.id ? null : member);
+                            if (e.target.checked) {
+                              setSelectedIds(prev => [...prev, member.id]);
+                            } else {
+                              setSelectedIds(prev => prev.filter(id => id !== member.id));
+                            }
                           }}
-                          className="mt-0.5 cursor-pointer"
+                          className="mt-0.5 cursor-pointer rounded border-black/25 dark:border-white/25 text-emerald focus:ring-emerald h-4 w-4"
                         />
                         <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${
                           member.status === 'active' 
@@ -408,12 +472,42 @@ export function MembersPage() {
               </select>
             </label>
 
-            <div className="md:col-span-2 flex gap-2 justify-end pt-4 border-t border-black/5 dark:border-white/5">
+            <div className="md:col-span-2 flex gap-2 justify-end pt-4 pb-4 border-t border-black/5 dark:border-white/5">
               <Button type="button" variant="ghost" onClick={() => setAdding(false)}>{t("catalog.addModal.cancel")}</Button>
               <Button type="submit" disabled={addMutation.isPending}>{addMutation.isPending ? "Saving..." : t("catalog.addModal.save")}</Button>
             </div>
           </form>
         </Modal>
+      )}
+
+      {selectedIds.length > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-white/90 dark:bg-[#1d2926]/90 backdrop-blur-md px-6 py-3 rounded-full border border-black/10 dark:border-white/10 shadow-lg flex items-center gap-6 z-50 animate-in fade-in slide-in-from-bottom-4 duration-300">
+          <span className="text-[13px] font-semibold text-[#122222] dark:text-white">
+            {selectedIds.length} {selectedIds.length === 1 ? 'member' : 'members'} selected
+          </span>
+          <div className="h-4 w-px bg-black/10 dark:bg-white/10" />
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setSelectedIds(sortedMembers.map(m => m.id))}
+              className="text-[12px] font-bold text-emerald dark:text-emerald-light hover:underline px-2 py-1 cursor-pointer"
+            >
+              Select All
+            </button>
+            <button
+              onClick={() => setSelectedIds([])}
+              className="text-[12px] font-bold text-[#122222]/60 dark:text-white/60 hover:underline px-2 py-1 cursor-pointer"
+            >
+              Deselect All
+            </button>
+            <button
+              onClick={handleBulkArchiveMembers}
+              className="flex items-center gap-1.5 text-[12px] font-bold bg-red-500 hover:bg-red-600 text-white px-4 py-1.5 rounded-full shadow transition-colors cursor-pointer"
+            >
+              <Trash2 size={13} />
+              Archive Selected
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );

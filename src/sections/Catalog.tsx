@@ -17,10 +17,10 @@ import { SearchableSelect } from "../components/ui/shared";
 import { toast } from "sonner";
 import { 
   isValidIsbn, normalizeIsbn, cleanBarcode, 
-  cleanAccession, cleanText 
+  cleanAccession, cleanText, formatIsbn 
 } from "../utils/isbn";
 import { queryClient } from "../app/providers";
-import { fetchBookMetadataByIsbn, enrichMetadataWithGroq } from "../utils/metadata";
+import { fetchBookMetadata, enrichMetadataWithGroq } from "../utils/metadata";
 import { useUiStore } from "../store/uiStore";
 import { useLocation } from "react-router-dom";
 import { ImageUpload } from "../components/ui/ImageUpload";
@@ -56,19 +56,34 @@ export function CatalogPage() {
   const [lookupLoading, setLookupLoading] = useState(false);
 
   // Sorting, Filtering & Pagination State
-  const [sortBy, setSortBy] = useState<"title" | "author" | "category" | "isbn">("title");
+  const [sortBy, setSortBy] = useState<"title" | "author" | "category" | "isbn" | "created_at" | "available_copies">("title");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const [savedView, setSavedView] = useState("All Books");
   const [langFilter, setLangFilter] = useState("All Languages");
   const [catFilter, setCatFilter] = useState("All Categories");
   const [page, setPage] = useState(1);
-  const itemsPerPage = 8;
+  const itemsPerPage = useUiStore((state) => state.preferences.pageSize) || 10;
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
-  // Handle query parameter search (e.g. from header search)
+  // Handle query parameters
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const q = params.get("q");
     if (q) setTerm(q);
+
+    const action = params.get("action");
+    if (action === "add-book") {
+      setAdding(true);
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+
+    const focus = params.get("focus");
+    if (focus === "search") {
+      setTimeout(() => {
+        document.getElementById("catalog-page-search")?.focus();
+      }, 100);
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
   }, [location.search]);
 
   // Quick fetch
@@ -125,10 +140,32 @@ export function CatalogPage() {
     }
   });
 
+  const bulkArchiveMutation = useMutation({
+    mutationFn: async () => {
+      await Promise.all(selectedIds.map(id => deleteBook(id)));
+    },
+    onSuccess: () => {
+      invalidate();
+      toast.success("Selected books archived.");
+      setSelectedIds([]);
+    },
+    onError: (error: any) => {
+      toast.error(error?.message || "Failed to archive books.");
+    }
+  });
+
+  const handleBulkArchive = () => {
+    if (confirm(`Are you sure you want to archive ${selectedIds.length} selected book(s)? This will archive all of their copies.`)) {
+      bulkArchiveMutation.mutate();
+    }
+  };
+
   const handleIsbnLookup = async () => {
     const isbnVal = addForm.getValues("isbn");
-    if (!isbnVal?.trim()) {
-      toast.warning("Please type an ISBN to fetch details.");
+    const titleVal = addForm.getValues("title");
+    const queryVal = isbnVal?.trim() || titleVal?.trim();
+    if (!queryVal) {
+      toast.warning("Please type an ISBN or book title to fetch details.");
       return;
     }
     setLookupLoading(true);
@@ -138,7 +175,7 @@ export function CatalogPage() {
     let queryError: any = null;
 
     try {
-      meta = await fetchBookMetadataByIsbn(isbnVal);
+      meta = await fetchBookMetadata(queryVal);
     } catch (err: any) {
       queryError = err;
     }
@@ -146,7 +183,7 @@ export function CatalogPage() {
     const apiKey = useUiStore.getState().preferences.groqApiKey;
 
     if (!meta && !apiKey) {
-      toast.error(queryError?.message || "Could not find any metadata matches for this ISBN.", { id: toastId });
+      toast.error(queryError?.message || "Could not find any metadata matches for this query.", { id: toastId });
       setLookupLoading(false);
       return;
     }
@@ -154,7 +191,7 @@ export function CatalogPage() {
     try {
       if (apiKey) {
         toast.loading("Enriching metadata with Groq AI...", { id: toastId });
-        meta = await enrichMetadataWithGroq(isbnVal, meta || {}, apiKey);
+        meta = await enrichMetadataWithGroq(queryVal, meta || {}, apiKey);
         toast.success("Book metadata auto-filled & enriched with Groq AI!", { id: toastId });
       } else {
         toast.success("Book metadata auto-filled!", { id: toastId });
@@ -173,6 +210,12 @@ export function CatalogPage() {
         if (meta.category) addForm.setValue("category", cleanText(meta.category));
         if (meta.language) addForm.setValue("language", cleanText(meta.language));
         if (meta.description) addForm.setValue("description", cleanText(meta.description));
+
+        // Autofill retrieved ISBN if not already entered by the user
+        const retrievedIsbn = meta.isbn13 || meta.isbn10 || "";
+        if (retrievedIsbn) {
+          addForm.setValue("isbn", formatIsbn(retrievedIsbn));
+        }
 
         // Download cover url and convert to base64
         if (meta.cover_url) {
@@ -220,9 +263,10 @@ export function CatalogPage() {
         const addedDate = new Date(b.created_at);
         const diff = Date.now() - addedDate.getTime();
         if (diff > 7 * 24 * 60 * 60 * 1000) return false;
-      } else if (savedView === "Medical Core") {
-        const cat = (b.category || "").toLowerCase();
-        if (!cat.includes("med") && !cat.includes("path") && !cat.includes("phys")) return false;
+      } else if (savedView === "Available Now") {
+        if ((b.available_copies ?? 0) === 0) return false;
+      } else if (savedView === "Out of Stock") {
+        if ((b.available_copies ?? 0) > 0) return false;
       }
 
       // Language filter
@@ -243,16 +287,22 @@ export function CatalogPage() {
   const sortedBooks = useMemo(() => {
     const list = [...filteredBooks];
     return list.sort((a, b) => {
-      let valA = "";
-      let valB = "";
+      let valA: any = "";
+      let valB: any = "";
       if (sortBy === "title") { valA = a.title || ""; valB = b.title || ""; }
       else if (sortBy === "author") { valA = a.author || ""; valB = b.author || ""; }
       else if (sortBy === "category") { valA = a.category || ""; valB = b.category || ""; }
       else if (sortBy === "isbn") { valA = a.isbn13 || a.isbn10 || ""; valB = b.isbn13 || b.isbn10 || ""; }
+      else if (sortBy === "created_at") { valA = a.created_at || ""; valB = b.created_at || ""; }
+      else if (sortBy === "available_copies") { valA = a.available_copies ?? 0; valB = b.available_copies ?? 0; }
+
+      if (typeof valA === "number" && typeof valB === "number") {
+        return sortOrder === "asc" ? valA - valB : valB - valA;
+      }
 
       return sortOrder === "asc"
-        ? valA.localeCompare(valB, undefined, { numeric: true, sensitivity: 'base' })
-        : valB.localeCompare(valA, undefined, { numeric: true, sensitivity: 'base' });
+        ? String(valA).localeCompare(String(valB), undefined, { numeric: true, sensitivity: 'base' })
+        : String(valB).localeCompare(String(valA), undefined, { numeric: true, sensitivity: 'base' });
     });
   }, [filteredBooks, sortBy, sortOrder]);
 
@@ -260,7 +310,7 @@ export function CatalogPage() {
   const paginatedBooks = useMemo(() => {
     const start = (page - 1) * itemsPerPage;
     return sortedBooks.slice(start, start + itemsPerPage);
-  }, [sortedBooks, page]);
+  }, [sortedBooks, page, itemsPerPage]);
 
   const totalPages = Math.ceil(sortedBooks.length / itemsPerPage) || 1;
 
@@ -299,6 +349,7 @@ export function CatalogPage() {
           <div className="flex-1 relative">
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#122222]/40" />
             <input
+              id="catalog-page-search"
               type="text"
               placeholder={t("catalog.searchPlaceholder")}
               value={term}
@@ -349,10 +400,16 @@ export function CatalogPage() {
               {t("catalog.recentAdditions")}
             </button>
             <button
-              onClick={() => { setSavedView("Medical Core"); setPage(1); }}
-              className={`px-4 py-1.5 text-[13px] font-bold rounded-md transition-colors ${savedView === "Medical Core" ? "bg-emerald text-white" : "text-[#122222]/60 dark:text-white/60 hover:bg-black/5 dark:hover:bg-white/5"}`}
+              onClick={() => { setSavedView("Available Now"); setPage(1); }}
+              className={`px-4 py-1.5 text-[13px] font-bold rounded-md transition-colors ${savedView === "Available Now" ? "bg-emerald text-white" : "text-[#122222]/60 dark:text-white/60 hover:bg-black/5 dark:hover:bg-white/5"}`}
             >
-              {t("catalog.medicalCore")}
+              {t("catalog.availableNow", "Available Now")}
+            </button>
+            <button
+              onClick={() => { setSavedView("Out of Stock"); setPage(1); }}
+              className={`px-4 py-1.5 text-[13px] font-bold rounded-md transition-colors ${savedView === "Out of Stock" ? "bg-emerald text-white" : "text-[#122222]/60 dark:text-white/60 hover:bg-black/5 dark:hover:bg-white/5"}`}
+            >
+              {t("catalog.outOfStock", "Out of Stock")}
             </button>
           </div>
         </div>
@@ -364,7 +421,20 @@ export function CatalogPage() {
               <table className="w-full text-left text-[13px]">
                 <thead className="bg-[#fcfbf8] dark:bg-[#111d1a] sticky top-0 border-b border-black/5 dark:border-white/5 text-[11px] font-bold text-[#122222]/50 dark:text-white/50 uppercase tracking-wider select-none">
                   <tr>
-                    <th className="px-4 py-3 w-10"></th>
+                    <th className="px-4 py-3 w-10">
+                      <input
+                        type="checkbox"
+                        checked={sortedBooks.length > 0 && selectedIds.length === sortedBooks.length}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedIds(sortedBooks.map(b => b.id));
+                          } else {
+                            setSelectedIds([]);
+                          }
+                        }}
+                        className="cursor-pointer rounded border-black/25 dark:border-white/25 text-emerald focus:ring-emerald h-4 w-4"
+                      />
+                    </th>
                     <th className="px-4 py-3 cursor-pointer hover:text-emerald dark:hover:text-emerald-light" onClick={() => handleSort("title")}>
                       {t("catalog.headers.title")} {sortBy === "title" ? (sortOrder === "asc" ? "▲" : "▼") : "↕"}
                     </th>
@@ -377,6 +447,12 @@ export function CatalogPage() {
                     <th className="px-4 py-3 cursor-pointer hover:text-emerald dark:hover:text-emerald-light" onClick={() => handleSort("isbn")}>
                       {t("catalog.headers.isbn")} {sortBy === "isbn" ? (sortOrder === "asc" ? "▲" : "▼") : "↕"}
                     </th>
+                    <th className="px-4 py-3 cursor-pointer hover:text-emerald dark:hover:text-emerald-light" onClick={() => handleSort("created_at")}>
+                      {t("catalog.headers.dateAdded", "Date Added")} {sortBy === "created_at" ? (sortOrder === "asc" ? "▲" : "▼") : "↕"}
+                    </th>
+                    <th className="px-4 py-3 cursor-pointer hover:text-emerald dark:hover:text-emerald-light" onClick={() => handleSort("available_copies")}>
+                      {t("catalog.headers.availability", "Availability")} {sortBy === "available_copies" ? (sortOrder === "asc" ? "▲" : "▼") : "↕"}
+                    </th>
                     <th className="px-4 py-3 w-10"></th>
                   </tr>
                 </thead>
@@ -385,9 +461,28 @@ export function CatalogPage() {
                     <tr
                       key={book.id}
                       onClick={() => setSelectedBook(book)}
-                      className={`cursor-pointer transition-colors ${selectedBook?.id === book.id ? 'bg-emerald/5' : 'hover:bg-black/5 dark:hover:bg-white/5'}`}
+                      className={`cursor-pointer transition-colors ${
+                        selectedIds.includes(book.id) 
+                          ? 'bg-emerald/5 dark:bg-emerald-light/5' 
+                          : selectedBook?.id === book.id 
+                            ? 'bg-black/5 dark:bg-white/5' 
+                            : 'hover:bg-black/5 dark:hover:bg-white/5'
+                      }`}
                     >
-                      <td className="px-4 py-3"><input type="checkbox" checked={selectedBook?.id === book.id} readOnly /></td>
+                      <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.includes(book.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedIds(prev => [...prev, book.id]);
+                            } else {
+                              setSelectedIds(prev => prev.filter(id => id !== book.id));
+                            }
+                          }}
+                          className="cursor-pointer rounded border-black/25 dark:border-white/25 text-emerald focus:ring-emerald h-4 w-4"
+                        />
+                      </td>
                       <td className="px-4 py-3 font-semibold text-[#122222] dark:text-white">
                         <div className="flex items-center gap-3">
                           {book.cover_path ? (
@@ -405,7 +500,17 @@ export function CatalogPage() {
                       </td>
                       <td className="px-4 py-3 text-[#122222]/70 dark:text-white/70">{book.author || "—"}</td>
                       <td className="px-4 py-3 text-[#122222]/70 dark:text-white/70">{book.category || "Uncategorized"}</td>
-                      <td className="px-4 py-3 text-[#122222]/70 dark:text-white/70 font-mono text-[12px]">{book.isbn13 || book.isbn10 || "—"}</td>
+                      <td className="px-4 py-3 text-[#122222]/70 dark:text-white/70 font-mono text-[12px]">{formatIsbn(book.isbn13 || book.isbn10) || "—"}</td>
+                      <td className="px-4 py-3 text-[#122222]/70 dark:text-white/70 whitespace-nowrap">{formatDisplayDate(book.created_at)}</td>
+                      <td className="px-4 py-3 text-[#122222]/70 dark:text-white/70 whitespace-nowrap">
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                          (book.available_copies ?? 0) > 0 
+                            ? 'bg-emerald/10 text-emerald dark:text-emerald-light' 
+                            : 'bg-red-500/10 text-red-500'
+                        }`}>
+                          {book.available_copies ?? 0} / {book.total_copies ?? 0}
+                        </span>
+                      </td>
                       <td className="px-4 py-3 text-[#122222]/40 hover:text-[#122222]"><MoreHorizontal size={16} /></td>
                     </tr>
                   ))}
@@ -526,12 +631,42 @@ export function CatalogPage() {
                 className="w-full bg-white dark:bg-[#1d2926] border border-black/10 dark:border-white/10 rounded-lg py-2 px-3 text-[13px] text-[#122222] dark:text-white outline-none focus:border-emerald min-h-[60px] mt-1"
               />
             </label>
-            <div className="md:col-span-2 flex gap-2 justify-end pt-4 border-t border-black/5 dark:border-white/5">
+            <div className="md:col-span-2 flex gap-2 justify-end pt-4 pb-4 border-t border-black/5 dark:border-white/5">
               <Button type="button" variant="ghost" onClick={() => setAdding(false)}>{t("catalog.addModal.cancel")}</Button>
               <Button type="submit" disabled={addMutation.isPending}>{addMutation.isPending ? "Saving…" : t("catalog.addModal.save")}</Button>
             </div>
           </form>
         </Modal>
+      )}
+
+      {selectedIds.length > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-white/90 dark:bg-[#1d2926]/90 backdrop-blur-md px-6 py-3 rounded-full border border-black/10 dark:border-white/10 shadow-lg flex items-center gap-6 z-50 animate-in fade-in slide-in-from-bottom-4 duration-300">
+          <span className="text-[13px] font-semibold text-[#122222] dark:text-white">
+            {selectedIds.length} {selectedIds.length === 1 ? 'book' : 'books'} selected
+          </span>
+          <div className="h-4 w-px bg-black/10 dark:bg-white/10" />
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setSelectedIds(sortedBooks.map(b => b.id))}
+              className="text-[12px] font-bold text-emerald dark:text-emerald-light hover:underline px-2 py-1 cursor-pointer"
+            >
+              Select All
+            </button>
+            <button
+              onClick={() => setSelectedIds([])}
+              className="text-[12px] font-bold text-[#122222]/60 dark:text-white/60 hover:underline px-2 py-1 cursor-pointer"
+            >
+              Deselect All
+            </button>
+            <button
+              onClick={handleBulkArchive}
+              className="flex items-center gap-1.5 text-[12px] font-bold bg-red-500 hover:bg-red-600 text-white px-4 py-1.5 rounded-full shadow transition-colors cursor-pointer"
+            >
+              <Trash2 size={13} />
+              Archive Selected
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );
@@ -565,7 +700,7 @@ function BookSidebar({ book, onClose, registerClean }: { book: Book; onClose: ()
       arabic_title: book.arabic_title || "",
       tags: book.tags || "",
       author: book.author || "",
-      isbn: book.isbn13 || book.isbn10 || "",
+      isbn: formatIsbn(book.isbn13 || book.isbn10 || ""),
       publisher: book.publisher || "",
       category: book.category || "",
       language: book.language,
@@ -730,8 +865,8 @@ function BookSidebar({ book, onClose, registerClean }: { book: Book; onClose: ()
                     <InfoRow label={t("catalog.details.pubYear")} value={book.publication_year ? String(book.publication_year) : "—"} />
                     <InfoRow label={t("catalog.details.callNumber")} value={book.call_number || "—"} />
                   </div>
-                  <InfoRow label={t("catalog.details.isbn10")} value={book.isbn10 || "—"} />
-                  <InfoRow label={t("catalog.details.isbn13")} value={book.isbn13 || "—"} />
+                  <InfoRow label={t("catalog.details.isbn10")} value={formatIsbn(book.isbn10) || "—"} />
+                  <InfoRow label={t("catalog.details.isbn13")} value={formatIsbn(book.isbn13) || "—"} />
                   {book.description && (
                     <div className="pt-2">
                       <div className="text-[11px] font-bold text-[#122222]/50 dark:text-white/50 uppercase tracking-wider mb-1">{t("catalog.details.description")}</div>
