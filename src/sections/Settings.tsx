@@ -159,70 +159,71 @@ type TabProps = { prefs: Preferences; update: (v: Partial<Preferences>) => void 
 // 1. GENERAL TAB
 // ═══════════════════════════════════════════════════════════════════════════════
 function GeneralTab({ prefs, update }: TabProps) {
+  const { t } = useTranslation();
   return (
     <div className="max-w-2xl">
-      <PageHeader title="General" desc="Configure your library identity and operator profile." />
+      <PageHeader title={t("settings.general.title")} desc={t("settings.general.desc")} />
 
-      <Card title="Library identity" icon={<SettingsIcon size={16} className="text-[#1a4d40]" />}>
+      <Card title={t("settings.general.identityTitle")} icon={<SettingsIcon size={16} className="text-[#1a4d40]" />}>
         <div className="grid grid-cols-2 gap-4 mb-4">
-          <Field label="Library name">
+          <Field label={t("settings.general.libName")}>
             <input type="text" defaultValue={prefs.libraryName} onBlur={e => update({ libraryName: e.target.value })} className={inputCls} />
           </Field>
-          <Field label="Short name (optional)">
-            <input type="text" defaultValue={prefs.libraryShortName} placeholder="e.g., MBH Library" onBlur={e => update({ libraryShortName: e.target.value })} className={inputCls} />
+          <Field label={t("settings.general.shortName")}>
+            <input type="text" defaultValue={prefs.libraryShortName} placeholder={t("settings.general.shortNamePlaceholder")} onBlur={e => update({ libraryShortName: e.target.value })} className={inputCls} />
           </Field>
         </div>
-        <Field label="Library logo (optional)">
+        <Field label={t("settings.general.logo")}>
           <div className="flex items-center gap-4">
             <ImageUpload
               value={prefs.libraryLogo}
               onChange={val => update({ libraryLogo: val })}
               shape="rect"
             />
-            <p className="text-[11px] text-[#122222]/40 dark:text-white/40">Recommended: Landscape or Square logo<br />Max size: 2 MB</p>
+            <p className="text-[11px] text-[#122222]/40 dark:text-white/40">{t("settings.general.logoHelp")}</p>
           </div>
         </Field>
       </Card>
 
-      <Card title="Operator profile" icon={<UserCircle size={16} className="text-[#b96f3e]" />}>
+      <Card title={t("settings.general.operatorTitle")} icon={<UserCircle size={16} className="text-[#b96f3e]" />}>
         <div className="grid grid-cols-2 gap-4 mb-4">
-          <Field label="Operator name">
-            <input type="text" defaultValue={prefs.operatorName} placeholder="e.g., Mohamed Benali" onBlur={e => update({ operatorName: e.target.value })} className={inputCls} />
+          <Field label={t("settings.general.opName")}>
+            <input type="text" defaultValue={prefs.operatorName} placeholder={t("settings.general.opNamePlaceholder")} onBlur={e => update({ operatorName: e.target.value })} className={inputCls} />
           </Field>
-          <Field label="Email (optional)">
-            <input type="email" defaultValue={prefs.operatorEmail} placeholder="librarian@hospital.dz" onBlur={e => update({ operatorEmail: e.target.value })} className={inputCls} />
+          <Field label={t("settings.general.opEmail")}>
+            <input type="email" defaultValue={prefs.operatorEmail} placeholder={t("settings.general.opEmailPlaceholder")} onBlur={e => update({ operatorEmail: e.target.value })} className={inputCls} />
           </Field>
         </div>
-        <Field label="Profile Picture">
+        <Field label={t("settings.general.opPic")}>
           <div className="flex items-center gap-4">
             <ImageUpload
               value={prefs.operatorAvatar}
               onChange={val => update({ operatorAvatar: val })}
               shape="circle"
             />
-            <p className="text-[11px] text-[#122222]/40 dark:text-white/40">Recommended: Square PNG, JPG or WEBP<br />Max size: 2 MB</p>
+            <p className="text-[11px] text-[#122222]/40 dark:text-white/40">{t("settings.general.opPicHelp")}</p>
           </div>
         </Field>
       </Card>
 
-      <Card title="Autosave" icon={<Save size={16} className="text-[#122222]/60 dark:text-white/60" />}>
+      <Card title={t("settings.general.autosaveTitle")} icon={<Save size={16} className="text-[#122222]/60 dark:text-white/60" />}>
         <div className="flex items-center justify-between">
           <div>
-            <p className="font-bold text-[13px] text-[#122222] dark:text-white">Automatic saving</p>
-            <p className="text-[12px] text-[#122222]/60 dark:text-white/60 mt-0.5">Periodically save any changes without manual action.</p>
+            <p className="font-bold text-[13px] text-[#122222] dark:text-white">{t("settings.general.autosaveLabel")}</p>
+            <p className="text-[12px] text-[#122222]/60 dark:text-white/60 mt-0.5">{t("settings.general.autosaveDesc")}</p>
           </div>
           <Toggle checked={prefs.autosaveEnabled} onChange={v => update({ autosaveEnabled: v })} />
         </div>
         {prefs.autosaveEnabled && (
           <div className="mt-4 pt-4 border-t border-black/5 dark:border-white/5">
-            <Field label="Interval (seconds)">
+            <Field label={t("settings.general.autosaveInterval")}>
               <input type="number" min={10} max={600} defaultValue={prefs.autosaveInterval} onBlur={e => update({ autosaveInterval: Number(e.target.value) })} className={inputCls + " w-32"} />
             </Field>
           </div>
         )}
       </Card>
 
-      <SaveButton label="Save general settings" />
+      <SaveButton label={t("settings.general.saveBtn")} />
     </div>
   );
 }
@@ -231,52 +232,53 @@ function GeneralTab({ prefs, update }: TabProps) {
 // 2. LIBRARY PROFILE TAB
 // ═══════════════════════════════════════════════════════════════════════════════
 function LibraryProfileTab({ prefs, update }: TabProps) {
+  const { t } = useTranslation();
   return (
     <div className="max-w-2xl">
-      <PageHeader title="Library Profile" desc="Public-facing details about your library institution." />
+      <PageHeader title={t("settings.profile.title")} desc={t("settings.profile.desc")} />
 
-      <Card title="Contact information" icon={<MapPin size={16} className="text-[#1a4d40]" />}>
+      <Card title={t("settings.profile.contactTitle")} icon={<MapPin size={16} className="text-[#1a4d40]" />}>
         <div className="space-y-4">
-          <Field label="Street address">
-            <input type="text" defaultValue={prefs.libraryAddress} placeholder="e.g., Rue Kaddour Rahim, Bab El Oued" onBlur={e => update({ libraryAddress: e.target.value })} className={inputCls} />
+          <Field label={t("settings.profile.address")}>
+            <input type="text" defaultValue={prefs.libraryAddress} placeholder={t("settings.profile.addressPlaceholder")} onBlur={e => update({ libraryAddress: e.target.value })} className={inputCls} />
           </Field>
           <div className="grid grid-cols-2 gap-4">
-            <Field label="City">
-              <input type="text" defaultValue={prefs.libraryCity} placeholder="e.g., Algiers" onBlur={e => update({ libraryCity: e.target.value })} className={inputCls} />
+            <Field label={t("settings.profile.city")}>
+              <input type="text" defaultValue={prefs.libraryCity} placeholder={t("settings.profile.cityPlaceholder")} onBlur={e => update({ libraryCity: e.target.value })} className={inputCls} />
             </Field>
-            <Field label="Phone">
-              <input type="tel" defaultValue={prefs.libraryPhone} placeholder="+213 21 …" onBlur={e => update({ libraryPhone: e.target.value })} className={inputCls} />
+            <Field label={t("settings.profile.phone")}>
+              <input type="tel" defaultValue={prefs.libraryPhone} placeholder={t("settings.profile.phonePlaceholder")} onBlur={e => update({ libraryPhone: e.target.value })} className={inputCls} />
             </Field>
           </div>
           <div className="grid grid-cols-2 gap-4">
-            <Field label="Email">
-              <input type="email" defaultValue={prefs.libraryEmail} placeholder="library@hospital.dz" onBlur={e => update({ libraryEmail: e.target.value })} className={inputCls} />
+            <Field label={t("settings.profile.email")}>
+              <input type="email" defaultValue={prefs.libraryEmail} placeholder={t("settings.profile.emailPlaceholder")} onBlur={e => update({ libraryEmail: e.target.value })} className={inputCls} />
             </Field>
-            <Field label="Website (optional)">
-              <input type="url" defaultValue={prefs.libraryWebsite} placeholder="https://…" onBlur={e => update({ libraryWebsite: e.target.value })} className={inputCls} />
+            <Field label={t("settings.profile.website")}>
+              <input type="url" defaultValue={prefs.libraryWebsite} placeholder={t("settings.profile.websitePlaceholder")} onBlur={e => update({ libraryWebsite: e.target.value })} className={inputCls} />
             </Field>
           </div>
         </div>
       </Card>
 
-      <Card title="About the library" icon={<FileText size={16} className="text-[#b96f3e]" />}>
+      <Card title={t("settings.profile.aboutTitle")} icon={<FileText size={16} className="text-[#b96f3e]" />}>
         <div className="space-y-4">
-          <Field label="Description">
+          <Field label={t("settings.profile.description")}>
             <textarea
               rows={4}
               defaultValue={prefs.libraryDescription}
-              placeholder="Brief description of the library's mission and collections…"
+              placeholder={t("settings.profile.descriptionPlaceholder")}
               onBlur={e => update({ libraryDescription: e.target.value })}
               className={inputCls + " resize-none"}
             />
           </Field>
-          <Field label="Opening hours">
-            <input type="text" defaultValue={prefs.libraryHours} placeholder="e.g., Sun–Thu 08:00–16:00" onBlur={e => update({ libraryHours: e.target.value })} className={inputCls} />
+          <Field label={t("settings.profile.hours")}>
+            <input type="text" defaultValue={prefs.libraryHours} placeholder={t("settings.profile.hoursPlaceholder")} onBlur={e => update({ libraryHours: e.target.value })} className={inputCls} />
           </Field>
         </div>
       </Card>
 
-      <SaveButton label="Save library profile" />
+      <SaveButton label={t("settings.profile.saveBtn")} />
     </div>
   );
 }
@@ -285,6 +287,7 @@ function LibraryProfileTab({ prefs, update }: TabProps) {
 // 3. LOCALIZATION TAB
 // ═══════════════════════════════════════════════════════════════════════════════
 function LocalizationTab({ prefs, update }: TabProps) {
+  const { t } = useTranslation();
   const languages = [
     { code: "en" as const, label: "English", native: "English" },
     { code: "fr" as const, label: "French", native: "Français" },
@@ -305,51 +308,51 @@ function LocalizationTab({ prefs, update }: TabProps) {
 
   return (
     <div className="max-w-2xl">
-      <PageHeader title="Localization" desc="Configure regional preferences including language, timezone, and formats." />
+      <PageHeader title={t("settings.localization.title")} desc={t("settings.localization.desc")} />
 
-      <Card title="Language" icon={<Globe size={16} className="text-[#1a4d40]" />}>
+      <Card title={t("settings.localization.langTitle")} icon={<Globe size={16} className="text-[#1a4d40]" />}>
         <div className="grid grid-cols-3 gap-3">
           {languages.map(lang => (
             <button
               key={lang.code}
               onClick={() => handleLocaleChange(lang.code)}
-              className={`p-4 rounded-xl border-2 text-start transition-all ${prefs.locale === lang.code ? "border-[#b96f3e] bg-[#b96f3e]/5" : "border-black/5 dark:border-white/5 hover:border-black/10 dark:hover:border-white/10"}`}
+              className={`p-4 rounded-xl border-2 text-start transition-all \${prefs.locale === lang.code ? "border-[#b96f3e] bg-[#b96f3e]/5" : "border-black/5 dark:border-white/5 hover:border-black/10 dark:hover:border-white/10"}`}
             >
               <div className="text-[18px] mb-2">{lang.code === "en" ? "🇬🇧" : lang.code === "fr" ? "🇫🇷" : "🇩🇿"}</div>
               <div className="font-bold text-[13px] text-[#122222] dark:text-white">{lang.label}</div>
               <div className="text-[11px] text-[#122222]/50 dark:text-white/50">{lang.native}</div>
-              {prefs.locale === lang.code && <div className="mt-2 flex items-center gap-1 text-[11px] font-bold text-[#b96f3e]"><CheckCircle2 size={12} /> Active</div>}
+              {prefs.locale === lang.code && <div className="mt-2 flex items-center gap-1 text-[11px] font-bold text-[#b96f3e]"><CheckCircle2 size={12} /> {t("status.active") || "Active"}</div>}
             </button>
           ))}
         </div>
         {prefs.locale === "ar" && (
           <div className="mt-4 p-3 rounded-lg bg-[#b96f3e]/10 border border-[#b96f3e]/20 flex items-start gap-2">
             <Info size={14} className="text-[#b96f3e] shrink-0 mt-0.5" />
-            <p className="text-[12px] text-[#b96f3e]">Selecting Arabic will enable right-to-left (RTL) layout automatically.</p>
+            <p className="text-[12px] text-[#b96f3e]">{t("settings.localization.rtlTip")}</p>
           </div>
         )}
       </Card>
 
-      <Card title="Regional formats" icon={<Clock size={16} className="text-[#b96f3e]" />}>
+      <Card title={t("settings.localization.formatsTitle")} icon={<Clock size={16} className="text-[#b96f3e]" />}>
         <div className="grid grid-cols-2 gap-4 mb-4">
-          <Field label="Timezone">
+          <Field label={t("settings.localization.timezone")}>
             <select value={prefs.timezone} onChange={e => update({ timezone: e.target.value })} className={selectCls}>
               {timezones.map(tz => <option key={tz} value={tz}>{tz}</option>)}
             </select>
           </Field>
-          <Field label="Currency">
+          <Field label={t("settings.localization.currency")}>
             <select value={prefs.currency} onChange={e => update({ currency: e.target.value })} className={selectCls}>
               {currencies.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
           </Field>
         </div>
-        <Field label="Date format">
+        <Field label={t("settings.localization.dateFormat")}>
           <div className="flex gap-3">
             {formats.map(f => (
               <button
                 key={f}
                 onClick={() => update({ dateFormat: f })}
-                className={`flex-1 py-2 px-3 rounded-lg border text-[13px] font-semibold transition-all ${prefs.dateFormat === f ? "border-[#1a4d40] bg-[#1a4d40]/10 text-[#1a4d40] dark:text-[#1b9277]" : "border-black/10 dark:border-white/10 text-[#122222]/70 dark:text-white/70 hover:border-[#1a4d40]/30"}`}
+                className={`flex-1 py-2 px-3 rounded-lg border text-[13px] font-semibold transition-all \${prefs.dateFormat === f ? "border-[#1a4d40] bg-[#1a4d40]/10 text-[#1a4d40] dark:text-[#1b9277]" : "border-black/10 dark:border-white/10 text-[#122222]/70 dark:text-white/70 hover:border-[#1a4d40]/30"}`}
               >
                 {f}
               </button>
@@ -358,7 +361,7 @@ function LocalizationTab({ prefs, update }: TabProps) {
         </Field>
       </Card>
 
-      <SaveButton label="Save localization" />
+      <SaveButton label={t("settings.localization.saveBtn")} />
     </div>
   );
 }
@@ -367,6 +370,7 @@ function LocalizationTab({ prefs, update }: TabProps) {
 // 4. APPEARANCE TAB
 // ═══════════════════════════════════════════════════════════════════════════════
 function AppearanceTab({ prefs, update }: TabProps) {
+  const { t } = useTranslation();
   const accentColors = [
     { value: "#1a4d40", label: "Emerald" },
     { value: "#b96f3e", label: "Copper" },
@@ -376,49 +380,49 @@ function AppearanceTab({ prefs, update }: TabProps) {
     { value: "#0284c7", label: "Sapphire" },
   ];
   const fontSizes = [
-    { value: "small" as const, label: "Small", desc: "Compact density" },
-    { value: "medium" as const, label: "Medium", desc: "Balanced default" },
-    { value: "large" as const, label: "Large", desc: "Accessible text" },
+    { value: "small" as const, label: t("settings.appearance.fontSizeSmall"), desc: t("settings.appearance.fontSizeSmallDesc") },
+    { value: "medium" as const, label: t("settings.appearance.fontSizeMedium"), desc: t("settings.appearance.fontSizeMediumDesc") },
+    { value: "large" as const, label: t("settings.appearance.fontSizeLarge"), desc: t("settings.appearance.fontSizeLargeDesc") },
   ];
 
   return (
     <div className="max-w-2xl">
-      <PageHeader title="Appearance" desc="Customize the look and feel of the Warraq interface." />
+      <PageHeader title={t("settings.appearance.title")} desc={t("settings.appearance.desc")} />
 
-      <Card title="Theme" icon={<Monitor size={16} className="text-[#122222]/60 dark:text-white/60" />}>
-        <p className="text-[12px] text-[#122222]/60 dark:text-white/60 mb-4">Choose your preferred interface theme.</p>
+      <Card title={t("settings.appearance.themeTitle")} icon={<Monitor size={16} className="text-[#122222]/60 dark:text-white/60" />}>
+        <p className="text-[12px] text-[#122222]/60 dark:text-white/60 mb-4">{t("settings.appearance.themeDesc")}</p>
         <div className="grid grid-cols-3 gap-4">
-          {(["Light", "Dark", "System"] as const).map(name => (
-            <ThemeOption key={name} name={name} active={prefs.theme === name.toLowerCase() as "light" | "dark" | "system"} onClick={() => update({ theme: name.toLowerCase() as "light" | "dark" | "system" })} />
+          {([["Light", "Light"], ["Dark", "Dark"], ["System", "System"]] as const).map(([key, name]) => (
+            <ThemeOption key={key} name={name} active={prefs.theme === key.toLowerCase() as "light" | "dark" | "system"} onClick={() => update({ theme: key.toLowerCase() as "light" | "dark" | "system" })} />
           ))}
         </div>
       </Card>
 
-      <Card title="Accent color" icon={<Palette size={16} className="text-[#b96f3e]" />}>
-        <p className="text-[12px] text-[#122222]/60 dark:text-white/60 mb-4">Choose the primary color used across the interface.</p>
+      <Card title={t("settings.appearance.accentTitle")} icon={<Palette size={16} className="text-[#b96f3e]" />}>
+        <p className="text-[12px] text-[#122222]/60 dark:text-white/60 mb-4">{t("settings.appearance.accentDesc")}</p>
         <div className="flex gap-3 flex-wrap">
           {accentColors.map(c => (
             <button
               key={c.value}
               title={c.label}
               onClick={() => update({ accentColor: c.value })}
-              className={`w-10 h-10 rounded-full border-4 transition-all ${prefs.accentColor === c.value ? "border-[#122222] dark:border-white scale-110" : "border-transparent hover:scale-105"}`}
+              className={`w-10 h-10 rounded-full border-4 transition-all \${prefs.accentColor === c.value ? "border-[#122222] dark:border-white scale-110" : "border-transparent hover:scale-105"}`}
               style={{ backgroundColor: c.value }}
             />
           ))}
         </div>
-        <p className="text-[11px] text-[#122222]/40 dark:text-white/40 mt-3">Selected: <span className="font-bold">{accentColors.find(c => c.value === prefs.accentColor)?.label ?? "Custom"}</span></p>
+        <p className="text-[11px] text-[#122222]/40 dark:text-white/40 mt-3">{t("settings.appearance.accentSelected")}: <span className="font-bold">{accentColors.find(c => c.value === prefs.accentColor)?.label ?? "Custom"}</span></p>
       </Card>
 
-      <Card title="Text size" icon={<Type size={16} className="text-[#122222]/60 dark:text-white/60" />}>
+      <Card title={t("settings.appearance.fontSizeTitle")} icon={<Type size={16} className="text-[#122222]/60 dark:text-white/60" />}>
         <div className="grid grid-cols-3 gap-3">
           {fontSizes.map(s => (
             <button
               key={s.value}
               onClick={() => update({ fontSize: s.value })}
-              className={`p-4 rounded-xl border-2 text-start transition-all ${prefs.fontSize === s.value ? "border-[#b96f3e] bg-[#b96f3e]/5" : "border-black/5 dark:border-white/5 hover:border-black/10 dark:hover:border-white/10"}`}
+              className={`p-4 rounded-xl border-2 text-start transition-all \${prefs.fontSize === s.value ? "border-[#b96f3e] bg-[#b96f3e]/5" : "border-black/5 dark:border-white/5 hover:border-black/10 dark:hover:border-white/10"}`}
             >
-              <div className={`font-bold text-[#122222] dark:text-white mb-1 ${s.value === "small" ? "text-[12px]" : s.value === "large" ? "text-[16px]" : "text-[14px]"}`}>Aa</div>
+              <div className={`font-bold text-[#122222] dark:text-white mb-1 \${s.value === "small" ? "text-[12px]" : s.value === "large" ? "text-[16px]" : "text-[14px]"}`}>Aa</div>
               <div className="font-bold text-[13px] text-[#122222] dark:text-white">{s.label}</div>
               <div className="text-[11px] text-[#122222]/50 dark:text-white/50">{s.desc}</div>
             </button>
@@ -426,7 +430,7 @@ function AppearanceTab({ prefs, update }: TabProps) {
         </div>
       </Card>
 
-      <SaveButton label="Save appearance" />
+      <SaveButton label={t("settings.appearance.saveBtn")} />
     </div>
   );
 }
@@ -435,55 +439,56 @@ function AppearanceTab({ prefs, update }: TabProps) {
 // 5. RULES TAB
 // ═══════════════════════════════════════════════════════════════════════════════
 function RulesTab({ prefs, update }: TabProps) {
+  const { t } = useTranslation();
   return (
     <div className="max-w-2xl">
-      <PageHeader title="Circulation Rules" desc="Define lending policies applied to all members and loans." />
+      <PageHeader title={t("settings.rules.title")} desc={t("settings.rules.desc")} />
 
-      <Card title="Loan parameters" icon={<BookMarked size={16} className="text-[#1a4d40]" />}>
+      <Card title={t("settings.rules.paramsTitle")} icon={<BookMarked size={16} className="text-[#1a4d40]" />}>
         <div className="grid grid-cols-2 gap-4 mb-4">
-          <Field label="Default loan period (days)">
+          <Field label={t("settings.rules.loanPeriod")}>
             <NumberInput value={prefs.loanDays} min={1} max={365} onChange={v => update({ loanDays: v })} />
           </Field>
-          <Field label="Max items per member">
+          <Field label={t("settings.rules.loanLimit")}>
             <NumberInput value={prefs.loanLimit} min={1} max={50} onChange={v => update({ loanLimit: v })} />
           </Field>
         </div>
         <div className="grid grid-cols-2 gap-4">
-          <Field label="Max renewals per loan">
+          <Field label={t("settings.rules.renewLimit")}>
             <NumberInput value={prefs.renewLimit} min={0} max={10} onChange={v => update({ renewLimit: v })} />
           </Field>
-          <Field label="Reservation hold period (days)">
+          <Field label={t("settings.rules.holdPeriod")}>
             <NumberInput value={prefs.reservationHoldDays} min={1} max={30} onChange={v => update({ reservationHoldDays: v })} />
           </Field>
         </div>
       </Card>
 
-      <Card title="Member self-service" icon={<RotateCcw size={16} className="text-[#b96f3e]" />}>
+      <Card title={t("settings.rules.selfServiceTitle")} icon={<RotateCcw size={16} className="text-[#b96f3e]" />}>
         <ToggleRow
-          label="Allow self-renewal"
-          desc="Members can renew their own loans without staff intervention."
+          label={t("settings.rules.allowSelfRenewal")}
+          desc={t("settings.rules.allowSelfRenewalDesc")}
           checked={prefs.selfRenewalAllowed}
           onChange={v => update({ selfRenewalAllowed: v })}
         />
       </Card>
 
-      <Card title="Grace period" icon={<Clock size={16} className="text-[#122222]/60 dark:text-white/60" />}>
+      <Card title={t("settings.rules.gracePeriodTitle")} icon={<Clock size={16} className="text-[#122222]/60 dark:text-white/60" />}>
         <ToggleRow
-          label="Enable grace period"
-          desc="Allow a short window after the due date before fines begin."
+          label={t("settings.rules.enableGracePeriod")}
+          desc={t("settings.rules.enableGracePeriodDesc")}
           checked={prefs.gracePeriodEnabled}
           onChange={v => update({ gracePeriodEnabled: v })}
         />
         {prefs.gracePeriodEnabled && (
           <div className="mt-4 pt-4 border-t border-black/5 dark:border-white/5">
-            <Field label="Grace period length (days)">
+            <Field label={t("settings.rules.gracePeriodLength")}>
               <NumberInput value={prefs.gracePeriodDays} min={1} max={14} onChange={v => update({ gracePeriodDays: v })} />
             </Field>
           </div>
         )}
       </Card>
 
-      <SaveButton label="Save circulation rules" />
+      <SaveButton label={t("settings.rules.saveBtn")} />
     </div>
   );
 }
@@ -492,21 +497,22 @@ function RulesTab({ prefs, update }: TabProps) {
 // 6. FINES & FEES TAB
 // ═══════════════════════════════════════════════════════════════════════════════
 function FinesTab({ prefs, update }: TabProps) {
+  const { t } = useTranslation();
   return (
     <div className="max-w-2xl">
-      <PageHeader title="Fines & Fees" desc="Configure overdue fine calculations and payment methods." />
+      <PageHeader title={t("settings.fines.title")} desc={t("settings.fines.desc")} />
 
-      <Card title="Fine policy" icon={<DollarSign size={16} className="text-[#1a4d40]" />}>
+      <Card title={t("settings.fines.policyTitle")} icon={<DollarSign size={16} className="text-[#1a4d40]" />}>
         <ToggleRow
-          label="Enable overdue fines"
-          desc="Automatically apply fines to loans returned past their due date."
+          label={t("settings.fines.enableFines")}
+          desc={t("settings.fines.enableFinesDesc")}
           checked={prefs.finesEnabled}
           onChange={v => update({ finesEnabled: v })}
         />
         {prefs.finesEnabled && (
           <div className="mt-4 pt-4 border-t border-black/5 dark:border-white/5 space-y-4">
             <div className="grid grid-cols-2 gap-4">
-              <Field label={`Fine per day (${prefs.fineCurrency})`}>
+              <Field label={t("settings.fines.finePerDay", { currency: prefs.fineCurrency })}>
                 <input
                   type="number"
                   min={0}
@@ -516,7 +522,7 @@ function FinesTab({ prefs, update }: TabProps) {
                   className={inputCls}
                 />
               </Field>
-              <Field label={`Max fine per loan (${prefs.fineCurrency})`}>
+              <Field label={t("settings.fines.maxFine", { currency: prefs.fineCurrency })}>
                 <input
                   type="number"
                   min={0}
@@ -526,7 +532,7 @@ function FinesTab({ prefs, update }: TabProps) {
                 />
               </Field>
             </div>
-            <Field label="Fine currency">
+            <Field label={t("settings.fines.currencyLabel")}>
               <select value={prefs.fineCurrency} onChange={e => update({ fineCurrency: e.target.value })} className={selectCls}>
                 {["DZD", "EUR", "USD", "GBP", "MAD", "TND"].map(c => <option key={c} value={c}>{c}</option>)}
               </select>
@@ -536,16 +542,16 @@ function FinesTab({ prefs, update }: TabProps) {
       </Card>
 
       {prefs.finesEnabled && (
-        <Card title="Payment method" icon={<DollarSign size={16} className="text-[#b96f3e]" />}>
-          <p className="text-[12px] text-[#122222]/60 dark:text-white/60 mb-4">Select the accepted payment methods for fine collection.</p>
+        <Card title={t("settings.fines.paymentTitle")} icon={<DollarSign size={16} className="text-[#b96f3e]" />}>
+          <p className="text-[12px] text-[#122222]/60 dark:text-white/60 mb-4">{t("settings.fines.paymentDesc")}</p>
           <div className="grid grid-cols-3 gap-3">
             {(["cash", "card", "both"] as const).map(method => (
               <button
                 key={method}
                 onClick={() => update({ finesPaymentMethod: method })}
-                className={`py-3 px-4 rounded-xl border-2 font-semibold text-[13px] capitalize transition-all ${prefs.finesPaymentMethod === method ? "border-[#b96f3e] bg-[#b96f3e]/5 text-[#b96f3e]" : "border-black/5 dark:border-white/5 text-[#122222]/70 dark:text-white/70 hover:border-black/10 dark:hover:border-white/10"}`}
+                className={`py-3 px-4 rounded-xl border-2 font-semibold text-[13px] capitalize transition-all \${prefs.finesPaymentMethod === method ? "border-[#b96f3e] bg-[#b96f3e]/5 text-[#b96f3e]" : "border-black/5 dark:border-white/5 text-[#122222]/70 dark:text-white/70 hover:border-black/10 dark:hover:border-white/10"}`}
               >
-                {method === "both" ? "Cash & Card" : method.charAt(0).toUpperCase() + method.slice(1)}
+                {method === "both" ? t("settings.fines.paymentBoth") : method === "cash" ? t("settings.fines.paymentCash") : t("settings.fines.paymentCard")}
               </button>
             ))}
           </div>
@@ -556,13 +562,13 @@ function FinesTab({ prefs, update }: TabProps) {
         <div className="bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-700/30 rounded-2xl p-5 flex items-start gap-3">
           <AlertTriangle size={16} className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
           <div>
-            <p className="font-bold text-[13px] text-amber-700 dark:text-amber-400">Fines are disabled</p>
-            <p className="text-[12px] text-amber-600/80 dark:text-amber-400/80 mt-1">No fines will be applied to overdue loans. Enable the toggle above to configure fine rates.</p>
+            <p className="font-bold text-[13px] text-amber-700 dark:text-amber-400">{t("settings.fines.disabledTitle")}</p>
+            <p className="text-[12px] text-amber-600/80 dark:text-amber-400/80 mt-1">{t("settings.fines.disabledDesc")}</p>
           </div>
         </div>
       )}
 
-      <SaveButton label="Save fines settings" />
+      <SaveButton label={t("settings.fines.saveBtn")} />
     </div>
   );
 }
@@ -571,31 +577,32 @@ function FinesTab({ prefs, update }: TabProps) {
 // 7. NOTIFICATIONS TAB
 // ═══════════════════════════════════════════════════════════════════════════════
 function NotificationsTab({ prefs, update }: TabProps) {
+  const { t } = useTranslation();
   return (
     <div className="max-w-2xl">
-      <PageHeader title="Notifications" desc="Control which alerts and reminders Warraq generates." />
+      <PageHeader title={t("settings.notifications.title")} desc={t("settings.notifications.desc")} />
 
-      <Card title="Loan reminders" icon={<Bell size={16} className="text-[#1a4d40]" />}>
+      <Card title={t("settings.notifications.remindersTitle")} icon={<Bell size={16} className="text-[#1a4d40]" />}>
         <div className="space-y-5">
           <ToggleRow
-            label="Overdue alerts"
-            desc="Show an alert in the dashboard when loans are past their due date."
+            label={t("settings.notifications.overdueAlerts")}
+            desc={t("settings.notifications.overdueAlertsDesc")}
             checked={prefs.notifyOverdue}
             onChange={v => update({ notifyOverdue: v })}
           />
           <div className="border-t border-black/5 dark:border-white/5 pt-5">
             <ToggleRow
-              label="Due-soon reminders"
-              desc="Warn when a loan is approaching its due date."
+              label={t("settings.notifications.dueSoonReminders")}
+              desc={t("settings.notifications.dueSoonRemindersDesc")}
               checked={prefs.notifyDueSoon}
               onChange={v => update({ notifyDueSoon: v })}
             />
             {prefs.notifyDueSoon && (
               <div className="mt-4 ml-12">
-                <Field label="Remind how many days before due?">
+                <Field label={t("settings.notifications.dueSoonDays")}>
                   <div className="flex items-center gap-3">
                     <NumberInput value={prefs.notifyDueSoonDays} min={1} max={14} onChange={v => update({ notifyDueSoonDays: v })} />
-                    <span className="text-[13px] text-[#122222]/60 dark:text-white/60">days before</span>
+                    <span className="text-[13px] text-[#122222]/60 dark:text-white/60">{t("settings.notifications.dueSoonDaysSuffix")}</span>
                   </div>
                 </Field>
               </div>
@@ -604,10 +611,10 @@ function NotificationsTab({ prefs, update }: TabProps) {
         </div>
       </Card>
 
-      <Card title="Reservations" icon={<Bell size={16} className="text-[#b96f3e]" />}>
+      <Card title={t("settings.notifications.readyAlerts")} icon={<Bell size={16} className="text-[#b96f3e]" />}>
         <ToggleRow
-          label="Reservation ready alerts"
-          desc="Notify when a reserved item becomes available for pickup."
+          label={t("settings.notifications.readyAlerts")}
+          desc={t("settings.notifications.readyAlertsDesc")}
           checked={prefs.notifyReady}
           onChange={v => update({ notifyReady: v })}
         />
@@ -616,11 +623,11 @@ function NotificationsTab({ prefs, update }: TabProps) {
       <div className="bg-[#1a4d40]/5 dark:bg-[#1b9277]/5 border border-[#1a4d40]/10 dark:border-[#1b9277]/10 rounded-2xl p-5 flex items-start gap-3">
         <Info size={16} className="text-[#1a4d40] dark:text-[#1b9277] shrink-0 mt-0.5" />
         <p className="text-[12px] text-[#1a4d40] dark:text-[#1b9277]">
-          Notifications appear in the Warraq dashboard Activity panel. Email and push notifications are planned for a future release.
+          {t("settings.notifications.tip")}
         </p>
       </div>
 
-      <SaveButton label="Save notification settings" />
+      <SaveButton label={t("settings.notifications.saveBtn")} />
     </div>
   );
 }
@@ -629,6 +636,7 @@ function NotificationsTab({ prefs, update }: TabProps) {
 // 8. BACKUP & RESTORE TAB
 // ═══════════════════════════════════════════════════════════════════════════════
 function BackupTab() {
+  const { t } = useTranslation();
   const [lastBackup, setLastBackup] = useState<string | null>(() => {
     return localStorage.getItem("warraq-last-backup-timestamp");
   });
@@ -648,10 +656,10 @@ function BackupTab() {
         const nowStr = new Date().toISOString().replace("T", " ").substring(0, 16);
         localStorage.setItem("warraq-last-backup-timestamp", nowStr);
         setLastBackup(nowStr);
-        alert("Backup saved successfully.");
+        alert(t("settings.backup.exportSuccess"));
       }
     } catch {
-      alert("Could not export backup. Please try again.");
+      alert(t("settings.backup.exportError"));
     }
   };
 
@@ -662,10 +670,10 @@ function BackupTab() {
       const file = await open({ filters: [{ name: "Database", extensions: ["db"] }] });
       if (file) {
         await new Promise(r => setTimeout(r, 800));
-        alert("Database restored. Please restart Warraq to apply changes.");
+        alert(t("settings.backup.restoreSuccess"));
       }
     } catch {
-      alert("Could not import backup.");
+      alert(t("settings.backup.restoreError"));
     } finally {
       setRestoring(false);
     }
@@ -687,7 +695,7 @@ function BackupTab() {
         const text = await readTextFile(file);
         const data = JSON.parse(text);
         if (!Array.isArray(data)) {
-          alert("Invalid JSON: Expected an array of books.");
+          alert(t("settings.backup.invalidJsonBooks"));
           return;
         }
 
@@ -718,14 +726,14 @@ function BackupTab() {
             console.error("Failed to import book:", item.title, err);
           }
         }
-        alert(`Successfully imported ${count} of ${data.length} books from JSON.`);
+        alert(t("settings.backup.importBooksSuccess", { count, total: data.length }));
       } else if (file.endsWith(".db")) {
         const res = await importBooksFromDb(file);
-        alert(`Successfully imported ${res.importedCount} new books from database.`);
+        alert(t("settings.backup.importBooksSuccessDb", { count: res.importedCount }));
       }
     } catch (err: any) {
       console.error(err);
-      alert(`Import failed: ${err.message || String(err)}`);
+      alert(t("settings.backup.importFailed", { error: err.message || String(err) }));
     } finally {
       setImportingBooks(false);
     }
@@ -747,7 +755,7 @@ function BackupTab() {
         const text = await readTextFile(file);
         const data = JSON.parse(text);
         if (!Array.isArray(data)) {
-          alert("Invalid JSON: Expected an array of members.");
+          alert(t("settings.backup.invalidJsonMembers"));
           return;
         }
 
@@ -769,14 +777,14 @@ function BackupTab() {
             console.error("Failed to import member:", item.full_name, err);
           }
         }
-        alert(`Successfully imported ${count} of ${data.length} members from JSON.`);
+        alert(t("settings.backup.importMembersSuccess", { count, total: data.length }));
       } else if (file.endsWith(".db")) {
         const res = await importMembersFromDb(file);
-        alert(`Successfully imported ${res.importedCount} new members from database.`);
+        alert(t("settings.backup.importMembersSuccessDb", { count: res.importedCount }));
       }
     } catch (err: any) {
       console.error(err);
-      alert(`Import failed: ${err.message || String(err)}`);
+      alert(t("settings.backup.importFailed", { error: err.message || String(err) }));
     } finally {
       setImportingMembers(false);
     }
@@ -784,61 +792,65 @@ function BackupTab() {
 
   return (
     <div className="max-w-2xl">
-      <PageHeader title="Backup & Restore" desc="Export or restore your Warraq database." />
+      <PageHeader title={t("settings.backup.title")} desc={t("settings.backup.desc")} />
 
-      <Card title="Last backup" icon={<HardDrive size={16} className="text-[#1a4d40]" />}>
+      <Card title={t("settings.backup.lastBackupTitle")} icon={<HardDrive size={16} className="text-[#1a4d40]" />}>
         <div className="flex items-center justify-between">
           <div>
-            <p className="font-bold text-[13px] text-[#122222] dark:text-white">Latest backup</p>
-            <p className="text-[12px] text-[#122222]/60 dark:text-white/60 mt-0.5">{lastBackup ? lastBackup : "No backups found"}</p>
+            <p className="font-bold text-[13px] text-[#122222] dark:text-white">{t("settings.backup.latestBackup")}</p>
+            <p className="text-[12px] text-[#122222]/60 dark:text-white/60 mt-0.5">{lastBackup ? lastBackup : t("settings.backup.noBackup")}</p>
           </div>
-          {lastBackup && <span className="text-[11px] font-bold text-[#1a4d40] dark:text-[#1b9277] bg-[#1a4d40]/10 px-3 py-1 rounded-full">Saved</span>}
+          {lastBackup && <span className="text-[11px] font-bold text-[#1a4d40] dark:text-[#1b9277] bg-[#1a4d40]/10 px-3 py-1 rounded-full">{t("settings.backup.savedBadge")}</span>}
         </div>
       </Card>
 
-      <Card title="Export backup" icon={<Download size={16} className="text-[#b96f3e]" />}>
-        <p className="text-[12px] text-[#122222]/70 dark:text-white/70 mb-4">
-          Save a copy of the complete SQLite database to your computer. Includes all books, members, loans, and history.
+      <Card title={t("settings.backup.exportTitle")} icon={<Download size={16} className="text-[#b96f3e]" />}>
+        <p className="text-[12px] text-[#122222]/70 dark:text-white/70 mb-4 font-normal">
+          {t("settings.backup.exportDesc")}
         </p>
         <button onClick={handleExport} className="flex items-center gap-2 bg-[#1a4d40] text-white px-5 py-2.5 rounded-lg font-bold text-[13px] hover:bg-[#1a4d40]/90 transition-colors shadow-sm">
-          <Download size={15} /> Export database (.db)
+          <Download size={15} /> {t("settings.backup.exportBtn")}
         </button>
       </Card>
 
-      <Card title="Restore from backup" icon={<Upload size={16} className="text-[#122222]/60 dark:text-white/60" />}>
+      <Card title={t("settings.backup.restoreTitle")} icon={<Upload size={16} className="text-[#122222]/60 dark:text-white/60" />}>
         <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-700/30 flex items-start gap-3 mb-4">
           <AlertTriangle size={15} className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
-          <p className="text-[12px] text-amber-700 dark:text-amber-400 font-medium">
-            Restoring will <strong>replace</strong> all current data with the selected backup. This cannot be undone.
+          <p className="text-[12px] text-amber-700 dark:text-amber-400 font-medium leading-normal">
+            {t("settings.backup.restoreWarn")}
           </p>
         </div>
         <button onClick={handleImport} disabled={restoring} className="flex items-center gap-2 border border-[#122222]/15 dark:border-white/15 text-[#122222] dark:text-white px-5 py-2.5 rounded-lg font-bold text-[13px] hover:bg-black/5 dark:hover:bg-white/5 transition-colors disabled:opacity-50">
-          {restoring ? <><RefreshCw size={15} className="animate-spin" /> Restoring…</> : <><Upload size={15} /> Import backup file</>}
+          {restoring ? <><RefreshCw size={15} className="animate-spin" /> {t("settings.backup.restoringBtn")}</> : <><Upload size={15} /> {t("settings.backup.restoreBtn")}</>}
         </button>
       </Card>
 
-      <Card title="Import books or members" icon={<FileText size={16} className="text-emerald dark:text-[#1b9277]" />}>
-        <p className="text-[12px] text-[#122222]/70 dark:text-white/70 mb-4">
-          Import books or members from a JSON file (containing an array of objects) or another Warraq SQLite database (.db) file.
+      <Card title={t("settings.backup.importBooksTitle", "Import books")} icon={<BookOpen size={16} className="text-[#1a4d40] dark:text-[#1b9277]" />}>
+        <p className="text-[12px] text-[#122222]/70 dark:text-white/70 mb-4 font-normal">
+          {t("settings.backup.importBooksDesc", "Import books from a JSON file (containing an array of objects) or another Warraq SQLite database (.db) file.")}
         </p>
-        <div className="flex flex-wrap gap-3">
-          <button 
-            onClick={handleImportBooks} 
-            disabled={importingBooks || importingMembers || restoring} 
-            className="flex items-center gap-2 bg-[#1a4d40] text-white px-5 py-2.5 rounded-lg font-bold text-[13px] hover:bg-[#1a4d40]/90 transition-colors shadow-sm disabled:opacity-50 cursor-pointer"
-          >
-            {importingBooks ? <RefreshCw size={15} className="animate-spin" /> : <Download size={15} className="rotate-180" />} 
-            Import Books (.json / .db)
-          </button>
-          <button 
-            onClick={handleImportMembers} 
-            disabled={importingBooks || importingMembers || restoring} 
-            className="flex items-center gap-2 border border-[#1a4d40]/25 text-[#1a4d40] dark:text-[#1b9277] dark:border-[#1b9277]/25 px-5 py-2.5 rounded-lg font-bold text-[13px] hover:bg-black/5 dark:hover:bg-white/5 transition-colors disabled:opacity-50 cursor-pointer"
-          >
-            {importingMembers ? <RefreshCw size={15} className="animate-spin" /> : <Upload size={15} />} 
-            Import Members (.json / .db)
-          </button>
-        </div>
+        <button 
+          onClick={handleImportBooks} 
+          disabled={importingBooks || importingMembers || restoring} 
+          className="flex items-center gap-2 bg-[#1a4d40] text-white px-5 py-2.5 rounded-lg font-bold text-[13px] hover:bg-[#1a4d40]/90 transition-colors shadow-sm disabled:opacity-50 cursor-pointer"
+        >
+          {importingBooks ? <RefreshCw size={15} className="animate-spin" /> : <Download size={15} className="rotate-180" />} 
+          {t("settings.backup.importBooks")}
+        </button>
+      </Card>
+
+      <Card title={t("settings.backup.importMembersTitle", "Import members")} icon={<UserCircle size={16} className="text-[#b96f3e]" />}>
+        <p className="text-[12px] text-[#122222]/70 dark:text-white/70 mb-4 font-normal">
+          {t("settings.backup.importMembersDesc", "Import library members from a JSON file (containing an array of objects) or another Warraq SQLite database (.db) file.")}
+        </p>
+        <button 
+          onClick={handleImportMembers} 
+          disabled={importingBooks || importingMembers || restoring} 
+          className="flex items-center gap-2 border border-[#1a4d40]/25 text-[#1a4d40] dark:text-[#1b9277] dark:border-[#1b9277]/25 px-5 py-2.5 rounded-lg font-bold text-[13px] hover:bg-black/5 dark:hover:bg-white/5 transition-colors disabled:opacity-50 cursor-pointer"
+        >
+          {importingMembers ? <RefreshCw size={15} className="animate-spin" /> : <Upload size={15} />} 
+          {t("settings.backup.importMembers")}
+        </button>
       </Card>
     </div>
   );
@@ -848,6 +860,7 @@ function BackupTab() {
 // 9. DATABASE TAB
 // ═══════════════════════════════════════════════════════════════════════════════
 function DatabaseTab() {
+  const { t } = useTranslation();
   const [vacuuming, setVacuuming] = useState(false);
   const [vacuumDone, setVacuumDone] = useState(false);
   const [showDanger, setShowDanger] = useState(false);
@@ -856,10 +869,10 @@ function DatabaseTab() {
   const { preferences } = useUiStore();
 
   const stats = [
-    { label: "Library name", value: preferences.libraryName },
-    { label: "Database engine", value: "SQLite 3" },
-    { label: "Location", value: "AppData / warraq.db" },
-    { label: "WAL mode", value: "Enabled" },
+    { label: t("settings.database.infoName"), value: preferences.libraryName },
+    { label: t("settings.database.infoEngine"), value: "SQLite 3" },
+    { label: t("settings.database.infoLocation"), value: "AppData / warraq.db" },
+    { label: t("settings.database.infoWal"), value: "Enabled" },
   ];
 
   const handleVacuum = async () => {
@@ -872,52 +885,45 @@ function DatabaseTab() {
       setTimeout(() => setVacuumDone(false), 3000);
     } catch (err) {
       console.error("VACUUM failed", err);
-      alert("Database optimization failed. See console for details.");
+      alert(t("settings.database.maintenanceFailed"));
     } finally {
       setVacuuming(false);
     }
   };
 
   const handleClearLoans = async () => {
-    const confirmed = window.confirm(
-      "This will permanently delete ALL loan and circulation history.\nMembers and books will NOT be affected.\n\nThis action cannot be undone. Proceed?"
-    );
+    const confirmed = window.confirm(t("settings.database.clearLoansConfirm"));
     if (!confirmed) return;
     setClearingLoans(true);
     try {
       const { database } = await import("../data/database");
       const db = await database();
       await db.execute("DELETE FROM loans");
-      alert("All loan history has been deleted.");
+      alert(t("settings.database.clearLoansSuccess"));
     } catch (err) {
       console.error("Clear loans failed", err);
-      alert("Failed to clear loan history.");
+      alert(t("settings.database.clearLoansFailed"));
     } finally {
       setClearingLoans(false);
     }
   };
 
   const handleFactoryReset = async () => {
-    const first = window.confirm(
-      "⚠️ FACTORY RESET\n\nThis will PERMANENTLY DELETE all books, members, loans, reservations, and settings.\nThis cannot be undone.\n\nAre you absolutely sure?"
-    );
+    const first = window.confirm(t("settings.database.factoryResetConfirm1"));
     if (!first) return;
-    const second = window.confirm(
-      "Last chance — type OK to confirm you want to wipe all data and start fresh."
-    );
+    const second = window.confirm(t("settings.database.factoryResetConfirm2"));
     if (!second) return;
     setResetting(true);
     try {
       const { database } = await import("../data/database");
       const db = await database();
-      // Delete in FK-safe order
       await db.execute("DELETE FROM reservations");
       await db.execute("DELETE FROM loans");
       await db.execute("DELETE FROM copies");
       await db.execute("DELETE FROM books");
       await db.execute("DELETE FROM members");
       localStorage.removeItem("warraq-preferences");
-      alert("Factory reset complete. Warraq will now reload.");
+      alert(t("settings.database.factoryResetSuccess"));
       window.location.reload();
     } catch (err) {
       console.error("Factory reset failed", err);
@@ -929,9 +935,9 @@ function DatabaseTab() {
 
   return (
     <div className="max-w-2xl">
-      <PageHeader title="Database" desc="Inspect and maintain the local Warraq SQLite database." />
+      <PageHeader title={t("settings.database.title")} desc={t("settings.database.desc")} />
 
-      <Card title="Database info" icon={<Server size={16} className="text-[#1a4d40]" />}>
+      <Card title={t("settings.database.infoTitle")} icon={<Server size={16} className="text-[#1a4d40]" />}>
         <div className="space-y-3">
           {stats.map(s => (
             <div key={s.label} className="flex items-center justify-between py-2 border-b border-black/5 dark:border-white/5 last:border-0">
@@ -942,49 +948,49 @@ function DatabaseTab() {
         </div>
       </Card>
 
-      <Card title="Maintenance" icon={<Cpu size={16} className="text-[#b96f3e]" />}>
-        <p className="text-[12px] text-[#122222]/70 dark:text-white/70 mb-4">
-          Running VACUUM reclaims unused space and defragments the database. This is safe and reversible.
+      <Card title={t("settings.database.maintenanceTitle")} icon={<Cpu size={16} className="text-[#b96f3e]" />}>
+        <p className="text-[12px] text-[#122222]/70 dark:text-white/70 mb-4 font-normal">
+          {t("settings.database.maintenanceDesc")}
         </p>
         <button
           onClick={handleVacuum}
           disabled={vacuuming}
           className="flex items-center gap-2 bg-[#1a4d40] text-white px-5 py-2.5 rounded-lg font-bold text-[13px] hover:bg-[#1a4d40]/90 transition-colors shadow-sm disabled:opacity-60"
         >
-          {vacuuming ? <><RefreshCw size={15} className="animate-spin" /> Optimizing…</> : vacuumDone ? <><Check size={15} /> Optimized!</> : <><Zap size={15} /> Optimize database</>}
+          {vacuuming ? <><RefreshCw size={15} className="animate-spin" /> {t("settings.database.maintenanceBtnRunning")}</> : vacuumDone ? <><Check size={15} /> {t("settings.database.maintenanceBtnDone")}</> : <><Zap size={15} /> {t("settings.database.maintenanceBtn")}</>}
         </button>
       </Card>
 
-      <Card title="Danger zone" icon={<AlertTriangle size={16} className="text-red-500" />}>
-        <p className="text-[12px] text-[#122222]/70 dark:text-white/70 mb-4">
-          These actions are irreversible. Always export a backup before proceeding.
+      <Card title={t("settings.database.dangerTitle")} icon={<AlertTriangle size={16} className="text-red-500" />}>
+        <p className="text-[12px] text-[#122222]/70 dark:text-white/70 mb-4 font-normal">
+          {t("settings.database.dangerDesc")}
         </p>
         {!showDanger ? (
           <button onClick={() => setShowDanger(true)} className="flex items-center gap-2 border border-red-300 dark:border-red-700 text-red-600 dark:text-red-400 px-5 py-2.5 rounded-lg font-bold text-[13px] hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
-            <Trash2 size={15} /> Show danger actions
+            <Trash2 size={15} /> {t("settings.database.dangerShowBtn")}
           </button>
         ) : (
           <div className="space-y-3">
             <div className="p-4 rounded-xl bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-700/30">
-              <p className="font-bold text-[13px] text-red-700 dark:text-red-400 mb-1">Clear all loans</p>
-              <p className="text-[12px] text-red-600/80 dark:text-red-400/70 mb-3">Remove all loan and circulation history. Members and books remain.</p>
+              <p className="font-bold text-[13px] text-red-700 dark:text-red-400 mb-1">{t("settings.database.clearLoansTitle")}</p>
+              <p className="text-[12px] text-red-600/80 dark:text-red-400/70 mb-3">{t("settings.database.clearLoansDesc")}</p>
               <button
                 onClick={handleClearLoans}
                 disabled={clearingLoans}
                 className="text-[12px] font-bold text-red-600 dark:text-red-400 border border-red-300 dark:border-red-700 px-4 py-1.5 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50 flex items-center gap-2"
               >
-                {clearingLoans ? <><RefreshCw size={12} className="animate-spin" /> Deleting…</> : "Delete loan history"}
+                {clearingLoans ? <><RefreshCw size={12} className="animate-spin" /> {t("settings.database.clearLoansBtnRunning")}</> : t("settings.database.clearLoansBtn")}
               </button>
             </div>
             <div className="p-4 rounded-xl bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-700/30">
-              <p className="font-bold text-[13px] text-red-700 dark:text-red-400 mb-1">Reset entire database</p>
-              <p className="text-[12px] text-red-600/80 dark:text-red-400/70 mb-3">Wipe all data and start fresh. This cannot be undone.</p>
+              <p className="font-bold text-[13px] text-red-700 dark:text-red-400 mb-1">{t("settings.database.factoryResetTitle")}</p>
+              <p className="text-[12px] text-red-600/80 dark:text-red-400/70 mb-3">{t("settings.database.factoryResetDesc")}</p>
               <button
                 onClick={handleFactoryReset}
                 disabled={resetting}
                 className="text-[12px] font-bold text-white bg-red-600 px-4 py-1.5 rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center gap-2"
               >
-                {resetting ? <><RefreshCw size={12} className="animate-spin" /> Resetting…</> : "Factory reset"}
+                {resetting ? <><RefreshCw size={12} className="animate-spin" /> {t("settings.database.factoryResetBtnRunning")}</> : t("settings.database.factoryResetBtn")}
               </button>
             </div>
           </div>
@@ -998,6 +1004,7 @@ function DatabaseTab() {
 // 10. INTEGRATIONS & AI TAB
 // ═══════════════════════════════════════════════════════════════════════════════
 function IntegrationsTab({ prefs, update }: TabProps) {
+  const { t } = useTranslation();
   const [showKey, setShowKey] = useState(false);
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<"ok" | "fail" | null>(null);
@@ -1012,7 +1019,7 @@ function IntegrationsTab({ prefs, update }: TabProps) {
     setTestResult(null);
     try {
       const res = await fetch("https://api.openai.com/v1/models", {
-        headers: { Authorization: `Bearer ${prefs.openAIKey}` },
+        headers: { Authorization: `Bearer \${prefs.openAIKey}` },
       });
       setTestResult(res.ok ? "ok" : "fail");
     } catch {
@@ -1029,7 +1036,7 @@ function IntegrationsTab({ prefs, update }: TabProps) {
     setTestGroqResult(null);
     try {
       const res = await fetch("https://api.groq.com/openai/v1/models", {
-        headers: { Authorization: `Bearer ${prefs.groqApiKey}` },
+        headers: { Authorization: `Bearer \${prefs.groqApiKey}` },
       });
       setTestGroqResult(res.ok ? "ok" : "fail");
     } catch {
@@ -1041,116 +1048,142 @@ function IntegrationsTab({ prefs, update }: TabProps) {
   };
 
   return (
-    <div className="max-w-2xl">
-      <PageHeader title="Integrations & AI" desc="Connect Warraq with external services and AI features." />
+    <div className="max-w-4xl w-full">
+      <PageHeader title={t("settings.integrations.title")} desc={t("settings.integrations.desc")} />
 
-      <Card title="OpenAI" icon={<Zap size={16} className="text-[#1a4d40]" />}>
-        <p className="text-[12px] text-[#122222]/70 dark:text-white/70 mb-4">
-          Used for AI-assisted book descriptions, smart search, and catalog enrichment.
-        </p>
-        <Field label="API key">
-          <div className="flex gap-2">
-            <div className="relative flex-1">
-              <input
-                type={showKey ? "text" : "password"}
-                defaultValue={prefs.openAIKey}
-                placeholder="sk-…"
-                onBlur={e => update({ openAIKey: e.target.value })}
-                className={inputCls + " pr-10"}
-              />
-              <button onClick={() => setShowKey(!showKey)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#122222]/40 dark:text-white/40 hover:text-[#122222] dark:hover:text-white transition-colors">
-                {showKey ? <EyeOff size={14} /> : <Eye size={14} />}
-              </button>
+      <h3 className="font-bold text-[13px] text-[#122222]/80 dark:text-white/80 uppercase tracking-wider mb-4 border-b border-black/5 dark:border-white/5 pb-2">
+        AI Enrichment Engines
+      </h3>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-8">
+        {/* OpenAI Card */}
+        <Card title={t("settings.integrations.openaiTitle", "OpenAI Enrichment")} icon={<Zap size={16} className="text-[#1a4d40] dark:text-[#1b9277]" />}>
+          <div className="flex items-center justify-between pb-3 mb-3 border-b border-black/5 dark:border-white/5">
+            <div>
+              <p className="font-bold text-[13px] text-[#122222] dark:text-white">{t("settings.integrations.openaiToggleLabel", "Enable OpenAI Enrichment")}</p>
+              <p className="text-[11px] text-[#122222]/60 dark:text-white/60 mt-0.5">{t("settings.integrations.openaiToggleDesc", "Activate GPT-4o auto-classification and translations.")}</p>
             </div>
-            <button
-              onClick={handleTest}
-              disabled={testing || !prefs.openAIKey}
-              className="px-4 py-2 border border-black/10 dark:border-white/10 rounded-lg text-[13px] font-semibold text-[#122222] dark:text-white hover:bg-black/5 dark:hover:bg-white/5 transition-colors disabled:opacity-50 flex items-center gap-2"
-            >
-              {testing ? <RefreshCw size={13} className="animate-spin" /> : null}
-              {testing ? "Testing…" : "Test"}
-            </button>
+            <Toggle checked={prefs.openAIEnabled} onChange={v => update({ openAIEnabled: v })} />
           </div>
-          {testResult === "ok" && <p className="text-[12px] text-[#1a4d40] dark:text-[#1b9277] font-bold mt-2 flex items-center gap-1"><CheckCircle2 size={13} /> Connection successful</p>}
-          {testResult === "fail" && <p className="text-[12px] text-red-500 font-bold mt-2 flex items-center gap-1"><AlertTriangle size={13} /> Invalid or expired key</p>}
-        </Field>
-        <p className="text-[11px] text-[#122222]/40 dark:text-white/40 mt-3">
-          Your key is stored locally only and never sent to Warraq servers.
-        </p>
-      </Card>
-
-      <Card title="Groq" icon={<Cpu size={16} className="text-[#b96f3e]" />}>
-        <p className="text-[12px] text-[#122222]/70 dark:text-white/70 mb-4">
-          Used to enrich book details, fill in missing fields, and provide smart classification.
-        </p>
-        <Field label="API key">
-          <div className="flex gap-2">
-            <div className="relative flex-1">
-              <input
-                type={showGroqKey ? "text" : "password"}
-                defaultValue={prefs.groqApiKey}
-                placeholder="gsk_…"
-                onBlur={e => update({ groqApiKey: e.target.value })}
-                className={inputCls + " pr-10"}
-              />
-              <button onClick={() => setShowGroqKey(!showGroqKey)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#122222]/40 dark:text-white/40 hover:text-[#122222] dark:hover:text-white transition-colors">
-                {showGroqKey ? <EyeOff size={14} /> : <Eye size={14} />}
-              </button>
-            </div>
-            <button
-              onClick={handleTestGroq}
-              disabled={testingGroq || !prefs.groqApiKey}
-              className="px-4 py-2 border border-black/10 dark:border-white/10 rounded-lg text-[13px] font-semibold text-[#122222] dark:text-white hover:bg-black/5 dark:hover:bg-white/5 transition-colors disabled:opacity-50 flex items-center gap-2"
-            >
-              {testingGroq ? <RefreshCw size={13} className="animate-spin" /> : null}
-              {testingGroq ? "Testing…" : "Test"}
-            </button>
+          <div className={`transition-all duration-200 ${prefs.openAIEnabled ? "opacity-100" : "opacity-40 pointer-events-none"}`}>
+            <p className="text-[12px] text-[#122222]/70 dark:text-white/70 mb-4 font-normal leading-normal">
+              {t("settings.integrations.aiDesc")}
+            </p>
+            <Field label={t("settings.integrations.openaiKey")}>
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <input
+                    type={showKey ? "text" : "password"}
+                    defaultValue={prefs.openAIKey}
+                    disabled={!prefs.openAIEnabled}
+                    placeholder={t("settings.integrations.openaiPlaceholder")}
+                    onBlur={e => update({ openAIKey: e.target.value })}
+                    className={inputCls + " pr-10"}
+                  />
+                  <button onClick={() => setShowKey(!showKey)} disabled={!prefs.openAIEnabled} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#122222]/40 dark:text-white/40 hover:text-[#122222] dark:hover:text-white transition-colors">
+                    {showKey ? <EyeOff size={14} /> : <Eye size={14} />}
+                  </button>
+                </div>
+                <button
+                  onClick={handleTest}
+                  disabled={testing || !prefs.openAIKey || !prefs.openAIEnabled}
+                  className="px-4 py-2 border border-black/10 dark:border-white/10 rounded-lg text-[13px] font-semibold text-[#122222] dark:text-white hover:bg-black/5 dark:hover:bg-white/5 transition-colors disabled:opacity-50 flex items-center gap-2"
+                >
+                  {testing ? <RefreshCw size={13} className="animate-spin" /> : null}
+                  {testing ? t("common.loading") : t("common.select")}
+                </button>
+              </div>
+              {testResult === "ok" && <p className="text-[12px] text-[#1a4d40] dark:text-[#1b9277] font-bold mt-2 flex items-center gap-1"><CheckCircle2 size={13} /> {t("common.confirm")}</p>}
+              {testResult === "fail" && <p className="text-[12px] text-red-500 font-bold mt-2 flex items-center gap-1"><AlertTriangle size={13} /> {t("settings.backup.importFailed", { error: "" })}</p>}
+            </Field>
+            <p className="text-[11px] text-[#122222]/40 dark:text-white/40 mt-3 font-medium">
+              {t("settings.integrations.openaiHelp")}
+            </p>
           </div>
-          {testGroqResult === "ok" && <p className="text-[12px] text-[#1a4d40] dark:text-[#1b9277] font-bold mt-2 flex items-center gap-1"><CheckCircle2 size={13} /> Connection successful</p>}
-          {testGroqResult === "fail" && <p className="text-[12px] text-red-500 font-bold mt-2 flex items-center gap-1"><AlertTriangle size={13} /> Invalid or expired key</p>}
-        </Field>
-        <p className="text-[11px] text-[#122222]/40 dark:text-white/40 mt-3">
-          Your key is stored locally only and never sent to Warraq servers.
-        </p>
-      </Card>
+        </Card>
 
-      <Card title="Book metadata sources" icon={<BookOpen size={16} className="text-[#b96f3e]" />}>
-        <div className="space-y-4">
-          <div className="flex items-center justify-between p-4 bg-[#fcfbf8] dark:bg-[#111d1a] rounded-xl border border-black/5 dark:border-white/5">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                <Globe size={16} className="text-blue-600 dark:text-blue-400" />
-              </div>
-              <div>
-                <p className="font-bold text-[13px] text-[#122222] dark:text-white">Google Books API</p>
-                <p className="text-[11px] text-[#122222]/50 dark:text-white/50">Cover images, metadata, descriptions</p>
-              </div>
+        {/* Groq Card */}
+        <Card title={t("settings.integrations.groqTitle", "Groq Llama 3")} icon={<Cpu size={16} className="text-[#1a4d40] dark:text-[#1b9277]" />}>
+          <div className="flex items-center justify-between pb-3 mb-3 border-b border-black/5 dark:border-white/5">
+            <div>
+              <p className="font-bold text-[13px] text-[#122222] dark:text-white">{t("settings.integrations.groqToggleLabel", "Enable Groq Enrichment")}</p>
+              <p className="text-[11px] text-[#122222]/60 dark:text-white/60 mt-0.5">{t("settings.integrations.groqToggleDesc", "Activate fast Llama 3 metadata generation.")}</p>
             </div>
-            <div className="flex items-center gap-3">
-              {prefs.googleBooksEnabled ? <Wifi size={13} className="text-[#1a4d40] dark:text-[#1b9277]" /> : <WifiOff size={13} className="text-[#122222]/30 dark:text-white/30" />}
-              <Toggle checked={prefs.googleBooksEnabled} onChange={v => update({ googleBooksEnabled: v })} />
-            </div>
+            <Toggle checked={prefs.groqEnabled} onChange={v => update({ groqEnabled: v })} />
           </div>
-
-          <div className="flex items-center justify-between p-4 bg-[#fcfbf8] dark:bg-[#111d1a] rounded-xl border border-black/5 dark:border-white/5">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
-                <BookOpen size={16} className="text-amber-600 dark:text-amber-400" />
+          <div className={`transition-all duration-200 ${prefs.groqEnabled ? "opacity-100" : "opacity-40 pointer-events-none"}`}>
+            <p className="text-[12px] text-[#122222]/70 dark:text-white/70 mb-4 font-normal leading-normal">
+              {t("settings.integrations.aiDesc")}
+            </p>
+            <Field label={t("settings.integrations.groqKey")}>
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <input
+                    type={showGroqKey ? "text" : "password"}
+                    defaultValue={prefs.groqApiKey}
+                    disabled={!prefs.groqEnabled}
+                    placeholder={t("settings.integrations.groqPlaceholder")}
+                    onBlur={e => update({ groqApiKey: e.target.value })}
+                    className={inputCls + " pr-10"}
+                  />
+                  <button onClick={() => setShowGroqKey(!showGroqKey)} disabled={!prefs.groqEnabled} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#122222]/40 dark:text-white/40 hover:text-[#122222] dark:hover:text-white transition-colors">
+                    {showGroqKey ? <EyeOff size={14} /> : <Eye size={14} />}
+                  </button>
+                </div>
+                <button
+                  onClick={handleTestGroq}
+                  disabled={testingGroq || !prefs.groqApiKey || !prefs.groqEnabled}
+                  className="px-4 py-2 border border-black/10 dark:border-white/10 rounded-lg text-[13px] font-semibold text-[#122222] dark:text-white hover:bg-black/5 dark:hover:bg-white/5 transition-colors disabled:opacity-50 flex items-center gap-2"
+                >
+                  {testingGroq ? <RefreshCw size={13} className="animate-spin" /> : null}
+                  {testingGroq ? t("common.loading") : t("common.select")}
+                </button>
               </div>
-              <div>
-                <p className="font-bold text-[13px] text-[#122222] dark:text-white">Open Library (Internet Archive)</p>
-                <p className="text-[11px] text-[#122222]/50 dark:text-white/50">ISBN lookup, author data, editions</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              {prefs.openLibraryEnabled ? <Wifi size={13} className="text-[#1a4d40] dark:text-[#1b9277]" /> : <WifiOff size={13} className="text-[#122222]/30 dark:text-white/30" />}
-              <Toggle checked={prefs.openLibraryEnabled} onChange={v => update({ openLibraryEnabled: v })} />
-            </div>
+              {testGroqResult === "ok" && <p className="text-[12px] text-[#1a4d40] dark:text-[#1b9277] font-bold mt-2 flex items-center gap-1"><CheckCircle2 size={13} /> {t("common.confirm")}</p>}
+              {testGroqResult === "fail" && <p className="text-[12px] text-red-500 font-bold mt-2 flex items-center gap-1"><AlertTriangle size={13} /> {t("settings.backup.importFailed", { error: "" })}</p>}
+            </Field>
+            <p className="text-[11px] text-[#122222]/40 dark:text-white/40 mt-3 font-medium">
+              {t("settings.integrations.groqHelp")}
+            </p>
           </div>
-        </div>
-      </Card>
+        </Card>
+      </div>
 
-      <SaveButton label="Save integrations" />
+      <h3 className="font-bold text-[13px] text-[#122222]/80 dark:text-white/80 uppercase tracking-wider mb-4 border-b border-black/5 dark:border-white/5 pb-2">
+        External Catalog Lookup
+      </h3>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-8">
+        {/* Google Books Card */}
+        <Card title={t("settings.integrations.googleTitle", "Google Books Lookup")} icon={<Globe size={16} className="text-[#1a4d40] dark:text-[#1b9277]" />}>
+          <div className="flex items-center justify-between">
+            <div className="flex-1 pr-4">
+              <p className="text-[12px] text-[#122222]/70 dark:text-white/70 font-normal leading-normal">
+                {t("settings.integrations.googleDesc", "Search Google's massive global catalog. Recommended as the primary source for modern book records and covers.")}
+              </p>
+              <p className="text-[11px] text-[#122222]/40 dark:text-white/40 mt-3.5 flex items-center gap-1.5 font-semibold">
+                {prefs.googleBooksEnabled ? <><Wifi size={13} className="text-[#1a4d40] dark:text-[#1b9277]" /> {t("statusConnected", "Connected")}</> : <><WifiOff size={13} /> {t("statusDisconnected", "Disconnected")}</>}
+              </p>
+            </div>
+            <Toggle checked={prefs.googleBooksEnabled} onChange={v => update({ googleBooksEnabled: v })} />
+          </div>
+        </Card>
+
+        {/* Open Library Card */}
+        <Card title={t("settings.integrations.openLibraryTitle", "Open Library Catalog")} icon={<BookOpen size={16} className="text-[#1a4d40] dark:text-[#1b9277]" />}>
+          <div className="flex items-center justify-between">
+            <div className="flex-1 pr-4">
+              <p className="text-[12px] text-[#122222]/70 dark:text-white/70 font-normal leading-normal">
+                {t("settings.integrations.openLibraryDesc", "Search the Internet Archive's Open Library. Great fallback for classic literature and historical editions.")}
+              </p>
+              <p className="text-[11px] text-[#122222]/40 dark:text-white/40 mt-3.5 flex items-center gap-1.5 font-semibold">
+                {prefs.openLibraryEnabled ? <><Wifi size={13} className="text-[#1a4d40] dark:text-[#1b9277]" /> {t("statusConnected", "Connected")}</> : <><WifiOff size={13} /> {t("statusDisconnected", "Disconnected")}</>}
+              </p>
+            </div>
+            <Toggle checked={prefs.openLibraryEnabled} onChange={v => update({ openLibraryEnabled: v })} />
+          </div>
+        </Card>
+      </div>
+
+      <SaveButton label={t("settings.integrations.saveBtn")} />
     </div>
   );
 }
@@ -1160,6 +1193,7 @@ function IntegrationsTab({ prefs, update }: TabProps) {
 // 11. SECRETS & KEYS TAB
 // ═══════════════════════════════════════════════════════════════════════════════
 function SecretsTab({ prefs, update }: TabProps) {
+  const { t } = useTranslation();
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [visibleKey, setVisibleKey] = useState<string | null>(null);
 
@@ -1176,20 +1210,20 @@ function SecretsTab({ prefs, update }: TabProps) {
 
   return (
     <div className="max-w-2xl">
-      <PageHeader title="Secrets & Keys" desc="View and manage API keys stored locally on this device." />
+      <PageHeader title={t("settings.secrets.title")} desc={t("settings.secrets.desc")} />
 
       <div className="bg-[#1a4d40]/5 dark:bg-[#1b9277]/5 border border-[#1a4d40]/10 dark:border-[#1b9277]/10 rounded-2xl p-5 flex items-start gap-3 mb-6">
         <Shield size={16} className="text-[#1a4d40] dark:text-[#1b9277] shrink-0 mt-0.5" />
         <p className="text-[12px] text-[#1a4d40] dark:text-[#1b9277]">
-          All keys are stored in your browser's localStorage on this device only. They are never transmitted to any server by Warraq.
+          {t("settings.secrets.desc")}
         </p>
       </div>
 
-      <Card title="Stored secrets" icon={<Key size={16} className="text-[#1a4d40]" />}>
+      <Card title={t("settings.secrets.keysTitle")} icon={<Key size={16} className="text-[#1a4d40]" />}>
         {secrets.length === 0 ? (
           <div className="text-center py-8">
             <Key size={32} className="mx-auto text-[#122222]/20 dark:text-white/20 mb-3" />
-            <p className="text-[13px] text-[#122222]/50 dark:text-white/50">No secrets stored yet.</p>
+            <p className="text-[13px] text-[#122222]/50 dark:text-white/50">{t("settings.secrets.secretPlaceholder")}</p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -1237,7 +1271,7 @@ function SecretsTab({ prefs, update }: TabProps) {
                   }
                 </p>
                 {!secret.value && (
-                  <p className="text-[11px] text-[#122222]/30 dark:text-white/30 mt-1">Set in Integrations & AI →</p>
+                  <p className="text-[11px] text-[#122222]/30 dark:text-white/30 mt-1">{t("settings.secrets.secretHelp")}</p>
                 )}
               </div>
             ))}
@@ -1252,9 +1286,43 @@ function SecretsTab({ prefs, update }: TabProps) {
 // 12. DESKTOP & DATA TAB
 // ═══════════════════════════════════════════════════════════════════════════════
 function DesktopTab({ prefs, update }: TabProps) {
+  const { t } = useTranslation();
   const [checkingUpdate, setCheckingUpdate] = useState(false);
   const [updateStatus, setUpdateStatus] = useState<"idle" | "uptodate" | "available" | "error">("idle");
+  const [autostartEnabled, setAutostartEnabled] = useState(false);
   const dataPath = "AppData\\Roaming\\com.warraq.app";
+
+  useEffect(() => {
+    async function checkAutostart() {
+      try {
+        const { isEnabled } = await import("@tauri-apps/plugin-autostart");
+        const enabled = await isEnabled();
+        setAutostartEnabled(enabled);
+        if (enabled !== prefs.launchOnBoot) {
+          update({ launchOnBoot: enabled });
+        }
+      } catch (e) {
+        console.warn("Autostart plugin not available", e);
+        setAutostartEnabled(prefs.launchOnBoot);
+      }
+    }
+    void checkAutostart();
+  }, [prefs.launchOnBoot, update]);
+
+  const handleAutostartToggle = async (v: boolean) => {
+    try {
+      const { enable, disable } = await import("@tauri-apps/plugin-autostart");
+      if (v) {
+        await enable();
+      } else {
+        await disable();
+      }
+      setAutostartEnabled(v);
+      update({ launchOnBoot: v });
+    } catch (e) {
+      console.error("Failed to update autostart setting", e);
+    }
+  };
 
   const openFolder = async () => {
     try {
@@ -1271,7 +1339,6 @@ function DesktopTab({ prefs, update }: TabProps) {
     setCheckingUpdate(true);
     setUpdateStatus("idle");
     try {
-      // Simulate checking for update
       await new Promise((resolve) => setTimeout(resolve, 1500));
       setUpdateStatus("uptodate");
       setTimeout(() => setUpdateStatus("idle"), 4000);
@@ -1285,23 +1352,32 @@ function DesktopTab({ prefs, update }: TabProps) {
 
   return (
     <div className="max-w-2xl">
-      <PageHeader title="Desktop & Data" desc="Configure how Warraq behaves as a desktop application." />
+      <PageHeader title={t("settings.desktop.title")} desc={t("settings.desktop.desc")} />
 
-      <Card title="Window behavior" icon={<Monitor size={16} className="text-[#1a4d40]" />}>
+      <Card title={t("settings.desktop.trayTitle")} icon={<Monitor size={16} className="text-[#1a4d40] dark:text-[#1b9277]" />}>
         <ToggleRow
-          label="Minimize to system tray"
-          desc="When you close the window, Warraq stays running in the system tray."
+          label={t("settings.desktop.closeToTray")}
+          desc={t("settings.desktop.trayDesc")}
           checked={prefs.closeToTray}
           onChange={v => update({ closeToTray: v })}
         />
       </Card>
 
-      <Card title="Page settings" icon={<LayoutGrid size={16} className="text-[#1a4d40]" />}>
+      <Card title={t("settings.desktop.startupTitle")} icon={<LayoutGrid size={16} className="text-[#1a4d40] dark:text-[#1b9277]" />}>
+        <ToggleRow
+          label={t("settings.desktop.launchOnBoot")}
+          desc={t("settings.desktop.startupDesc")}
+          checked={autostartEnabled}
+          onChange={handleAutostartToggle}
+        />
+      </Card>
+
+      <Card title={t("settings.desktop.paginationTitle", "Pagination settings")} icon={<LayoutGrid size={16} className="text-[#1a4d40] dark:text-[#1b9277]" />}>
         <div className="flex items-center justify-between text-[13px]">
           <div>
-            <p className="font-bold text-[#122222] dark:text-white">Items per page</p>
+            <p className="font-bold text-[#122222] dark:text-white">{t("settings.desktop.pageSizeLabel", "Default page size")}</p>
             <p className="text-[12px] text-[#122222]/60 dark:text-white/60 mt-0.5">
-              Control the maximum number of items shown per page in the catalog, members list, inventory list, etc.
+              {t("settings.desktop.pageSizeDesc", "Select the default number of items to show per page in tables.")}
             </p>
           </div>
           <select
@@ -1309,37 +1385,37 @@ function DesktopTab({ prefs, update }: TabProps) {
             onChange={(e) => update({ pageSize: Number(e.target.value) })}
             className="bg-white dark:bg-[#1d2926] border border-black/10 dark:border-white/10 rounded-lg py-1.5 px-3 font-semibold text-[#122222]/70 dark:text-white/70 outline-none cursor-pointer"
           >
-            <option value={10}>10 items</option>
-            <option value={20}>20 items</option>
-            <option value={50}>50 items</option>
-            <option value={100}>100 items</option>
+            <option value={10}>10</option>
+            <option value={20}>20</option>
+            <option value={50}>50</option>
+            <option value={100}>100</option>
           </select>
         </div>
       </Card>
 
-      <Card title="Data location" icon={<FolderOpen size={16} className="text-[#b96f3e]" />}>
-        <p className="text-[12px] text-[#122222]/70 dark:text-white/70 mb-4">
-          Warraq stores its database and settings in your system's AppData directory.
+      <Card title={t("settings.desktop.storageTitle", "Database storage")} icon={<FolderOpen size={16} className="text-[#b96f3e]" />}>
+        <p className="text-[12px] text-[#122222]/70 dark:text-white/70 mb-4 font-normal">
+          {t("settings.desktop.storageDesc", "Locate the folder where your database and local assets are saved on this system.")}
         </p>
         <div className="flex items-center gap-2 p-3 bg-[#fcfbf8] dark:bg-[#111d1a] border border-black/5 dark:border-white/5 rounded-lg">
           <FolderOpen size={14} className="text-[#b96f3e] shrink-0" />
           <code className="text-[12px] text-[#122222]/70 dark:text-white/60 flex-1 truncate">{dataPath}</code>
           <button
             onClick={openFolder}
-            className="text-[11px] font-bold text-[#1a4d40] dark:text-[#1b9277] flex items-center gap-1 hover:underline shrink-0"
+            className="text-[11px] font-bold text-[#1a4d40] dark:text-[#1b9277] flex items-center gap-1 hover:underline shrink-0 text-[12px]"
           >
-            Open <ExternalLink size={11} />
+            {t("common.select")} <ExternalLink size={11} />
           </button>
         </div>
       </Card>
 
-      <Card title="App updates" icon={<RefreshCw size={16} className="text-[#122222]/60 dark:text-white/60" />}>
+      <Card title={t("settings.about.updates")} icon={<RefreshCw size={16} className="text-[#122222]/60 dark:text-white/60" />}>
         <div className="flex items-center justify-between">
           <div>
-            <p className="font-bold text-[13px] text-[#122222] dark:text-white">Current version</p>
+            <p className="font-bold text-[13px] text-[#122222] dark:text-white">{t("settings.about.version")}</p>
             <p className="text-[12px] text-[#122222]/60 dark:text-white/60 mt-0.5">
               v1.0.0
-              {updateStatus === "uptodate" && <span className="text-[#1a4d40] dark:text-[#1b9277] font-bold ml-2">✓ Up to date</span>}
+              {updateStatus === "uptodate" && <span className="text-[#1a4d40] dark:text-[#1b9277] font-bold ml-2">✓ {t("settings.about.upToDate")}</span>}
               {updateStatus === "available" && <span className="text-[#b96f3e] font-bold ml-2">Update available!</span>}
             </p>
           </div>
@@ -1349,12 +1425,12 @@ function DesktopTab({ prefs, update }: TabProps) {
             className="flex items-center gap-2 border border-black/10 dark:border-white/10 text-[#122222] dark:text-white px-4 py-2 rounded-lg font-bold text-[13px] hover:bg-black/5 dark:hover:bg-white/5 transition-colors disabled:opacity-50"
           >
             <RefreshCw size={13} className={checkingUpdate ? "animate-spin" : ""} />
-            {checkingUpdate ? "Checking…" : "Check for updates"}
+            {checkingUpdate ? t("common.loading") : t("settings.about.checkBtn")}
           </button>
         </div>
       </Card>
 
-      <SaveButton label="Save system settings" />
+      <SaveButton label={t("settings.desktop.saveBtn")} />
     </div>
   );
 }
@@ -1363,7 +1439,9 @@ function DesktopTab({ prefs, update }: TabProps) {
 // 13. ABOUT TAB
 // ═══════════════════════════════════════════════════════════════════════════════
 function AboutTab() {
+  const { t } = useTranslation();
   const credits = [
+    { role: t("settings.about.developer"), name: "MANAA Mohaned" },
     { role: "Book data", name: "Google Books / Open Library" },
     { role: "Icons", name: "Lucide React" },
     { role: "Font", name: "Manrope / IBM Plex Sans Arabic" },
@@ -1371,23 +1449,22 @@ function AboutTab() {
 
   return (
     <div className="max-w-2xl">
-      <PageHeader title="About Warraq" desc="Application information, version, and acknowledgements." />
+      <PageHeader title={t("settings.about.title")} desc={t("settings.about.desc")} />
 
-      <Card title="Application" icon={<Info size={16} className="text-[#1a4d40]" />}>
+      <Card title={t("settings.about.engine")} icon={<Info size={16} className="text-[#1a4d40]" />}>
         <div className="flex items-center gap-5 mb-6">
           <img src="/brand/warraq-symbol.png" alt="Warraq" className="h-16 w-16 rounded-2xl shadow-card" />
           <div>
             <h2 className="font-display text-[22px] font-bold text-[#122222] dark:text-white tracking-wider">WARRAQ</h2>
             <p className="text-[13px] font-arabic text-[#b96f3e]">وراق ـ المخطوط الحي</p>
-            <p className="text-[12px] text-[#122222]/60 dark:text-white/60 mt-1">A living manuscript management system for libraries.</p>
+            <p className="text-[12px] text-[#122222]/60 dark:text-white/60 mt-1">{t("settings.about.desc")}</p>
           </div>
         </div>
         <div className="space-y-2">
           {[
-            { label: "Version", value: "1.0.0" },
-            { label: "Build", value: "2026.07.16" },
-            { label: "Runtime", value: "Tauri v2 + React 18" },
-            { label: "Database", value: "SQLite 3 (via tauri-plugin-sql)" },
+            { label: t("settings.about.version"), value: "1.0.0" },
+            { label: t("settings.about.database"), value: "SQLite 3" },
+            { label: t("settings.about.platform"), value: "Windows / Tauri" },
           ].map(r => (
             <div key={r.label} className="flex justify-between py-2 border-b border-black/5 dark:border-white/5 last:border-0">
               <span className="text-[12px] text-[#122222]/60 dark:text-white/60">{r.label}</span>
@@ -1397,10 +1474,10 @@ function AboutTab() {
         </div>
       </Card>
 
-      <Card title="Credits" icon={<LayoutGrid size={16} className="text-[#b96f3e]" />}>
+      <Card title={t("settings.about.credits") || "Credits"} icon={<LayoutGrid size={16} className="text-[#b96f3e]" />}>
         <div className="space-y-3">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-black/5 dark:border-white/5 pb-3">
-            <span className="text-[12px] text-[#122222]/60 dark:text-white/60">Design & Engineering</span>
+            <span className="text-[12px] text-[#122222]/60 dark:text-white/60">{t("settings.about.designAndEngineering") || "Design & Engineering"}</span>
             <div className="flex flex-col items-end mt-1 sm:mt-0">
               <span className="text-[13px] font-semibold text-[#122222] dark:text-white">MANAA Mohaned</span>
               <div className="flex gap-2.5 mt-1 text-[11px] font-medium text-[#1a4d40] dark:text-[#1b9277]">
@@ -1421,16 +1498,16 @@ function AboutTab() {
         </div>
       </Card>
 
-      <Card title="Legal" icon={<FileText size={16} className="text-[#122222]/60 dark:text-white/60" />}>
+      <Card title={t("settings.about.legal") || "Legal"} icon={<FileText size={16} className="text-[#122222]/60 dark:text-white/60" />}>
         <div className="flex flex-col gap-3">
           <a href="#" className="flex items-center justify-between text-[13px] font-semibold text-[#1a4d40] dark:text-[#1b9277] hover:underline">
-            Terms of Service <ChevronRight size={14} />
+            {t("settings.about.terms") || "Terms of Service"} <ChevronRight size={14} />
           </a>
           <a href="#" className="flex items-center justify-between text-[13px] font-semibold text-[#1a4d40] dark:text-[#1b9277] hover:underline">
-            Privacy Policy <ChevronRight size={14} />
+            {t("settings.about.privacy") || "Privacy Policy"} <ChevronRight size={14} />
           </a>
           <a href="#" className="flex items-center justify-between text-[13px] font-semibold text-[#1a4d40] dark:text-[#1b9277] hover:underline">
-            Open Source Licenses <ChevronRight size={14} />
+            {t("settings.about.licenses") || "Open Source Licenses"} <ChevronRight size={14} />
           </a>
         </div>
         <p className="text-[11px] text-[#122222]/40 dark:text-white/40 mt-4">© 2026 Warraq. All rights reserved.</p>
@@ -1648,6 +1725,7 @@ function NumberInput({ value, min, max, onChange }: { value: number; min: number
 }
 
 function SaveButton({ label }: { label: string }) {
+  const { t } = useTranslation();
   const [saved, setSaved] = useState(false);
   const handle = () => { setSaved(true); setTimeout(() => setSaved(false), 2500); };
   return (
@@ -1656,7 +1734,7 @@ function SaveButton({ label }: { label: string }) {
         onClick={handle}
         className="bg-[#1a4d40] text-white px-6 py-2.5 rounded-lg font-bold text-[13px] hover:bg-[#1a4d40]/90 transition-all shadow-sm flex items-center gap-2"
       >
-        {saved ? <><Check size={16} /> Saved!</> : <><CheckCircle2 size={16} /> {label}</>}
+        {saved ? <><Check size={16} /> {t("save") || "Saved!"}</> : <><CheckCircle2 size={16} /> {label}</>}
       </button>
     </div>
   );

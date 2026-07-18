@@ -56,10 +56,13 @@ export interface Preferences {
   // Integrations
   googleBooksEnabled: boolean;
   openLibraryEnabled: boolean;
+  openAIEnabled: boolean;
+  groqEnabled: boolean;
   openAIKey: string;
   groqApiKey: string;
   // System
   closeToTray: boolean;
+  launchOnBoot: boolean;
   autosaveEnabled: boolean;
   autosaveInterval: number;
   pageSize: number;
