@@ -8,6 +8,7 @@
   "search": "Search",
   "actions": "Actions",
   "status": "Status",
+  "status.active": "Active",
   "statusConnected": "Connected",
   "statusDisconnected": "Disconnected",
   "nav": {

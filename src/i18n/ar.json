@@ -8,6 +8,7 @@
   "search": "بحث",
   "actions": "إجراءات",
   "status": "الحالة",
+  "status.active": "نشط",
   "statusConnected": "متصل",
   "statusDisconnected": "غير متصل",
   "nav": {
