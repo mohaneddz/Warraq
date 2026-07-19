@@ -5,7 +5,7 @@ import {
   BookOpen, Database, UserCircle, Monitor, Globe, Bell, Shield,
   HardDrive, Info, Zap, Key, RefreshCw, Trash2, Download, Upload,
   Eye, EyeOff, Copy, Check, AlertTriangle, Clock, MapPin,
-  FileText, Palette, Type, BookMarked, RotateCcw,
+  FileText, Palette, Type, BookMarked,
   DollarSign, Server, Cpu, FolderOpen, ExternalLink, Wifi, WifiOff,
   LayoutGrid, Save,
 } from "lucide-react";
@@ -316,12 +316,16 @@ function LocalizationTab({ prefs, update }: TabProps) {
             <button
               key={lang.code}
               onClick={() => handleLocaleChange(lang.code)}
-              className={`p-4 rounded-xl border-2 text-start transition-all \${prefs.locale === lang.code ? "border-[#b96f3e] bg-[#b96f3e]/5" : "border-black/5 dark:border-white/5 hover:border-black/10 dark:hover:border-white/10"}`}
+              className={`p-4 rounded-xl border-2 border-solid text-start transition-all cursor-pointer ${
+                prefs.locale === lang.code 
+                  ? "border-[#b96f3e] bg-[#b96f3e]/5 scale-[1.02]" 
+                  : "border-transparent bg-[#122222]/[0.03] dark:bg-[#ffffff]/[0.03]"
+              } hover:brightness-90 hover:scale-[0.98] active:scale-[1.02] active:brightness-110`}
             >
               <div className="text-[18px] mb-2">{lang.code === "en" ? "🇬🇧" : lang.code === "fr" ? "🇫🇷" : "🇩🇿"}</div>
               <div className="font-bold text-[13px] text-[#122222] dark:text-white">{lang.label}</div>
               <div className="text-[11px] text-[#122222]/50 dark:text-white/50">{lang.native}</div>
-              {prefs.locale === lang.code && <div className="mt-2 flex items-center gap-1 text-[11px] font-bold text-[#b96f3e]"><CheckCircle2 size={12} /> {t("status.active") || "Active"}</div>}
+              {prefs.locale === lang.code && <div className="mt-2 flex items-center gap-1 text-[11px] font-bold text-[#b96f3e]"><CheckCircle2 size={12} /> {t("status.active", "Active")}</div>}
             </button>
           ))}
         </div>
@@ -352,7 +356,11 @@ function LocalizationTab({ prefs, update }: TabProps) {
               <button
                 key={f}
                 onClick={() => update({ dateFormat: f })}
-                className={`flex-1 py-2 px-3 rounded-lg border text-[13px] font-semibold transition-all \${prefs.dateFormat === f ? "border-[#1a4d40] bg-[#1a4d40]/10 text-[#1a4d40] dark:text-[#1b9277]" : "border-black/10 dark:border-white/10 text-[#122222]/70 dark:text-white/70 hover:border-[#1a4d40]/30"}`}
+                className={`flex-1 py-2 px-3 rounded-lg border border-solid transition-all cursor-pointer ${
+                  prefs.dateFormat === f 
+                    ? "border-[#1a4d40] bg-[#1a4d40]/10 text-[#1a4d40] dark:text-[#1b9277] scale-[1.02]" 
+                    : "border-transparent bg-[#122222]/[0.03] dark:bg-[#ffffff]/[0.03] text-[#122222]/70 dark:text-white/70"
+                } hover:brightness-90 hover:scale-[0.98] active:scale-[1.02] active:brightness-110`}
               >
                 {f}
               </button>
@@ -406,7 +414,11 @@ function AppearanceTab({ prefs, update }: TabProps) {
               key={c.value}
               title={c.label}
               onClick={() => update({ accentColor: c.value })}
-              className={`w-10 h-10 rounded-full border-4 transition-all \${prefs.accentColor === c.value ? "border-[#122222] dark:border-white scale-110" : "border-transparent hover:scale-105"}`}
+              className={`w-10 h-10 rounded-full border-4 border-solid transition-all cursor-pointer ${
+                prefs.accentColor === c.value 
+                  ? "border-[#122222] dark:border-white scale-[1.15]" 
+                  : "border-transparent"
+              } hover:brightness-90 hover:scale-[0.95] active:scale-[1.1] active:brightness-110`}
               style={{ backgroundColor: c.value }}
             />
           ))}
@@ -420,9 +432,13 @@ function AppearanceTab({ prefs, update }: TabProps) {
             <button
               key={s.value}
               onClick={() => update({ fontSize: s.value })}
-              className={`p-4 rounded-xl border-2 text-start transition-all \${prefs.fontSize === s.value ? "border-[#b96f3e] bg-[#b96f3e]/5" : "border-black/5 dark:border-white/5 hover:border-black/10 dark:hover:border-white/10"}`}
+              className={`p-4 rounded-xl border-2 border-solid text-start transition-all cursor-pointer ${
+                prefs.fontSize === s.value 
+                  ? "border-[#b96f3e] bg-[#b96f3e]/5 scale-[1.02]" 
+                  : "border-transparent bg-[#122222]/[0.03] dark:bg-[#ffffff]/[0.03]"
+              } hover:brightness-90 hover:scale-[0.98] active:scale-[1.02] active:brightness-110`}
             >
-              <div className={`font-bold text-[#122222] dark:text-white mb-1 \${s.value === "small" ? "text-[12px]" : s.value === "large" ? "text-[16px]" : "text-[14px]"}`}>Aa</div>
+              <div className={`font-bold text-[#122222] dark:text-white mb-1 ${s.value === "small" ? "text-[12px]" : s.value === "large" ? "text-[16px]" : "text-[14px]"}`}>Aa</div>
               <div className="font-bold text-[13px] text-[#122222] dark:text-white">{s.label}</div>
               <div className="text-[11px] text-[#122222]/50 dark:text-white/50">{s.desc}</div>
             </button>
@@ -444,7 +460,7 @@ function RulesTab({ prefs, update }: TabProps) {
     <div className="max-w-2xl">
       <PageHeader title={t("settings.rules.title")} desc={t("settings.rules.desc")} />
 
-      <Card title={t("settings.rules.paramsTitle")} icon={<BookMarked size={16} className="text-[#1a4d40]" />}>
+      <Card title={t("settings.rules.paramsTitle")} icon={<BookMarked size={16} className="text-[#1a4d40] dark:text-[#1b9277]" />}>
         <div className="grid grid-cols-2 gap-4 mb-4">
           <Field label={t("settings.rules.loanPeriod")}>
             <NumberInput value={prefs.loanDays} min={1} max={365} onChange={v => update({ loanDays: v })} />
@@ -463,29 +479,19 @@ function RulesTab({ prefs, update }: TabProps) {
         </div>
       </Card>
 
-      <Card title={t("settings.rules.selfServiceTitle")} icon={<RotateCcw size={16} className="text-[#b96f3e]" />}>
-        <ToggleRow
-          label={t("settings.rules.allowSelfRenewal")}
-          desc={t("settings.rules.allowSelfRenewalDesc")}
-          checked={prefs.selfRenewalAllowed}
-          onChange={v => update({ selfRenewalAllowed: v })}
-        />
-      </Card>
-
-      <Card title={t("settings.rules.gracePeriodTitle")} icon={<Clock size={16} className="text-[#122222]/60 dark:text-white/60" />}>
-        <ToggleRow
-          label={t("settings.rules.enableGracePeriod")}
-          desc={t("settings.rules.enableGracePeriodDesc")}
-          checked={prefs.gracePeriodEnabled}
-          onChange={v => update({ gracePeriodEnabled: v })}
-        />
-        {prefs.gracePeriodEnabled && (
-          <div className="mt-4 pt-4 border-t border-black/5 dark:border-white/5">
-            <Field label={t("settings.rules.gracePeriodLength")}>
-              <NumberInput value={prefs.gracePeriodDays} min={1} max={14} onChange={v => update({ gracePeriodDays: v })} />
-            </Field>
+      <Card title={t("settings.rules.gracePeriodTitle", "Grace Period")} icon={<Clock size={16} className="text-[#1a4d40] dark:text-[#1b9277]" />}>
+        <div className="flex items-center justify-between pb-4 mb-4 border-b border-black/5 dark:border-white/5">
+          <div>
+            <p className="font-bold text-[13px] text-[#122222] dark:text-white">{t("settings.rules.enableGracePeriod")}</p>
+            <p className="text-[12px] text-[#122222]/60 dark:text-white/60 mt-0.5">{t("settings.rules.enableGracePeriodDesc")}</p>
           </div>
-        )}
+          <Toggle checked={prefs.gracePeriodEnabled} onChange={v => update({ gracePeriodEnabled: v })} />
+        </div>
+        <div className={`transition-all duration-200 ${prefs.gracePeriodEnabled ? "opacity-100" : "opacity-40 pointer-events-none"}`}>
+          <Field label={t("settings.rules.gracePeriodLength")}>
+            <NumberInput value={prefs.gracePeriodDays} min={1} max={14} disabled={!prefs.gracePeriodEnabled} onChange={v => update({ gracePeriodDays: v })} />
+          </Field>
+        </div>
       </Card>
 
       <SaveButton label={t("settings.rules.saveBtn")} />
@@ -549,7 +555,11 @@ function FinesTab({ prefs, update }: TabProps) {
               <button
                 key={method}
                 onClick={() => update({ finesPaymentMethod: method })}
-                className={`py-3 px-4 rounded-xl border-2 font-semibold text-[13px] capitalize transition-all \${prefs.finesPaymentMethod === method ? "border-[#b96f3e] bg-[#b96f3e]/5 text-[#b96f3e]" : "border-black/5 dark:border-white/5 text-[#122222]/70 dark:text-white/70 hover:border-black/10 dark:hover:border-white/10"}`}
+                className={`py-3 px-4 rounded-xl border-2 border-solid font-semibold text-[13px] capitalize transition-all cursor-pointer ${
+                  prefs.finesPaymentMethod === method 
+                    ? "border-[#b96f3e] bg-[#b96f3e]/5 text-[#b96f3e] scale-[1.02]" 
+                    : "border-transparent bg-[#122222]/[0.03] dark:bg-[#ffffff]/[0.03] text-[#122222]/70 dark:text-white/70"
+                } hover:brightness-90 hover:scale-[0.98] active:scale-[1.02] active:brightness-110`}
               >
                 {method === "both" ? t("settings.fines.paymentBoth") : method === "cash" ? t("settings.fines.paymentCash") : t("settings.fines.paymentCard")}
               </button>
@@ -1701,24 +1711,27 @@ function ToggleRow({ label, desc, checked, onChange }: { label: string; desc: st
   );
 }
 
-function NumberInput({ value, min, max, onChange }: { value: number; min: number; max: number; onChange: (v: number) => void }) {
+function NumberInput({ value, min, max, onChange, disabled }: { value: number; min: number; max: number; onChange: (v: number) => void; disabled?: boolean }) {
   return (
-    <div className="flex items-center gap-2">
+    <div className={`flex items-center gap-2 ${disabled ? "pointer-events-none opacity-50" : ""}`}>
       <button
+        disabled={disabled}
         onClick={() => onChange(Math.max(min, value - 1))}
-        className="w-8 h-8 rounded-lg border border-black/10 dark:border-white/10 flex items-center justify-center text-[#122222] dark:text-white font-bold hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+        className="w-8 h-8 rounded-lg border border-black/10 dark:border-white/10 flex items-center justify-center text-[#122222] dark:text-white font-bold hover:bg-black/5 dark:hover:bg-white/5 transition-colors disabled:opacity-50"
       >−</button>
       <input
         type="number"
         value={value}
         min={min}
         max={max}
+        disabled={disabled}
         onChange={e => onChange(Number(e.target.value))}
         className="w-16 text-center bg-[#fcfbf8] dark:bg-[#111d1a] border border-black/10 dark:border-white/10 rounded-lg py-1.5 text-[14px] font-bold text-[#122222] dark:text-white outline-none focus:border-[#1a4d40]"
       />
       <button
+        disabled={disabled}
         onClick={() => onChange(Math.min(max, value + 1))}
-        className="w-8 h-8 rounded-lg border border-black/10 dark:border-white/10 flex items-center justify-center text-[#122222] dark:text-white font-bold hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+        className="w-8 h-8 rounded-lg border border-black/10 dark:border-white/10 flex items-center justify-center text-[#122222] dark:text-white font-bold hover:bg-black/5 dark:hover:bg-white/5 transition-colors disabled:opacity-50"
       >+</button>
     </div>
   );
@@ -1744,7 +1757,11 @@ function ThemeOption({ name, active, onClick }: { name: string; active: boolean;
   return (
     <button
       onClick={onClick}
-      className={`relative p-2 rounded-xl border-2 transition-all w-full ${active ? "border-[#b96f3e] shadow-sm" : "border-black/5 dark:border-white/5 hover:border-black/10 dark:hover:border-white/10"}`}
+      className={`relative p-2 rounded-xl border-2 border-solid transition-all w-full cursor-pointer ${
+        active 
+          ? "border-[#b96f3e] bg-[#b96f3e]/5 scale-[1.02] shadow-sm" 
+          : "border-transparent bg-[#122222]/[0.03] dark:bg-[#ffffff]/[0.03]"
+      } hover:brightness-90 hover:scale-[0.98] active:scale-[1.02] active:brightness-110`}
     >
       <div className={`h-20 w-full rounded-lg mb-2 ${name === "Dark" ? "bg-[#111d1a]" : name === "Light" ? "bg-[#fcfbf8]" : "bg-gradient-to-r from-[#fcfbf8] to-[#111d1a]"} border border-black/10 dark:border-white/10 overflow-hidden relative`}>
         <div className={`absolute top-2 left-2 right-2 h-4 rounded ${name === "Dark" ? "bg-white/10" : name === "Light" ? "bg-black/10" : "bg-transparent"}`} />
