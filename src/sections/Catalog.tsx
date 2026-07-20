@@ -9,7 +9,8 @@ import {
 } from "lucide-react";
 import {
   books, saveBook, updateBook, deleteBook, getCopiesForBook,
-  addCopy, deleteCopy, addReservation, members, auditLog
+  addCopy, deleteCopy, addReservation, members, auditLog,
+  getShelves
 } from "../data/repositories/library";
 import type { Book } from "../types";
 import { Modal, Input, Button, StatusBadge } from "../components/ui/primitives";
@@ -492,15 +493,19 @@ export function CatalogPage() {
                               <BookOpen size={14} className="text-[#b96f3e]/40" />
                             </div>
                           )}
-                          <div className="min-w-0">
-                            <div className="font-bold text-[#122222] dark:text-white truncate">{book.title}</div>
-                            {book.subtitle && <div className="text-[11px] text-[#122222]/50 dark:text-white/50 font-arabic mt-0.5 truncate">{book.subtitle}</div>}
+                          <div className="min-w-0 flex-1">
+                            <div className="font-bold text-[#122222] dark:text-white line-clamp-2" title={book.title}>{book.title}</div>
+                            {book.subtitle && <div className="text-[11px] text-[#122222]/50 dark:text-white/50 font-arabic mt-0.5 line-clamp-2" title={book.subtitle}>{book.subtitle}</div>}
                           </div>
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-[#122222]/70 dark:text-white/70">{book.author || "—"}</td>
-                      <td className="px-4 py-3 text-[#122222]/70 dark:text-white/70">{book.category || t("catalog.uncategorized") || "Uncategorized"}</td>
-                      <td className="px-4 py-3 text-[#122222]/70 dark:text-white/70 font-mono text-[12px]">{formatIsbn(book.isbn13 || book.isbn10) || "—"}</td>
+                      <td className="px-4 py-3 text-[#122222]/70 dark:text-white/70">
+                        <div className="line-clamp-2" title={book.author || ""}>{book.author || "—"}</div>
+                      </td>
+                      <td className="px-4 py-3 text-[#122222]/70 dark:text-white/70">
+                        <div className="line-clamp-2" title={book.category || ""}>{book.category || t("catalog.uncategorized") || "Uncategorized"}</div>
+                      </td>
+                      <td className="px-4 py-3 text-[#122222]/70 dark:text-white/70 font-mono text-[12px] whitespace-nowrap">{formatIsbn(book.isbn13 || book.isbn10) || "—"}</td>
                       <td className="px-4 py-3 text-[#122222]/70 dark:text-white/70 whitespace-nowrap">{formatDisplayDate(book.created_at)}</td>
                       <td className="px-4 py-3 text-[#122222]/70 dark:text-white/70 whitespace-nowrap">
                         <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold ${
@@ -717,6 +722,62 @@ function BookSidebar({ book, onClose, registerClean }: { book: Book; onClose: ()
     defaultValues: { barcode: "", accession: "", condition: "good", shelf: "" }
   });
 
+  const [selectedBookcase, setSelectedBookcase] = useState("");
+  const [selectedRow, setSelectedRow] = useState("");
+
+  // Fetch shelves for dynamic location select
+  const shelvesQuery = useQuery({ queryKey: ["shelves-all-catalog"], queryFn: () => getShelves() });
+  const allShelves = shelvesQuery.data ?? [];
+
+  // Parse shelves into rows and columns
+  const parsedShelves = useMemo(() => {
+    return allShelves.map((s: any) => {
+      const code = s.code || "";
+      const m = code.match(/^([A-Za-z]+)[-_]?(\d+)$/);
+      const row = m ? m[1].toUpperCase() : "A";
+      const col = m ? m[2] : "01";
+      return { id: s.id, code, row, col };
+    });
+  }, [allShelves]);
+
+  const uniqueBookcases = useMemo(() => {
+    const cols = parsedShelves.map(s => s.col);
+    const set = new Set(cols);
+    if (set.size === 0) return ["01", "02", "03", "04", "05", "06", "07", "08"];
+    return Array.from(set).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+  }, [parsedShelves]);
+
+  const uniqueRows = useMemo(() => {
+    const rows = parsedShelves.map(s => s.row);
+    const set = new Set(rows);
+    if (set.size === 0) return ["A", "B", "C", "D", "E"];
+    return Array.from(set).sort();
+  }, [parsedShelves]);
+
+  const filteredRows = useMemo(() => {
+    if (!selectedBookcase) return uniqueRows;
+    const existing = parsedShelves.filter(s => s.col === selectedBookcase).map(s => s.row);
+    if (existing.length === 0) return uniqueRows;
+    return Array.from(new Set(existing)).sort();
+  }, [uniqueRows, parsedShelves, selectedBookcase]);
+
+  const filteredBookcases = useMemo(() => {
+    if (!selectedRow) return uniqueBookcases;
+    const existing = parsedShelves.filter(s => s.row === selectedRow).map(s => s.col);
+    if (existing.length === 0) return uniqueBookcases;
+    return Array.from(new Set(existing)).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+  }, [uniqueBookcases, parsedShelves, selectedRow]);
+
+  useEffect(() => {
+    if (selectedBookcase && selectedRow) {
+      const matched = parsedShelves.find(s => s.col === selectedBookcase && s.row === selectedRow);
+      const code = matched ? matched.code : `${selectedRow}${selectedBookcase}`;
+      copyForm.setValue("shelf", code);
+    } else {
+      copyForm.setValue("shelf", "");
+    }
+  }, [selectedBookcase, selectedRow, parsedShelves, copyForm]);
+
   // Mutations
   const updateBookMutation = useMutation({
     mutationFn: (values: any) => {
@@ -765,6 +826,8 @@ function BookSidebar({ book, onClose, registerClean }: { book: Book; onClose: ()
     onSuccess: () => {
       toast.success(t("catalog.alerts.copyAdded") || "Copy added.");
       copyForm.reset();
+      setSelectedBookcase("");
+      setSelectedRow("");
       setAddCopyOpen(false);
       refetchCopies();
       invalidate();
@@ -983,7 +1046,17 @@ function BookSidebar({ book, onClose, registerClean }: { book: Book; onClose: ()
             <div className="flex justify-between items-center shrink-0">
               <h3 className="font-bold text-[14px] text-[#122222] dark:text-white">{t("catalog.details.physicalCopies") || "Physical copies"}</h3>
               <button
-                onClick={() => setAddCopyOpen(true)}
+                onClick={() => {
+                  copyForm.reset({
+                    barcode: "",
+                    accession: crypto.randomUUID(),
+                    condition: "good",
+                    shelf: ""
+                  });
+                  setSelectedBookcase("");
+                  setSelectedRow("");
+                  setAddCopyOpen(true);
+                }}
                 className="flex items-center gap-1 text-[11px] font-bold text-emerald hover:underline cursor-pointer"
               >
                 <Plus size={12} /> {t("catalog.details.addCopy") || "Add copy"}
@@ -1022,16 +1095,40 @@ function BookSidebar({ book, onClose, registerClean }: { book: Book; onClose: ()
             {addCopyOpen && (
               <Modal isOpen={addCopyOpen} onClose={() => setAddCopyOpen(false)} title={t("catalog.details.addCopyTitle") || "Add Physical Copy"}>
                 <form onSubmit={copyForm.handleSubmit((v) => addCopyMutation.mutate(v))} className="space-y-4 text-[13px]">
-                  <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">{t("catalog.details.copyBarcode") || "Barcode"}
-                    <Input {...registerClean(copyForm, "barcode", cleanBarcode)} placeholder={t("catalog.details.copyBarcodePlaceholder") || "Scan or enter copy barcode"} required />
+                  <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">
+                    <span>{t("catalog.details.copyAccession") || "Index"} <span className="text-red-500">*</span></span>
+                    <Input {...registerClean(copyForm, "accession", cleanAccession)} placeholder={t("catalog.details.copyAccessionPlaceholder") || "Enter copy index (e.g. 001)"} required />
                   </label>
-                  <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">{t("catalog.details.copyAccession") || "Accession number"}
-                    <Input {...registerClean(copyForm, "accession", cleanAccession)} placeholder={t("catalog.details.copyAccessionPlaceholder") || "Auto-generated if blank"} />
+                  <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">{t("catalog.details.copyBarcode") || "Barcode"}
+                    <Input {...registerClean(copyForm, "barcode", cleanBarcode)} placeholder="Scan or enter copy barcode (optional)" />
                   </label>
                   <div className="grid grid-cols-2 gap-4">
-                    <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">{t("catalog.details.copyShelf") || "Shelf location"}
-                      <Input {...registerClean(copyForm, "shelf", cleanText)} placeholder={t("catalog.details.copyShelfPlaceholder") || "e.g. A-12"} />
+                    <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">Bookcase
+                      <select 
+                        value={selectedBookcase} 
+                        onChange={(e) => setSelectedBookcase(e.target.value)}
+                        className="field-select mt-1 text-[13px] py-2 px-3 bg-white dark:bg-[#1d2926]"
+                      >
+                        <option value="">None (Unassigned)</option>
+                        {filteredBookcases.map(col => (
+                          <option key={col} value={col}>Bookcase {col}</option>
+                        ))}
+                      </select>
                     </label>
+                    <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">Row
+                      <select 
+                        value={selectedRow} 
+                        onChange={(e) => setSelectedRow(e.target.value)}
+                        className="field-select mt-1 text-[13px] py-2 px-3 bg-white dark:bg-[#1d2926]"
+                      >
+                        <option value="">None (Unassigned)</option>
+                        {filteredRows.map(row => (
+                          <option key={row} value={row}>Row {row}</option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+                  <div>
                     <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">{t("catalog.details.copyCondition") || "Condition"}
                       <select {...copyForm.register("condition")} className="field-select mt-1 text-[13px] py-2 px-3">
                         <option value="mint">{t("catalog.condition.mint") || "Mint"}</option>
