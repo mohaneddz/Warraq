@@ -13,4 +13,10 @@ export async function initializeDatabase() {
   await db.execute("PRAGMA journal_mode = WAL");
   await db.execute("PRAGMA busy_timeout = 5000");
   await db.execute("PRAGMA synchronous = NORMAL");
+
+  try {
+    await db.execute("ALTER TABLE books ADD COLUMN item_type TEXT NOT NULL DEFAULT 'book'");
+  } catch (_) {
+    // Column already exists
+  }
 }

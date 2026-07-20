@@ -564,10 +564,11 @@ export async function ensureMedicalBooksSeeded() {
         publisherId = pubRows[0].id;
       }
 
+      const itemType = (b as any).item_type || "book";
       await db.execute(
-        `INSERT INTO books (id, title, subtitle, arabic_title, description, isbn13, category_id, publisher_id, language, publication_year, call_number, cover_path, source, created_at, updated_at) 
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'manual', ?, ?)`,
-        [bookId, b.title, b.subtitle || null, b.arabic_title || null, b.description || null, b.isbn, categoryId, publisherId, b.lang, b.year || null, b.call_number || null, coverPath, today.toISOString(), today.toISOString()]
+        `INSERT INTO books (id, item_type, title, subtitle, arabic_title, description, isbn13, category_id, publisher_id, language, publication_year, call_number, cover_path, source, created_at, updated_at) 
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'manual', ?, ?)`,
+        [bookId, itemType, b.title, b.subtitle || null, b.arabic_title || null, b.description || null, b.isbn, categoryId, publisherId, b.lang, b.year || null, b.call_number || null, coverPath, today.toISOString(), today.toISOString()]
       );
 
       // Author

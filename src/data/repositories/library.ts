@@ -105,9 +105,10 @@ export async function dashboard(): Promise<DashboardMetrics> {
 }
 
 
-export async function books(query = ""): Promise<Book[]> {
+export async function books(query = "", itemType = ""): Promise<Book[]> {
   const db = await database();
   const term = `%${query.trim()}%`;
+  const filterType = itemType && itemType !== "All Items" && itemType !== "All" ? itemType : "";
   return db.select<Book[]>(
     `SELECT b.*, p.name publisher, c.name category, 
      (SELECT GROUP_CONCAT(a.name, ', ') FROM book_authors ba JOIN authors a ON a.id=ba.author_id WHERE ba.book_id=b.id) author,
@@ -118,15 +119,17 @@ export async function books(query = ""): Promise<Book[]> {
      LEFT JOIN publishers p ON p.id=b.publisher_id 
      LEFT JOIN categories c ON c.id=b.category_id 
      WHERE b.archived_at IS NULL 
+     AND (?='' OR b.item_type = ?)
      AND (?='' OR b.title LIKE ? OR b.arabic_title LIKE ? OR b.subtitle LIKE ? OR b.isbn13 LIKE ? OR b.isbn10 LIKE ? OR EXISTS (SELECT 1 FROM book_authors ba JOIN authors a ON a.id=ba.author_id WHERE ba.book_id=b.id AND a.name LIKE ?)) 
      ORDER BY b.title`,
-    [query.trim(), term, term, term, term, term, term]
+    [filterType, filterType, query.trim(), term, term, term, term, term, term]
   );
 }
 
 export async function saveBook(input: Omit<Book, "id" | "created_at"> & { author?: string; barcode?: string; accession?: string }): Promise<void> {
   const db = await database(); const bookId = id(); const now = timestamp();
   const title = cleanText(input.title);
+  const itemType = input.item_type ? cleanText(input.item_type) : "book";
   const subtitle = input.subtitle ? cleanText(input.subtitle) : null;
   const arabicTitle = input.arabic_title ? cleanText(input.arabic_title) : null;
   const author = input.author ? cleanText(input.author) : null;
@@ -145,7 +148,7 @@ export async function saveBook(input: Omit<Book, "id" | "created_at"> & { author
   if (publisher) { const existing = await db.select<{ id: string }[]>("SELECT id FROM publishers WHERE name=?", [publisher]); publisherId = existing[0]?.id ?? id(); if (!existing[0]) await db.execute("INSERT INTO publishers (id,name,created_at,updated_at) VALUES (?,?,?,?)", [publisherId, publisher, now, now]); }
   let categoryId: string | null = null;
   if (category) { const existing = await db.select<{ id: string }[]>("SELECT id FROM categories WHERE name=?", [category]); categoryId = existing[0]?.id ?? id(); if (!existing[0]) await db.execute("INSERT INTO categories (id,name) VALUES (?,?)", [categoryId, category]); }
-  await db.execute("INSERT INTO books (id,isbn10,isbn13,title,subtitle,arabic_title,description,language,publisher_id,category_id,call_number,cover_path,source,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", [bookId, isbn10, isbn13, title, subtitle, arabicTitle, description, language, publisherId, categoryId, callNumber, input.cover_path ?? null, "manual", now, now]);
+  await db.execute("INSERT INTO books (id,item_type,isbn10,isbn13,title,subtitle,arabic_title,description,language,publisher_id,category_id,call_number,cover_path,source,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", [bookId, itemType, isbn10, isbn13, title, subtitle, arabicTitle, description, language, publisherId, categoryId, callNumber, input.cover_path ?? null, "manual", now, now]);
   if (author) { const normalized = author.toLocaleLowerCase(); const existing = await db.select<{ id: string }[]>("SELECT id FROM authors WHERE normalized_name=?", [normalized]); const authorId = existing[0]?.id ?? id(); if (!existing[0]) await db.execute("INSERT INTO authors (id,name,normalized_name,created_at,updated_at) VALUES (?,?,?,?,?)", [authorId, author, normalized, now, now]); await db.execute("INSERT INTO book_authors (book_id,author_id,author_order) VALUES (?,?,0)", [bookId, authorId]); }
   if (barcode || accession) {
     const finalAccession = await ensureUniqueAccession(db, accession);
@@ -206,6 +209,7 @@ export async function updateBook(bookId: string, input: Partial<Book> & { author
     const fields: string[] = [];
     const params: any[] = [];
     if (input.title !== undefined) { fields.push("title = ?"); params.push(cleanText(input.title)); }
+    if (input.item_type !== undefined) { fields.push("item_type = ?"); params.push(cleanText(input.item_type)); }
     if (input.subtitle !== undefined) { fields.push("subtitle = ?"); params.push(input.subtitle ? cleanText(input.subtitle) : null); }
     if (input.arabic_title !== undefined) { fields.push("arabic_title = ?"); params.push(input.arabic_title ? cleanText(input.arabic_title) : null); }
     if (input.description !== undefined) { fields.push("description = ?"); params.push(input.description ? cleanText(input.description) : null); }
@@ -633,5 +637,36 @@ export async function deleteShelf(shelfId: string): Promise<void> {
   }
   await db.execute("DELETE FROM shelves WHERE id = ?", [shelfId]);
 }
+
+// ─── Building / Floor management ─────────────────────────────────────────────
+
+export async function renameBuilding(oldName: string, newName: string): Promise<void> {
+  if (!newName.trim()) throw new Error("Building name cannot be empty.");
+  const db = await database();
+  await db.execute("UPDATE shelves SET room = ?, updated_at = ? WHERE room = ?", [cleanText(newName), timestamp(), cleanText(oldName)]);
+}
+
+export async function deleteBuilding(name: string): Promise<void> {
+  const db = await database();
+  const rows = await db.select<{ count: number }[]>("SELECT COUNT(*) as count FROM shelves WHERE room = ?", [name]);
+  if ((rows[0]?.count ?? 0) > 0) {
+    throw new Error(`Cannot delete building "${name}" because it still has shelves. Remove all shelves first.`);
+  }
+}
+
+export async function renameFloor(room: string, oldFloor: string, newFloor: string): Promise<void> {
+  if (!newFloor.trim()) throw new Error("Floor name cannot be empty.");
+  const db = await database();
+  await db.execute("UPDATE shelves SET floor = ?, updated_at = ? WHERE room = ? AND floor = ?", [cleanText(newFloor), timestamp(), cleanText(room), cleanText(oldFloor)]);
+}
+
+export async function deleteFloor(room: string, floor: string): Promise<void> {
+  const db = await database();
+  const rows = await db.select<{ count: number }[]>("SELECT COUNT(*) as count FROM shelves WHERE room = ? AND floor = ?", [room, floor]);
+  if ((rows[0]?.count ?? 0) > 0) {
+    throw new Error(`Cannot delete floor "${floor}" because it still has shelves. Remove all shelves first.`);
+  }
+}
+
 
 
