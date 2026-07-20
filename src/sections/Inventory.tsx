@@ -3,7 +3,8 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { 
   copies, updateCopy, deleteCopy,
-  getShelves, createShelf, updateShelf, deleteShelf 
+  getShelves, createShelf, updateShelf, deleteShelf,
+  renameBuilding, deleteBuilding, renameFloor, deleteFloor
 } from "../data/repositories/library";
 import { Modal, Input, Button, StatusBadge } from "../components/ui/primitives";
 import { toast } from "sonner";
@@ -15,25 +16,13 @@ import { useUiStore } from "../store/uiStore";
 import {
   ScanLine, BookCopy, Trash2,
   ChevronLeft, ChevronRight, ChevronDown, LayoutGrid, List, Search, RefreshCw,
-  MapPin, X, Wifi, Pause, Play, Check, PlusCircle, Library, Info
+  MapPin, X, Wifi, Pause, Play, Check, PlusCircle, Library, Info,
+  Pencil, Plus, Building2, Layers, Trash
 } from "lucide-react";
 
 const invalidate = () => queryClient.invalidateQueries();
 
 // ─── Custom Icons ───
-function BookshelfIcon({ size = 13, className = "" }: { size?: number; className?: string }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
-      <rect x="4" y="3" width="16" height="18" rx="1" />
-      <path d="M4 9h16" />
-      <path d="M4 15h16" />
-      <path d="M10 3v6" />
-      <path d="M7 9v6" />
-      <path d="M15 15v6" />
-    </svg>
-  );
-}
-
 function ShelfRowIcon({ size = 12, className = "" }: { size?: number; className?: string }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -63,7 +52,7 @@ function occupancyColor(pct: number) {
 
 // ─── SVG Book Spines Visualizer ───
 // 3-row bookshelf that fills progressively left→right, top→bottom.
-function ShelfSvgVisual({ copiesList, capacity }: { copiesList: any[]; capacity: number }) {
+function ShelfSvgVisual({ copiesList, capacity, rowOrder = "asc" }: { copiesList: any[]; capacity: number; rowOrder?: "asc" | "desc" }) {
   const SPINES_PER_ROW = 9;
   const ROWS = 3;
   const TOTAL_SLOTS = SPINES_PER_ROW * ROWS;
@@ -74,7 +63,8 @@ function ShelfSvgVisual({ copiesList, capacity }: { copiesList: any[]; capacity:
   const spines = useMemo(() => {
     const result: { color: string; height: number; row: number; col: number }[] = [];
     for (let slot = 0; slot < TOTAL_SLOTS; slot++) {
-      const row = Math.floor(slot / SPINES_PER_ROW);
+      const rawRow = Math.floor(slot / SPINES_PER_ROW);
+      const row = rowOrder === "desc" ? (ROWS - 1 - rawRow) : rawRow;
       const col = slot % SPINES_PER_ROW;
       const filled = slot < filledSlots;
       let color = "#dde5e2";
@@ -98,7 +88,7 @@ function ShelfSvgVisual({ copiesList, capacity }: { copiesList: any[]; capacity:
     }
     return result;
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [copiesList, capacity, filledSlots]);
+  }, [copiesList, capacity, filledSlots, rowOrder]);
 
   // Compact SVG – fits in a small card
   const svgW = 76;
@@ -189,6 +179,7 @@ export function InventoryPage() {
   const [newBookcaseOpen, setNewBookcaseOpen] = useState(false);
   const [addShelfSection, setAddShelfSection] = useState<string | null>(null);
   const [editingShelf, setEditingShelf] = useState<any | null>(null);
+  const [manageLocationsOpen, setManageLocationsOpen] = useState(false);
 
   // Scanning session
   const [scanInitOpen, setScanInitOpen] = useState(false);
@@ -231,16 +222,23 @@ export function InventoryPage() {
     }
   }, [activeSession, sessionPaused]);
 
-  // Locations tree configuration
-  const staticTree = {
-    "Mustapha Bacha Hospital Library": {
-      "Main Building": ["Ground Floor", "First Floor", "Second Floor"],
-      "Annex Building": ["Ground Floor", "First Floor"],
-      "Archives Room": [],
-      "Storage": [],
-      "Off-site Storage": []
+  // Locations tree configuration — derived dynamically from shelves data
+  const locationTree = useMemo(() => {
+    const tree: Record<string, string[]> = {};
+    for (const s of allShelves) {
+      const room = (s.room || "Main Building").trim();
+      const floor = (s.floor || "").trim();
+      if (!tree[room]) tree[room] = [];
+      if (floor && !tree[room].includes(floor)) {
+        tree[room].push(floor);
+      }
     }
-  };
+    // Sort floors within each room
+    for (const room of Object.keys(tree)) {
+      tree[room].sort();
+    }
+    return tree;
+  }, [allShelves]);
 
   // Compile copies in real-time for parsed shelves
   const parsedShelves = useMemo(() => {
@@ -288,7 +286,7 @@ export function InventoryPage() {
       colsSet.add(s.colNumber);
     }
     
-    const sortedRowLetters = Array.from(rowsMap.keys()).sort();
+    const sortedRowLetters = Array.from(rowsMap.keys()).sort((a, b) => a.localeCompare(b));
     if (rowOrder === "desc") {
       sortedRowLetters.reverse();
     }
@@ -297,11 +295,11 @@ export function InventoryPage() {
     const columnsList = Array.from(colsSet).sort((a, b) => a - b);
     
     return {
-      rowLetters: sortedRowLetters.length > 0 ? sortedRowLetters : ["A", "B", "C", "D"],
+      rowLetters: sortedRowLetters.length > 0 ? sortedRowLetters : (rowOrder === "desc" ? ["D", "C", "B", "A"] : ["A", "B", "C", "D"]),
       columns: columnsList,
       rowsMap
     };
-  }, [filteredShelves]);
+  }, [filteredShelves, rowOrder]);
 
   // Metrics
   const counts = useMemo(() => {
@@ -555,7 +553,14 @@ export function InventoryPage() {
           <div className="bg-white dark:bg-[#1d2926] rounded-xl border border-black/5 dark:border-white/5 shadow-card p-4">
             <div className="flex items-center gap-2 mb-3 pb-2 border-b border-black/5 dark:border-white/5">
               <Library size={14} className="text-emerald" />
-              <span className="font-bold text-[11px] uppercase tracking-wider text-[#122222]/70 dark:text-white/70">Locations & floors</span>
+              <span className="font-bold text-[11px] uppercase tracking-wider text-[#122222]/70 dark:text-white/70 flex-1">Locations & floors</span>
+              <button
+                onClick={() => setManageLocationsOpen(true)}
+                title="Manage buildings & floors"
+                className="p-1 rounded-md hover:bg-black/5 dark:hover:bg-white/5 text-[#122222]/40 dark:text-white/40 hover:text-emerald transition-colors cursor-pointer"
+              >
+                <Pencil size={11} />
+              </button>
             </div>
             
             <div className="text-[12px] font-medium space-y-1">
@@ -566,70 +571,70 @@ export function InventoryPage() {
                 All locations
               </button>
               
-              {/* Nested interactive location tree */}
-              {Object.entries(staticTree).map(([rootNode, childNodes]) => (
-                <div key={rootNode} className="pl-1">
-                  <div 
-                    onClick={() => toggleNode(rootNode)}
-                    className="flex items-center gap-1.5 py-1 text-[#122222]/85 dark:text-white/85 hover:text-emerald cursor-pointer select-none"
-                  >
-                    {expandedNodes[rootNode] ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                    <Library size={13} className="text-emerald shrink-0" />
-                    <span className="font-semibold">{rootNode}</span>
-                  </div>
-                  
-                  {expandedNodes[rootNode] && (
-                    <div className="pl-4 border-l border-black/5 dark:border-white/5 space-y-1 mt-0.5">
-                      {Object.entries(childNodes).map(([room, floors]) => (
-                        <div key={room}>
-                          {floors.length > 0 ? (
-                            <>
-                              <div 
-                                onClick={() => toggleNode(room)}
-                                className="flex items-center gap-1.5 py-1 text-[#122222]/75 dark:text-white/75 hover:text-emerald cursor-pointer select-none"
-                              >
-                                {expandedNodes[room] ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-                                <BookshelfIcon size={12} className="text-[#b96f3e] shrink-0" />
-                                <span className={`font-semibold ${selectedLocation === room && !selectedFloor ? "text-emerald font-bold" : ""}`}>{room}</span>
-                              </div>
-                              {expandedNodes[room] && (
-                                <div className="pl-3 space-y-0.5 border-l border-black/5 dark:border-white/5 mt-0.5">
-                                  {floors.map(floor => (
-                                    <button
-                                      key={floor}
-                                      onClick={() => { setSelectedLocation(room); setSelectedFloor(floor); }}
-                                      className={`w-full text-left px-2 py-1.5 rounded transition-colors cursor-pointer text-[11px] flex items-center gap-1.5 ${
-                                        selectedLocation === room && selectedFloor === floor
-                                          ? "bg-[#b96f3e]/10 text-[#b96f3e] font-bold"
-                                          : "text-[#122222]/60 dark:text-white/60 hover:bg-black/5"
-                                      }`}
-                                    >
-                                      <ShelfRowIcon size={11} className={selectedLocation === room && selectedFloor === floor ? "text-[#b96f3e]" : "text-[#122222]/40 dark:text-white/40"} />
-                                      <span>{floor}</span>
-                                    </button>
-                                  ))}
-                                </div>
-                              )}
-                            </>
-                          ) : (
+              {/* Nested interactive location tree — dynamic from shelves */}
+              {Object.entries(locationTree).map(([room, floors]) => (
+                <div key={room} className="pl-1">
+                  {floors.length > 0 ? (
+                    <>
+                      <div
+                        onClick={() => toggleNode(room)}
+                        className="flex items-center gap-1.5 py-1 text-[#122222]/75 dark:text-white/75 hover:text-emerald cursor-pointer select-none"
+                      >
+                        {expandedNodes[room] ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+                        <Building2 size={12} className="text-[#b96f3e] shrink-0" />
+                        <span className={`font-semibold ${selectedLocation === room && !selectedFloor ? "text-emerald font-bold" : ""}`}>{room}</span>
+                      </div>
+                      {expandedNodes[room] && (
+                        <div className="pl-3 space-y-0.5 border-l border-black/5 dark:border-white/5 mt-0.5">
+                          <button
+                            onClick={() => { setSelectedLocation(room); setSelectedFloor(null); }}
+                            className={`w-full text-left px-2 py-1.5 rounded transition-colors cursor-pointer text-[11px] flex items-center gap-1.5 ${
+                              selectedLocation === room && !selectedFloor
+                                ? "bg-emerald/10 text-emerald font-bold"
+                                : "text-[#122222]/60 dark:text-white/60 hover:bg-black/5"
+                            }`}
+                          >
+                            <Building2 size={11} className={selectedLocation === room && !selectedFloor ? "text-emerald" : "text-[#122222]/30 dark:text-white/30"} />
+                            <span>All floors</span>
+                          </button>
+                          {floors.map(floor => (
                             <button
-                              onClick={() => { setSelectedLocation(room); setSelectedFloor(null); }}
-                              className={`w-full text-left px-2 py-1.5 rounded transition-colors text-[11px] flex items-center gap-1.5 cursor-pointer ${
-                                selectedLocation === room
-                                  ? "bg-emerald/10 text-emerald font-bold"
+                              key={floor}
+                              onClick={() => { setSelectedLocation(room); setSelectedFloor(floor); }}
+                              className={`w-full text-left px-2 py-1.5 rounded transition-colors cursor-pointer text-[11px] flex items-center gap-1.5 ${
+                                selectedLocation === room && selectedFloor === floor
+                                  ? "bg-[#b96f3e]/10 text-[#b96f3e] font-bold"
                                   : "text-[#122222]/60 dark:text-white/60 hover:bg-black/5"
                               }`}
                             >
-                              <BookshelfIcon size={12} className={selectedLocation === room ? "text-emerald" : "text-[#122222]/40 dark:text-white/40"} />
-                              <span>{room}</span>
+                              <ShelfRowIcon size={11} className={selectedLocation === room && selectedFloor === floor ? "text-[#b96f3e]" : "text-[#122222]/40 dark:text-white/40"} />
+                              <span>{floor}</span>
                             </button>
-                          )}
+                          ))}
                         </div>
-                      ))}
-                    </div>
+                      )}
+                    </>
+                  ) : (
+                    <button
+                      onClick={() => { setSelectedLocation(room); setSelectedFloor(null); }}
+                      className={`w-full text-left px-2 py-1.5 rounded transition-colors text-[11px] flex items-center gap-1.5 cursor-pointer ${
+                        selectedLocation === room
+                          ? "bg-emerald/10 text-emerald font-bold"
+                          : "text-[#122222]/60 dark:text-white/60 hover:bg-black/5"
+                      }`}
+                    >
+                      <Building2 size={12} className={selectedLocation === room ? "text-emerald" : "text-[#122222]/40 dark:text-white/40"} />
+                      <span>{room}</span>
+                    </button>
                   )}
                 </div>
               ))}
+
+              {Object.keys(locationTree).length === 0 && (
+                <p className="text-[11px] text-[#122222]/40 dark:text-white/40 italic px-2 py-1">
+                  No locations yet. Add shelves to populate.
+                </p>
+              )}
             </div>
           </div>
 
@@ -701,10 +706,10 @@ export function InventoryPage() {
               <button
                 onClick={() => setRowOrder(prev => prev === "asc" ? "desc" : "asc")}
                 className="bg-[#fcfcfc] dark:bg-[#111d1a] border border-black/8 rounded-lg py-2 px-3 text-[12px] outline-none cursor-pointer hover:bg-black/5 flex items-center gap-1.5 font-bold text-[#122222]/70 dark:text-white/70"
-                title={rowOrder === "asc" ? "Show from Bottom to Top" : "Show from Top to Bottom"}
+                title={rowOrder === "asc" ? "Top → Bottom: Row A is the top row" : "Bottom → Top: Row A is the bottom row"}
               >
                 <span>Rows:</span>
-                <span className="text-[#b96f3e]">{rowOrder === "asc" ? "Top → Bottom" : "Bottom → Top"}</span>
+                <span className="text-[#b96f3e]">{rowOrder === "asc" ? "Top → Bottom (A is Top Row)" : "Bottom → Top (A is Bottom Row)"}</span>
               </button>
             )}
             
@@ -793,7 +798,7 @@ export function InventoryPage() {
                               
                               {/* SVG Book Spines */}
                               <div className="w-full">
-                                <ShelfSvgVisual copiesList={shelf.copiesList} capacity={shelf.capacity} />
+                                <ShelfSvgVisual copiesList={shelf.copiesList} capacity={shelf.capacity} rowOrder={rowOrder} />
                               </div>
                               
                               {/* Shelf Code */}
@@ -1377,6 +1382,15 @@ export function InventoryPage() {
         </Modal>
       )}
 
+      {/* Manage Locations Modal */}
+      {manageLocationsOpen && (
+        <ManageLocationsModal
+          onClose={() => setManageLocationsOpen(false)}
+          onRefresh={() => shelvesQuery.refetch()}
+          locationTree={locationTree}
+        />
+      )}
+
       {/* Bulk select bar */}
       {selectedIds.length > 0 && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-white/95 dark:bg-[#1d2926]/95 backdrop-blur-md px-6 py-3 rounded-full border border-black/10 shadow-lg flex items-center gap-5 z-50">
@@ -1517,6 +1531,301 @@ function CopyEditModal({ copy, onClose, shelves }: { copy: Copy & { title: strin
           <Button type="submit" disabled={mutation.isPending}>Save Changes</Button>
         </div>
       </form>
+    </Modal>
+  );
+}
+
+// ─── Manage Locations Modal ───────────────────────────────────────────────────
+function ManageLocationsModal({
+  onClose,
+  onRefresh,
+  locationTree,
+}: {
+  onClose: () => void;
+  onRefresh: () => void;
+  locationTree: Record<string, string[]>;
+}) {
+  const [selectedBuilding, setSelectedBuilding] = useState<string | null>(
+    Object.keys(locationTree)[0] ?? null
+  );
+
+  // Building state
+  const [editingBuilding, setEditingBuilding] = useState<string | null>(null);
+  const [buildingInput, setBuildingInput] = useState("");
+  const [newBuildingInput, setNewBuildingInput] = useState("");
+  const [addingBuilding, setAddingBuilding] = useState(false);
+
+  // Floor state
+  const [editingFloor, setEditingFloor] = useState<string | null>(null);
+  const [floorInput, setFloorInput] = useState("");
+  const [newFloorInput, setNewFloorInput] = useState("");
+  const [addingFloor, setAddingFloor] = useState(false);
+
+  // ── Building mutations ──
+  const renameBuildingMutation = useMutation({
+    mutationFn: ({ oldName, newName }: { oldName: string; newName: string }) =>
+      renameBuilding(oldName, newName),
+    onSuccess: (_, { newName }) => {
+      toast.success("Building renamed.");
+      setEditingBuilding(null);
+      setSelectedBuilding(newName);
+      onRefresh();
+    },
+    onError: (err: any) => toast.error(err.message),
+  });
+
+  const deleteBuildingMutation = useMutation({
+    mutationFn: (name: string) => deleteBuilding(name),
+    onSuccess: () => {
+      toast.success("Building removed.");
+      setSelectedBuilding(null);
+      onRefresh();
+    },
+    onError: (err: any) => toast.error(err.message),
+  });
+
+  // ── Floor mutations ──
+  const renameFloorMutation = useMutation({
+    mutationFn: ({ room, oldFloor, newFloor }: { room: string; oldFloor: string; newFloor: string }) =>
+      renameFloor(room, oldFloor, newFloor),
+    onSuccess: () => {
+      toast.success("Floor renamed.");
+      setEditingFloor(null);
+      onRefresh();
+    },
+    onError: (err: any) => toast.error(err.message),
+  });
+
+  const deleteFloorMutation = useMutation({
+    mutationFn: ({ room, floor }: { room: string; floor: string }) =>
+      deleteFloor(room, floor),
+    onSuccess: () => {
+      toast.success("Floor removed.");
+      onRefresh();
+    },
+    onError: (err: any) => toast.error(err.message),
+  });
+
+  const buildings = Object.keys(locationTree);
+  const floors = selectedBuilding ? (locationTree[selectedBuilding] ?? []) : [];
+
+  return (
+    <Modal isOpen={true} onClose={onClose} title="Manage Buildings & Floors">
+      <div className="flex gap-4 min-h-[320px] text-[13px]">
+
+        {/* ── Buildings panel ── */}
+        <div className="w-52 shrink-0 border-r border-black/5 dark:border-white/5 pr-4 flex flex-col">
+          <div className="flex items-center gap-2 mb-3">
+            <Building2 size={13} className="text-[#b96f3e]" />
+            <span className="font-bold text-[11px] uppercase tracking-wider text-[#122222]/60 dark:text-white/60 flex-1">Buildings</span>
+            <button
+              onClick={() => { setAddingBuilding(true); setNewBuildingInput(""); }}
+              className="p-1 rounded hover:bg-black/5 text-emerald cursor-pointer"
+              title="Add building"
+            >
+              <Plus size={13} />
+            </button>
+          </div>
+
+          <div className="flex-1 space-y-1 overflow-y-auto">
+            {buildings.map(building => (
+              <div
+                key={building}
+                className={`group flex items-center gap-1.5 px-2 py-1.5 rounded-lg cursor-pointer transition-colors ${
+                  selectedBuilding === building
+                    ? "bg-emerald/10 text-emerald"
+                    : "text-[#122222]/70 dark:text-white/70 hover:bg-black/5"
+                }`}
+                onClick={() => { setSelectedBuilding(building); setEditingBuilding(null); setEditingFloor(null); }}
+              >
+                {editingBuilding === building ? (
+                  <form
+                    onSubmit={e => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      if (buildingInput.trim()) {
+                        renameBuildingMutation.mutate({ oldName: building, newName: buildingInput.trim() });
+                      }
+                    }}
+                    className="flex items-center gap-1 flex-1"
+                    onClick={e => e.stopPropagation()}
+                  >
+                    <input
+                      autoFocus
+                      value={buildingInput}
+                      onChange={e => setBuildingInput(e.target.value)}
+                      className="flex-1 bg-white dark:bg-[#111d1a] border border-emerald rounded px-2 py-0.5 text-[12px] outline-none min-w-0"
+                      onKeyDown={e => e.key === "Escape" && setEditingBuilding(null)}
+                    />
+                    <button type="submit" className="text-emerald hover:text-emerald/70 cursor-pointer"><Check size={12} /></button>
+                    <button type="button" onClick={() => setEditingBuilding(null)} className="text-[#122222]/40 hover:text-red-500 cursor-pointer"><X size={12} /></button>
+                  </form>
+                ) : (
+                  <>
+                    <span className="flex-1 truncate text-[12px] font-medium">{building}</span>
+                    <button
+                      onClick={e => { e.stopPropagation(); setEditingBuilding(building); setBuildingInput(building); }}
+                      className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-black/10 text-[#122222]/50 dark:text-white/50 transition-opacity cursor-pointer"
+                    >
+                      <Pencil size={10} />
+                    </button>
+                    <button
+                      onClick={e => {
+                        e.stopPropagation();
+                        if (confirm(`Delete building "${building}"? This only works if it has no shelves.`)) {
+                          deleteBuildingMutation.mutate(building);
+                        }
+                      }}
+                      className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-red-50 text-[#122222]/50 dark:text-white/50 hover:text-red-500 transition-opacity cursor-pointer"
+                    >
+                      <Trash size={10} />
+                    </button>
+                  </>
+                )}
+              </div>
+            ))}
+
+            {buildings.length === 0 && (
+              <p className="text-[11px] text-[#122222]/40 dark:text-white/40 italic px-1 py-2">No buildings yet.</p>
+            )}
+
+            {addingBuilding && (
+              <form
+                onSubmit={e => {
+                  e.preventDefault();
+                  if (!newBuildingInput.trim()) return;
+                  // Buildings without shelves don't need a DB call — just a reminder
+                  toast.info(`Building "${newBuildingInput.trim()}" added. Assign shelves to it when creating new bookcases.`);
+                  setAddingBuilding(false);
+                  setNewBuildingInput("");
+                }}
+                className="flex items-center gap-1 px-2 py-1"
+              >
+                <input
+                  autoFocus
+                  placeholder="Building name…"
+                  value={newBuildingInput}
+                  onChange={e => setNewBuildingInput(e.target.value)}
+                  className="flex-1 bg-white dark:bg-[#111d1a] border border-emerald rounded px-2 py-0.5 text-[12px] outline-none min-w-0"
+                  onKeyDown={e => e.key === "Escape" && setAddingBuilding(false)}
+                />
+                <button type="submit" className="text-emerald cursor-pointer"><Check size={12} /></button>
+                <button type="button" onClick={() => setAddingBuilding(false)} className="text-[#122222]/40 cursor-pointer"><X size={12} /></button>
+              </form>
+            )}
+          </div>
+        </div>
+
+        {/* ── Floors panel ── */}
+        <div className="flex-1 flex flex-col">
+          {selectedBuilding ? (
+            <>
+              <div className="flex items-center gap-2 mb-3">
+                <Layers size={13} className="text-[#b96f3e]" />
+                <span className="font-bold text-[11px] uppercase tracking-wider text-[#122222]/60 dark:text-white/60 flex-1">
+                  Floors — {selectedBuilding}
+                </span>
+                <button
+                  onClick={() => { setAddingFloor(true); setNewFloorInput(""); }}
+                  className="p-1 rounded hover:bg-black/5 text-emerald cursor-pointer"
+                  title="Add floor"
+                >
+                  <Plus size={13} />
+                </button>
+              </div>
+
+              <div className="flex-1 space-y-1 overflow-y-auto">
+                {floors.map(floor => (
+                  <div key={floor} className="group flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-black/5 transition-colors">
+                    {editingFloor === floor ? (
+                      <form
+                        onSubmit={e => {
+                          e.preventDefault();
+                          if (floorInput.trim() && selectedBuilding) {
+                            renameFloorMutation.mutate({ room: selectedBuilding, oldFloor: floor, newFloor: floorInput.trim() });
+                          }
+                        }}
+                        className="flex items-center gap-1 flex-1"
+                      >
+                        <input
+                          autoFocus
+                          value={floorInput}
+                          onChange={e => setFloorInput(e.target.value)}
+                          className="flex-1 bg-white dark:bg-[#111d1a] border border-emerald rounded px-2 py-0.5 text-[12px] outline-none"
+                          onKeyDown={e => e.key === "Escape" && setEditingFloor(null)}
+                        />
+                        <button type="submit" className="text-emerald cursor-pointer"><Check size={12} /></button>
+                        <button type="button" onClick={() => setEditingFloor(null)} className="text-[#122222]/40 cursor-pointer"><X size={12} /></button>
+                      </form>
+                    ) : (
+                      <>
+                        <ShelfRowIcon size={12} className="text-[#122222]/40 dark:text-white/40 shrink-0" />
+                        <span className="flex-1 text-[12px] text-[#122222]/80 dark:text-white/80">{floor}</span>
+                        <button
+                          onClick={() => { setEditingFloor(floor); setFloorInput(floor); }}
+                          className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-black/10 text-[#122222]/50 dark:text-white/50 transition-opacity cursor-pointer"
+                        >
+                          <Pencil size={10} />
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (confirm(`Delete floor "${floor}" from ${selectedBuilding}? This only works if it has no shelves.`)) {
+                              deleteFloorMutation.mutate({ room: selectedBuilding!, floor });
+                            }
+                          }}
+                          className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-red-50 text-[#122222]/50 hover:text-red-500 transition-opacity cursor-pointer"
+                        >
+                          <Trash size={10} />
+                        </button>
+                      </>
+                    )}
+                  </div>
+                ))}
+
+                {floors.length === 0 && !addingFloor && (
+                  <p className="text-[11px] text-[#122222]/40 dark:text-white/40 italic px-1 py-2">
+                    No floors assigned yet. Add a floor below.
+                  </p>
+                )}
+
+                {addingFloor && (
+                  <form
+                    onSubmit={e => {
+                      e.preventDefault();
+                      if (!newFloorInput.trim()) return;
+                      toast.info(`Floor "${newFloorInput.trim()}" added. Assign shelves to it when creating new bookcases.`);
+                      setAddingFloor(false);
+                      setNewFloorInput("");
+                    }}
+                    className="flex items-center gap-1 px-2 py-1"
+                  >
+                    <input
+                      autoFocus
+                      placeholder="Floor name… (e.g. Ground Floor)"
+                      value={newFloorInput}
+                      onChange={e => setNewFloorInput(e.target.value)}
+                      className="flex-1 bg-white dark:bg-[#111d1a] border border-emerald rounded px-2 py-0.5 text-[12px] outline-none"
+                      onKeyDown={e => e.key === "Escape" && setAddingFloor(false)}
+                    />
+                    <button type="submit" className="text-emerald cursor-pointer"><Check size={12} /></button>
+                    <button type="button" onClick={() => setAddingFloor(false)} className="text-[#122222]/40 cursor-pointer"><X size={12} /></button>
+                  </form>
+                )}
+              </div>
+            </>
+          ) : (
+            <div className="flex-1 flex flex-col items-center justify-center text-[#122222]/30 dark:text-white/30 gap-2">
+              <Building2 size={28} className="opacity-40" />
+              <p className="text-[12px]">Select a building to manage its floors</p>
+            </div>
+          )}
+        </div>
+
+      </div>
+
+      <div className="flex justify-end pt-4 mt-2 border-t border-black/5">
+        <Button variant="ghost" onClick={onClose}>Close</Button>
+      </div>
     </Modal>
   );
 }

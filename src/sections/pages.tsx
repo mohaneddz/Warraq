@@ -16,7 +16,7 @@ import {
   reservations, returnCopies, saveBook, saveMember, updateBook, 
   deleteBook, getCopiesForBook, addCopy, updateCopy, deleteCopy, 
   updateMember, deleteMember, getLoansForMember, getReservationsForMember, 
-  renewLoan, cancelReservation, addReservation
+  renewLoan, cancelReservation
 } from "../data/repositories/library";
 import { seedDummyData } from "../data/seed";
 import { queryClient } from "../app/providers";
@@ -398,7 +398,7 @@ export function CatalogPage() {
 
 // Book Details Modal Component
 function BookDetailsModal({ book, onClose }: { book: Book; onClose: () => void }) {
-  const [activeTab, setActiveTab] = useState<"details" | "copies" | "reserve">("details");
+  const [activeTab, setActiveTab] = useState<"details" | "copies">("details");
   const [isEditing, setIsEditing] = useState(false);
   const [addCopyOpen, setAddCopyOpen] = useState(false);
 
@@ -407,7 +407,7 @@ function BookDetailsModal({ book, onClose }: { book: Book; onClose: () => void }
     queryKey: ["book-copies", book.id],
     queryFn: () => getCopiesForBook(book.id)
   });
-  const membersQuery = useQuery({ queryKey: ["members-all"], queryFn: () => members() });
+
 
   // Book edit form
   const editForm = useForm({
@@ -429,8 +429,7 @@ function BookDetailsModal({ book, onClose }: { book: Book; onClose: () => void }
     defaultValues: { barcode: "", accession: "", condition: "good", shelf: "" }
   });
 
-  // Reservation form
-  const [reservingMemberId, setReservingMemberId] = useState("");
+
 
   // Mutations
   const updateBookMutation = useMutation({
@@ -490,15 +489,7 @@ function BookDetailsModal({ book, onClose }: { book: Book; onClose: () => void }
     onError: (err: any) => toast.error(err.message)
   });
 
-  const reserveMutation = useMutation({
-    mutationFn: () => addReservation(book.id, reservingMemberId),
-    onSuccess: () => {
-      toast.success("Reservation placed.");
-      setReservingMemberId("");
-      invalidate();
-    },
-    onError: (err: any) => toast.error(err.message)
-  });
+
 
   return (
     <Modal isOpen={true} onClose={onClose} title={book.title}>
@@ -514,12 +505,6 @@ function BookDetailsModal({ book, onClose }: { book: Book; onClose: () => void }
           className={cn("px-4 py-2 text-sm font-semibold border-b-2 transition-all", activeTab === "copies" ? "border-emerald text-emerald" : "border-transparent text-ink/60 dark:text-parchment/60")}
         >
           Copies ({copiesList?.length ?? 0})
-        </button>
-        <button 
-          onClick={() => setActiveTab("reserve")} 
-          className={cn("px-4 py-2 text-sm font-semibold border-b-2 transition-all", activeTab === "reserve" ? "border-emerald text-emerald" : "border-transparent text-ink/60 dark:text-parchment/60")}
-        >
-          Reserve Book
         </button>
       </div>
 
@@ -674,34 +659,7 @@ function BookDetailsModal({ book, onClose }: { book: Book; onClose: () => void }
         </div>
       )}
 
-      {activeTab === "reserve" && (
-        <div className="space-y-4">
-          <div>
-            <h4 className="text-sm font-bold text-ink/75 dark:text-parchment/75">Create a Reservation</h4>
-            <p className="text-xs text-ink/50 dark:text-parchment/50 mt-0.5">Place a reservation on behalf of a library member.</p>
-          </div>
-          <div className="space-y-3">
-            <label>Member
-              <SearchableSelect
-                options={membersQuery.data?.filter(m => m.status === "active") || []}
-                labelKey="full_name"
-                valueKey="id"
-                subLabelKey="member_number"
-                placeholder="Search member..."
-                value={reservingMemberId}
-                onChange={setReservingMemberId}
-              />
-            </label>
-            <Button 
-              className="w-full" 
-              disabled={!reservingMemberId || reserveMutation.isPending}
-              onClick={() => reserveMutation.mutate()}
-            >
-              Confirm Reservation
-            </Button>
-          </div>
-        </div>
-      )}
+
     </Modal>
   );
 }
