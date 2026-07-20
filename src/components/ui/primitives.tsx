@@ -1,4 +1,5 @@
 import type { ButtonHTMLAttributes, InputHTMLAttributes, PropsWithChildren } from "react";
+import { createPortal } from "react-dom";
 import { cn } from "../../utils/cn";
 import { X } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -52,9 +53,9 @@ interface ModalProps {
 export function Modal({ isOpen, onClose, title, children }: ModalProps) {
   const { t } = useTranslation();
   if (!isOpen) return null;
-  return (
+  return createPortal(
     <div 
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-all duration-200"
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md transition-all duration-200"
       onClick={onClose}
     >
       <div 
@@ -65,7 +66,7 @@ export function Modal({ isOpen, onClose, title, children }: ModalProps) {
           <h3 className="font-display text-lg font-bold">{title}</h3>
           <button 
             onClick={onClose} 
-            className="p-1.5 rounded-control text-ink/60 hover:bg-ink/5 dark:text-parchment/60 dark:hover:bg-parchment/5 transition" 
+            className="p-1.5 rounded-control text-ink/60 hover:bg-ink/5 dark:text-parchment/60 dark:hover:bg-parchment/5 transition cursor-pointer" 
             aria-label={t("common.closeDialog") || "Close dialog"}
           >
             <X size={18} />
@@ -75,6 +76,7 @@ export function Modal({ isOpen, onClose, title, children }: ModalProps) {
           {children}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

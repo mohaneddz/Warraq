@@ -190,6 +190,13 @@ export function AppShell() {
     const handler = (event: KeyboardEvent) => { 
       const target = event.target as HTMLElement | null; 
       const typing = event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement || Boolean(target?.isContentEditable); 
+      
+      // Ctrl + Shift + S: Collapse / uncollapse sidebar
+      if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key.toLowerCase() === "s") {
+        event.preventDefault();
+        toggleSidebar();
+      }
+
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") { 
         event.preventDefault(); 
         setPaletteOpen(true); 
@@ -202,7 +209,7 @@ export function AppShell() {
     }; 
     window.addEventListener("keydown", handler); 
     return () => window.removeEventListener("keydown", handler); 
-  }, [navigate, setPaletteOpen]);
+  }, [navigate, setPaletteOpen, toggleSidebar]);
 
   const windowAction = (action: "minimize" | "toggleMaximize" | "close") => { 
     void import("@tauri-apps/api/window").then(({ getCurrentWindow }) => getCurrentWindow()[action]()); 

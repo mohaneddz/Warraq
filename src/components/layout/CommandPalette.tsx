@@ -1,4 +1,5 @@
 import { Command } from "cmdk";
+import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import { useUiStore } from "../../store/uiStore";
 import { useTranslation } from "react-i18next";
@@ -84,7 +85,7 @@ export function CommandPalette() {
     { label: t("commandPalette.actions.secrets"), subtitle: t("commandPalette.actions.secretsSub"), route: "/settings?tab=secrets", icon: Shield }
   ];
 
-  return (
+  return createPortal(
     <div 
       className="fixed inset-0 z-50 flex justify-center items-start bg-[#122222]/60 dark:bg-black/75 pt-[18vh] backdrop-blur-sm transition-all"
       onMouseDown={() => setPaletteOpen(false)}
@@ -132,7 +133,7 @@ export function CommandPalette() {
         </Command.List>
 
       </Command>
-    </div>
+    </div>,
+    document.body
   );
 }
-
