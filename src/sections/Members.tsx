@@ -6,7 +6,7 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { 
   Plus, Search, ChevronLeft, ChevronRight, X, 
-  Trash2, IdCard, Building, Phone, Edit2
+  Trash2, IdCard, Phone, Edit2
 } from "lucide-react";
 import { 
   members, saveMember, updateMember, deleteMember, getLoansForMember, 
@@ -309,63 +309,74 @@ export function MembersPage() {
                     <div 
                       key={member.id} 
                       onClick={() => setSelectedMember(member)}
-                      className={`relative flex flex-col p-5 bg-white dark:bg-[#1d2926] border rounded-2xl shadow-card transition-all duration-300 cursor-pointer ${
+                      className={`relative flex flex-col items-center p-5 pt-12 mt-10 bg-white dark:bg-[#1d2926] border rounded-2xl shadow-card transition-all duration-300 cursor-pointer ${
                         selectedIds.includes(member.id)
                           ? 'border-emerald dark:border-emerald-light ring-2 ring-emerald dark:ring-emerald-light bg-emerald/5 dark:bg-emerald/10'
                           : selectedMember?.id === member.id
                             ? 'border-emerald/50 dark:border-emerald-light/50 ring-1 ring-emerald/30 dark:ring-emerald-light/30 bg-[#122222]/5 dark:bg-white/5'
-                            : 'border-black/5 dark:border-white/5 hover:border-black/15 dark:hover:border-white/15 hover:shadow-md hover:-translate-y-0.5'
+                            : 'border-black/5 dark:border-white/5 hover:border-black/15 dark:hover:border-white/15 hover:shadow-md hover:-translate-y-1'
                       }`}
                     >
-                      {/* Header: Checkbox & Status */}
-                      <div className="flex justify-between items-start mb-4">
+                      {/* Checkbox (Top Left) */}
+                      <div className="absolute top-4 left-4 z-10" onClick={(e) => e.stopPropagation()}>
                         <input 
                           type="checkbox" 
                           checked={selectedIds.includes(member.id)} 
                           onChange={(e) => {
-                            e.stopPropagation();
                             if (e.target.checked) {
                               setSelectedIds(prev => [...prev, member.id]);
                             } else {
                               setSelectedIds(prev => prev.filter(id => id !== member.id));
                             }
                           }}
-                          className="mt-0.5 cursor-pointer rounded border-black/25 dark:border-white/25 text-emerald focus:ring-emerald h-4 w-4"
+                          className="cursor-pointer rounded border-black/25 dark:border-white/25 text-emerald focus:ring-emerald h-4 w-4"
                         />
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${
-                          member.status === 'active' 
-                            ? 'bg-emerald-500/10 text-emerald-600' 
-                            : 'bg-red-500/10 text-red-500'
-                        }`}>
-                          {t("members." + member.status)}
-                        </span>
                       </div>
 
-                      {/* Profile details */}
-                      <div className="flex items-center gap-3 mb-4">
+                      {/* Status Badge (Top Right) */}
+                      <span className={`absolute top-4 right-4 z-10 text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${
+                        member.status === 'active' 
+                          ? 'bg-emerald-500/10 text-emerald-600' 
+                          : 'bg-red-500/10 text-red-500'
+                      }`}>
+                        {t("members." + member.status)}
+                      </span>
+
+                      {/* Circular Avatar Container (overlapping top edge by half) */}
+                      <div className="absolute -top-10 left-1/2 -translate-x-1/2 w-20 h-20 rounded-full border-4 border-white dark:border-[#1d2926] shadow-md overflow-hidden bg-white dark:bg-[#1d2926] shrink-0 z-10 flex items-center justify-center">
                         {member.avatar_path ? (
-                          <img src={member.avatar_path} alt="" className="h-10 w-10 rounded-full object-cover shrink-0" />
+                          <img src={member.avatar_path} alt="" className="w-full h-full object-cover" />
                         ) : (
-                          <div className="h-10 w-10 rounded-full bg-emerald text-white flex items-center justify-center text-[12px] font-bold shrink-0">
-                            {initials}
+                          <div className="absolute inset-0 bg-emerald dark:bg-emerald-light text-white flex flex-col items-center justify-center p-2">
+                            <span className="text-[18px] font-display font-bold tracking-wider drop-shadow-sm">
+                              {initials}
+                            </span>
                           </div>
                         )}
-                        <div className="min-w-0">
-                          <h3 className="font-bold text-[14px] text-[#122222] dark:text-white truncate leading-snug">{member.full_name}</h3>
-                          <p className="text-[11px] text-[#122222]/50 dark:text-white/50 truncate font-mono mt-0.5">{member.member_number}</p>
-                        </div>
                       </div>
 
-                      {/* Bio Details */}
-                      <div className="space-y-2 mt-auto text-[12px] text-[#122222]/60 dark:text-white/60">
-                        <div className="flex items-center gap-2">
-                          <Building size={14} className="text-[#122222]/30 dark:text-white/30" />
-                          <span className="truncate">{member.role} • {member.department || "No Department"}</span>
+                      {/* Member Info */}
+                      <h3 className="font-bold text-[14px] text-[#122222] dark:text-white text-center leading-snug mt-2 truncate w-full">
+                        {member.full_name}
+                      </h3>
+                      
+                      <span className="inline-block font-mono text-[10px] font-bold text-emerald dark:text-[#1b9277] bg-emerald/5 dark:bg-emerald-light/10 border border-emerald/10 dark:border-emerald-light/10 px-2 py-0.5 rounded-md mt-1.5 shrink-0">
+                        {member.member_number}
+                      </span>
+
+                      <div className="w-full border-t border-dashed border-black/5 dark:border-white/5 my-3 shrink-0" />
+
+                      <div className="space-y-1 w-full text-center text-[12px] text-[#122222]/60 dark:text-white/60 shrink-0">
+                        <div className="font-semibold text-ink dark:text-parchment truncate w-full px-1">
+                          {member.role}
+                        </div>
+                        <div className="text-[11px] opacity-75 truncate w-full px-1">
+                          {member.department || t("members.noDepartment") || "No Department"}
                         </div>
                         {member.phone && (
-                          <div className="flex items-center gap-2">
-                            <Phone size={14} className="text-[#122222]/30 dark:text-white/30" />
-                            <span className="font-mono text-[11px]">{member.phone}</span>
+                          <div className="flex items-center justify-center gap-1 text-[10px] font-mono opacity-60 pt-1">
+                            <Phone size={10} className="shrink-0" />
+                            <span className="truncate">{member.phone}</span>
                           </div>
                         )}
                       </div>

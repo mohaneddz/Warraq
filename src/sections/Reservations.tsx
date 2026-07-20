@@ -138,10 +138,10 @@ export function ReservationsPage() {
                       />
                     </td>
                     <td className="px-6 py-3 font-semibold text-[#122222] dark:text-white">
-                      {res.title || "—"}
+                      <div className="line-clamp-2" title={res.title || ""}>{res.title || "—"}</div>
                     </td>
                     <td className="px-6 py-3 text-[#122222]/70 dark:text-white/70">
-                      {res.member_name || "—"}
+                      <div className="line-clamp-2" title={res.member_name || ""}>{res.member_name || "—"}</div>
                     </td>
                     <td className="px-6 py-3 text-[#122222]/70 dark:text-white/70">
                       <div className="flex items-center gap-2">

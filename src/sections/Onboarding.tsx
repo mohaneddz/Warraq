@@ -33,8 +33,11 @@ export function OnboardingPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#F9F8F4] dark:bg-[#111d1a] px-4 py-8">
-      <div className="max-w-2xl w-full bg-white dark:bg-[#1d2926] p-8 md:p-10 rounded-2xl border border-black/5 dark:border-white/5 shadow-card flex flex-col">
+    <div className="flex min-h-screen items-center justify-center bg-[#F9F8F4] dark:bg-[#111d1a] px-4 py-8 relative overflow-hidden">
+      {/* Subtle paper grain texture overlay */}
+      <div className="bg-paper-texture-overlay" />
+
+      <div className="max-w-2xl w-full bg-white dark:bg-[#1d2926] p-8 md:p-10 rounded-2xl border border-black/5 dark:border-white/5 shadow-card flex flex-col relative z-10">
         {/* Brand */}
         <div className="flex items-center gap-3 mb-8 pb-6 border-b border-black/5 dark:border-white/5">
           <div className="w-12 h-12 bg-emerald rounded-xl flex items-center justify-center shadow-inner">

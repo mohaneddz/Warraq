@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { 
   ArrowRight, BookOpen, Clock3, AlertTriangle, Bookmark, 
-  ScanLine, RotateCcw, RotateCw, BookCopy, UsersRound
+  ScanLine, BookCopy, UsersRound, Warehouse, CalendarClock, RotateCcw
 } from "lucide-react";
 import { dashboard, reservations } from "../data/repositories/library";
 import { daysLate, formatDisplayDate } from "../utils/dates";
@@ -150,14 +150,14 @@ export function DashboardPage() {
           title={t("dashboard.recentBorrowings")} 
           subtitle={t("dashboard.latestTransactions")} 
           actionText={t("dashboard.viewAll")} 
-          onActionClick={() => navigate("/circulation")}
+          onActionClick={() => navigate("/members")}
           className="xl:col-span-1"
         >
           <div className="flex flex-col flex-1 min-h-0">
             <div className="flex-1 overflow-auto space-y-4 pr-2 no-scrollbar">
               {metrics.recentLoans.length ? (
                 metrics.recentLoans.map((loan) => (
-                  <div key={loan.id} className="flex gap-3 items-center group cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 p-2 -mx-2 rounded-lg transition-colors" onClick={() => navigate("/circulation")}>
+                  <div key={loan.id} className="flex gap-3 items-center group cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 p-2 -mx-2 rounded-lg transition-colors" onClick={() => navigate("/members")}>
                     <div className="w-10 h-14 bg-white dark:bg-[#1d2926] shadow-sm rounded flex items-center justify-center border border-black/5 dark:border-white/5 shrink-0 overflow-hidden">
                       <div className="w-full h-full bg-[#f4ebdd] opacity-50 relative flex items-center justify-center">
                         <BookOpen size={16} className="text-emerald/40" />
@@ -181,7 +181,7 @@ export function DashboardPage() {
                 </div>
               )}
             </div>
-            <div className="mt-4 pt-4 border-t border-black/5 dark:border-white/5 flex justify-between items-center cursor-pointer" onClick={() => navigate("/circulation")}>
+            <div className="mt-4 pt-4 border-t border-black/5 dark:border-white/5 flex justify-between items-center cursor-pointer" onClick={() => navigate("/members")}>
               <span className="text-[12px] text-[#122222]/60 dark:text-white/60 font-medium">{t("dashboard.metrics.activeLoans")}: {metrics.onLoan.toLocaleString(prefs.locale)}</span>
               <ArrowRight size={16} className="text-emerald" />
             </div>
@@ -193,7 +193,7 @@ export function DashboardPage() {
           title={t("dashboard.overdueQueue")} 
           subtitle={t("dashboard.itemsOverdue", { count: metrics.overdue })} 
           actionText={t("dashboard.viewAll")} 
-          onActionClick={() => navigate("/circulation")}
+          onActionClick={() => navigate("/members")}
           className="xl:col-span-1"
         >
            <div className="flex flex-col flex-1 min-h-0">
@@ -207,7 +207,7 @@ export function DashboardPage() {
                     : 0;
 
                   return (
-                    <div key={loan.id} className="flex gap-3 items-center group cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 p-2 -mx-2 rounded-lg transition-colors" onClick={() => navigate("/circulation")}>
+                    <div key={loan.id} className="flex gap-3 items-center group cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 p-2 -mx-2 rounded-lg transition-colors" onClick={() => navigate("/members")}>
                       <div className="w-10 h-14 bg-[#122222] rounded shadow-sm border border-black/10 shrink-0 overflow-hidden relative flex items-center justify-center">
                         <BookOpen size={16} className="text-white/30" />
                         <div className="absolute left-1 top-0 bottom-0 w-[2px] bg-white/10" />
@@ -236,7 +236,7 @@ export function DashboardPage() {
                 </div>
               )}
             </div>
-            <div className="mt-4 pt-4 border-t border-black/5 dark:border-white/5 flex justify-between items-center text-emerald dark:text-emerald-light font-semibold text-[13px] cursor-pointer" onClick={() => navigate("/circulation")}>
+            <div className="mt-4 pt-4 border-t border-black/5 dark:border-white/5 flex justify-between items-center text-emerald dark:text-emerald-light font-semibold text-[13px] cursor-pointer" onClick={() => navigate("/members")}>
               {t("dashboard.manageOverdue")}
               <ArrowRight size={16} />
             </div>
@@ -323,11 +323,11 @@ export function DashboardPage() {
           <div className="flex-1 bg-white dark:bg-[#1d2926] rounded-2xl p-5 shadow-card border border-black/5 dark:border-white/5 flex flex-col">
             <h3 className="font-bold text-[14px] text-[#122222] dark:text-white mb-4">{t("dashboard.quickActions")}</h3>
             <div className="grid grid-cols-2 gap-3 flex-1">
-              <ActionCard icon={<ScanLine size={20}/>} title={t("dashboard.scanIsbn")} subtitle={t("dashboard.addBook")} onClick={() => navigate("/catalog")} />
-              <ActionCard icon={<ArrowRight className="-rotate-45" size={20}/>} title={t("dashboard.checkout")} subtitle={t("dashboard.issueMember")} onClick={() => navigate("/circulation")} />
-              <ActionCard icon={<RotateCcw size={20}/>} title={t("dashboard.return")} subtitle={t("dashboard.checkIn")} onClick={() => navigate("/circulation")} />
-              <ActionCard icon={<RotateCw size={20}/>} title={t("dashboard.renew")} subtitle={t("dashboard.extendLoan")} onClick={() => navigate("/circulation")} />
-        </div>
+              <ActionCard icon={<ScanLine size={20}/>} title={t("dashboard.scanIsbn") || "Scan ISBN"} subtitle={t("dashboard.addBook") || "Add new book"} onClick={() => navigate("/catalog")} />
+              <ActionCard icon={<UsersRound size={20}/>} title="Add Member" subtitle="Create library profile" onClick={() => navigate("/members")} />
+              <ActionCard icon={<Warehouse size={20}/>} title="Inventory" subtitle="Manage shelf layout" onClick={() => navigate("/inventory")} />
+              <ActionCard icon={<CalendarClock size={20}/>} title="Reservations" subtitle="Check book queue" onClick={() => navigate("/reservations")} />
+            </div>
       </div>
     </div>
   </div>
