@@ -201,7 +201,7 @@ export function DashboardPage() {
               <span>No active loans yet.</span>
             </div>
           )}
-          <button className="panel-link" onClick={() => location.assign("#/circulation")}>
+          <button className="panel-link" onClick={() => location.assign("#/members")}>
             View circulation <ArrowRight size={16}/>
           </button>
         </Card>
@@ -232,7 +232,7 @@ export function DashboardPage() {
               <span>No overdue loans. Great work.</span>
             </div>
           )}
-          <button className="panel-link" onClick={() => location.assign("#/circulation")}>
+          <button className="panel-link" onClick={() => location.assign("#/members")}>
             View overdue items <ArrowRight size={16}/>
           </button>
         </Card>
@@ -605,7 +605,17 @@ function BookDetailsModal({ book, onClose }: { book: Book; onClose: () => void }
         <div className="space-y-4">
           <div className="flex justify-between items-center">
             <h4 className="text-sm font-bold text-ink/75 dark:text-parchment/75">Active Copies</h4>
-            <Button onClick={() => setAddCopyOpen(!addCopyOpen)}>
+            <Button onClick={() => {
+              if (!addCopyOpen) {
+                copyForm.reset({
+                  barcode: "",
+                  accession: crypto.randomUUID(),
+                  condition: "good",
+                  shelf: ""
+                });
+              }
+              setAddCopyOpen(!addCopyOpen);
+            }}>
               <Plus size={16} /> {addCopyOpen ? "Hide Form" : "Add Copy"}
             </Button>
           </div>
