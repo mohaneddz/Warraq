@@ -4,7 +4,7 @@ import { useUiStore } from "../../store/uiStore";
 import { useTranslation } from "react-i18next";
 import { 
   BookOpen, CalendarClock, ClipboardList, Cog, LayoutDashboard, Search, 
-  ScanLine, Users, Warehouse, Moon, Sun, HardDrive, Plus, 
+  Users, Warehouse, Moon, Sun, HardDrive, Plus, 
   Globe, Shield, Database, Zap, BookMarked 
 } from "lucide-react";
 
@@ -63,9 +63,7 @@ export function CommandPalette() {
     { label: t("commandPalette.actions.searchMember"), subtitle: t("commandPalette.actions.searchMemberSub"), route: "/members?focus=search", icon: Search },
     { label: t("commandPalette.actions.addBook"), subtitle: t("commandPalette.actions.addBookSub"), route: "/catalog?action=add-book", icon: Plus },
     { label: t("commandPalette.actions.addMember"), subtitle: t("commandPalette.actions.addMemberSub"), route: "/members?action=add-member", icon: Plus },
-    { label: t("commandPalette.actions.checkout"), subtitle: t("commandPalette.actions.checkoutSub"), route: "/circulation", icon: ScanLine },
-    { label: t("commandPalette.actions.return"), subtitle: t("commandPalette.actions.returnSub"), route: "/circulation", icon: ScanLine },
-    { label: t("commandPalette.actions.renew"), subtitle: t("commandPalette.actions.renewSub"), route: "/circulation", icon: ScanLine },
+
 
     // Native Actions
     { label: t("commandPalette.actions.backup"), subtitle: t("commandPalette.actions.backupSub"), action: handleBackup, icon: HardDrive },

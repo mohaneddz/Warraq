@@ -1,4 +1,4 @@
-import { BookOpen, CalendarClock, ChartNoAxesCombined, ClipboardList, Cog, LayoutDashboard, Search, Bell, Minus, ScanLine, Square, Users, Warehouse, X, ChevronDown, Menu, Moon, Sun, HardDrive, Sparkles } from "lucide-react";
+import { BookOpen, CalendarClock, ChartNoAxesCombined, ClipboardList, Cog, LayoutDashboard, Search, Bell, Minus, Square, Users, Warehouse, X, ChevronDown, Menu, Moon, Sun, HardDrive, Sparkles } from "lucide-react";
 import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useEffect, useState, useRef } from "react";
 import { useUiStore } from "../../store/uiStore";
@@ -10,7 +10,6 @@ import { useTranslation } from "react-i18next";
 const links = [
   ["/dashboard", "Dashboard", LayoutDashboard], 
   ["/catalog", "Catalog", BookOpen], 
-  ["/circulation", "Circulation", ScanLine], 
   ["/members", "Members", Users], 
   ["/reservations", "Reservations", CalendarClock], 
   ["/inventory", "Inventory", Warehouse], 
@@ -240,9 +239,9 @@ export function AppShell() {
             />
           )}
 
-          <div className={(sidebarOpen ? "p-6" : "py-6 px-3") + " flex flex-col h-full relative z-10"}>
+          <div className={(sidebarOpen ? "p-6" : "py-6 pl-2 pr-7 flex flex-col items-center") + " flex flex-col h-full relative z-10 font-sans"}>
             {/* Logo & Toggle */}
-            <div className="mb-10 w-full">
+            <div className="mb-8 w-full">
               {sidebarOpen ? (
                 <div className="flex items-center justify-between w-full font-display">
                   <Link to="/dashboard" className="flex min-w-0 items-center gap-3 overflow-hidden">
@@ -264,25 +263,29 @@ export function AppShell() {
                 <div className="flex flex-col items-center gap-4 w-full">
                   <button 
                     onClick={toggleSidebar}
-                    className="text-white/60 hover:text-white hover:bg-white/10 p-2 rounded transition-colors"
+                    className="text-white/60 hover:text-white hover:bg-white/10 w-10 h-10 rounded-xl flex items-center justify-center transition-colors shrink-0"
                     aria-label="Expand sidebar"
                   >
                     <Menu size={18} />
                   </button>
-                  <Link to="/dashboard" className="flex justify-center">
-                    <img src="/brand/warraq-symbol-cream.png" className="h-10 w-10 object-contain" alt="Warraq"/>
+                  <Link to="/dashboard" className="w-10 h-10 flex items-center justify-center shrink-0">
+                    <img src="/brand/warraq-symbol-cream.png" className="h-8 w-8 object-contain" alt="Warraq"/>
                   </Link>
                 </div>
               )}
             </div>
             
             {/* Navigation */}
-            <nav className="space-y-1.5 flex-1 overflow-y-auto pr-2 no-scrollbar">
+            <nav className={`flex-1 overflow-y-auto no-scrollbar ${sidebarOpen ? "space-y-1.5 pr-2 w-full" : "space-y-2 w-full flex flex-col items-center"}`}>
               {links.map(([to, label, Icon]) => (
                 <NavLink 
                   key={to} 
                   to={to} 
-                  className={({ isActive }) => `flex items-center gap-3.5 rounded-lg px-3 py-3 text-[14px] font-medium transition-all duration-200 ${isActive ? "bg-gradient-to-r from-[#b96f3e] to-[#a05b2e] text-white shadow-md shadow-[#b96f3e]/20" : "text-white/60 hover:bg-white/5 hover:text-white"}`} 
+                  className={({ isActive }) => 
+                    sidebarOpen
+                      ? `flex items-center gap-3.5 rounded-lg px-3 py-3 text-[14px] font-medium transition-all duration-200 ${isActive ? "bg-gradient-to-r from-[#b96f3e] to-[#a05b2e] text-white shadow-md shadow-[#b96f3e]/20" : "text-white/60 hover:bg-white/5 hover:text-white"}`
+                      : `w-10 h-10 rounded-xl flex items-center justify-center text-[14px] font-medium transition-all duration-200 shrink-0 ${isActive ? "bg-gradient-to-r from-[#b96f3e] to-[#a05b2e] text-white shadow-md shadow-[#b96f3e]/20" : "text-white/60 hover:bg-white/5 hover:text-white"}`
+                  } 
                   title={!sidebarOpen ? t("nav." + label.toLowerCase()) : undefined}
                 >
                   {({ isActive }) => (
@@ -296,8 +299,8 @@ export function AppShell() {
             </nav>
 
             {/* Bottom Profile */}
-            {sidebarOpen && (
-              <div className="mt-8 border-t border-white/10 pt-6 pb-2">
+            <div className={`pt-4 border-t border-white/10 ${sidebarOpen ? "mt-8" : "mt-auto w-full flex flex-col items-center"}`}>
+              {sidebarOpen ? (
                 <div 
                   className="relative"
                   onMouseEnter={handleSidebarMouseEnter}
@@ -332,13 +335,88 @@ export function AppShell() {
                     />
                   )}
                 </div>
-              </div>
-            )}
+              ) : (
+                <div 
+                  className="relative flex justify-center items-center w-full"
+                  onMouseEnter={handleSidebarMouseEnter}
+                  onMouseLeave={handleSidebarMouseLeave}
+                >
+                  <button 
+                    onClick={() => navigate("/settings")}
+                    className="w-10 h-10 rounded-full flex items-center justify-center hover:ring-2 hover:ring-[#b96f3e]/60 transition-all shrink-0"
+                    title={preferences.operatorName || "Librarian"}
+                  >
+                    {preferences.operatorAvatar ? (
+                      <img src={preferences.operatorAvatar} alt="" className="h-9 w-9 rounded-full object-cover shrink-0" />
+                    ) : (
+                      <div className="h-9 w-9 rounded-full bg-[#b96f3e] text-white flex items-center justify-center text-[12px] font-bold shrink-0">
+                        {(preferences.operatorName || "Librarian").substring(0,2).toUpperCase()}
+                      </div>
+                    )}
+                  </button>
+
+                  {showSidebarProfileCard && (
+                    <ProfileCard 
+                      position="sidebar" 
+                      onClose={() => setShowSidebarProfileCard(false)} 
+                      preferences={preferences}
+                      updatePreferences={updatePreferences}
+                      setPaletteOpen={setPaletteOpen}
+                      navigate={navigate}
+                      t={t}
+                    />
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </aside>
 
         {/* Main Area */}
-        <main className="flex-1 flex flex-col min-w-0 relative bg-[#F9F8F4] dark:bg-[#111d1a]">
+        <main className="flex-1 flex flex-col min-w-0 relative bg-[#F9F8F4] dark:bg-[#111d1a] overflow-hidden">
+          {/* Subtle paper grain texture overlay */}
+          <div className="bg-paper-texture-overlay" />
+
+          {/* Elegant background SVGs */}
+          <div className="absolute inset-0 pointer-events-none select-none overflow-hidden z-0 opacity-[0.03] dark:opacity-[0.015]">
+            {/* Top-Right: Open Book & Technical/Draft lines */}
+            <svg className="absolute -top-12 -right-12 w-[380px] h-[380px] text-ink dark:text-parchment" viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth="0.4">
+              <circle cx="50" cy="50" r="46" strokeDasharray="1,2" />
+              <circle cx="50" cy="50" r="40" strokeDasharray="3,3" />
+              <circle cx="50" cy="50" r="32" />
+              <path d="M50,75 C60,67 72,70 80,72 L80,22 C72,20 60,17 50,25 C40,17 28,20 20,22 L20,72 C28,70 40,67 50,75 Z" />
+              <path d="M50,25 L50,75" />
+              <path d="M54,30 C62,24 70,26 76,27" />
+              <path d="M54,38 C62,32 70,34 76,35" />
+              <path d="M54,46 C62,40 70,42 76,43" />
+              <path d="M54,54 C62,48 70,50 76,51" />
+              <path d="M54,62 C62,56 70,58 76,59" />
+              <path d="M46,30 C38,24 30,26 24,27" />
+              <path d="M46,38 C38,32 30,34 24,35" />
+              <path d="M46,46 C38,40 30,42 24,43" />
+              <path d="M46,54 C38,48 30,50 24,51" />
+              <path d="M46,62 C38,56 30,58 24,59" />
+            </svg>
+
+            {/* Bottom-Left: Traditional Rosette Geometric Pattern (Arabic/Scribal theme) */}
+            <svg className="absolute -bottom-20 -left-20 w-[420px] h-[420px] text-ink dark:text-parchment" viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth="0.3">
+              <circle cx="50" cy="50" r="48" strokeDasharray="2,2" />
+              <circle cx="50" cy="50" r="42" />
+              <circle cx="50" cy="50" r="30" strokeDasharray="1,1" />
+              
+              {/* Rotating square star rosette */}
+              <rect x="25" y="25" width="50" height="50" transform="rotate(0 50 50)" />
+              <rect x="25" y="25" width="50" height="50" transform="rotate(15 50 50)" />
+              <rect x="25" y="25" width="50" height="50" transform="rotate(30 50 50)" />
+              <rect x="25" y="25" width="50" height="50" transform="rotate(45 50 50)" />
+              <rect x="25" y="25" width="50" height="50" transform="rotate(60 50 50)" />
+              <rect x="25" y="25" width="50" height="50" transform="rotate(75 50 50)" />
+              
+              <circle cx="50" cy="50" r="15" />
+              <circle cx="50" cy="50" r="6" />
+            </svg>
+          </div>
+
           {/* Top Header */}
           <div className="h-[72px] bg-white border-b border-black/5 dark:bg-[#1d2926] dark:border-white/5 flex items-center justify-between px-8 z-30 shadow-sm sticky top-0">
             {/* Search */}
@@ -389,7 +467,7 @@ export function AppShell() {
                               <div 
                                 key={loan.id} 
                                 onClick={() => {
-                                  navigate("/circulation");
+                                  navigate("/members");
                                   setShowNotifications(false);
                                 }}
                                 className="p-2 rounded-lg hover:bg-emerald/5 dark:hover:bg-emerald-light/10 transition-colors cursor-pointer border border-black/5 dark:border-white/5"
@@ -483,7 +561,7 @@ export function AppShell() {
           </div>
 
           {/* Page Content */}
-          <div className="flex-1 overflow-auto p-8 relative">
+          <div className="flex-1 overflow-auto p-8 relative z-10">
             <Outlet/>
           </div>
         </main>

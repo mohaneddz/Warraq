@@ -147,7 +147,11 @@ export async function saveBook(input: Omit<Book, "id" | "created_at"> & { author
   if (category) { const existing = await db.select<{ id: string }[]>("SELECT id FROM categories WHERE name=?", [category]); categoryId = existing[0]?.id ?? id(); if (!existing[0]) await db.execute("INSERT INTO categories (id,name) VALUES (?,?)", [categoryId, category]); }
   await db.execute("INSERT INTO books (id,isbn10,isbn13,title,subtitle,arabic_title,description,language,publisher_id,category_id,call_number,cover_path,source,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", [bookId, isbn10, isbn13, title, subtitle, arabicTitle, description, language, publisherId, categoryId, callNumber, input.cover_path ?? null, "manual", now, now]);
   if (author) { const normalized = author.toLocaleLowerCase(); const existing = await db.select<{ id: string }[]>("SELECT id FROM authors WHERE normalized_name=?", [normalized]); const authorId = existing[0]?.id ?? id(); if (!existing[0]) await db.execute("INSERT INTO authors (id,name,normalized_name,created_at,updated_at) VALUES (?,?,?,?,?)", [authorId, author, normalized, now, now]); await db.execute("INSERT INTO book_authors (book_id,author_id,author_order) VALUES (?,?,0)", [bookId, authorId]); }
-  if (barcode) await db.execute("INSERT INTO copies (id,book_id,accession_number,barcode,status,condition,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?)", [id(), bookId, accession || `ACC-${Date.now()}`, barcode, "available", "good", now, now]);
+  if (barcode || accession) {
+    const finalAccession = await ensureUniqueAccession(db, accession);
+    const finalBarcode = await ensureUniqueBarcode(db, barcode, finalAccession);
+    await db.execute("INSERT INTO copies (id,book_id,accession_number,barcode,status,condition,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?)", [id(), bookId, finalAccession, finalBarcode, "available", "good", now, now]);
+  }
   
   // Save tags relation
   if (tags) {
@@ -275,11 +279,63 @@ export async function getCopiesForBook(bookId: string): Promise<Copy[]> {
   `, [bookId]);
 }
 
+async function ensureUniqueBarcode(db: Database, inputBarcode?: string | null, accessionNumber?: string | null, excludeCopyId?: string): Promise<string> {
+  const cleanB = inputBarcode ? cleanBarcode(inputBarcode) : "";
+  if (cleanB) {
+    const query = excludeCopyId 
+      ? "SELECT id FROM copies WHERE barcode = ? AND id != ?" 
+      : "SELECT id FROM copies WHERE barcode = ?";
+    const params = excludeCopyId ? [cleanB, excludeCopyId] : [cleanB];
+    const existing = await db.select<{ id: string }[]>(query, params);
+    if (existing.length > 0) {
+      throw new Error(`A copy with barcode "${cleanB}" already exists in the system. Please use a unique barcode.`);
+    }
+    return cleanB;
+  }
+  
+  const baseAccession = accessionNumber ? cleanAccession(accessionNumber) : "";
+  let baseBarcode = baseAccession ? `BAR-${baseAccession}` : `BAR-${id().substring(0, 8).toUpperCase()}`;
+  
+  let existing = await db.select<{ id: string }[]>("SELECT id FROM copies WHERE barcode = ?", [baseBarcode]);
+  if (!existing[0]) return baseBarcode;
+
+  let attempt = 0;
+  while (existing[0] && attempt < 10) {
+    baseBarcode = `BAR-${baseAccession || 'CPY'}-${id().substring(0, 6).toUpperCase()}`;
+    existing = await db.select<{ id: string }[]>("SELECT id FROM copies WHERE barcode = ?", [baseBarcode]);
+    attempt++;
+  }
+  return baseBarcode;
+}
+
+async function ensureUniqueAccession(db: Database, inputAccession?: string | null, excludeCopyId?: string): Promise<string> {
+  const cleanA = inputAccession ? cleanAccession(inputAccession) : "";
+  if (cleanA) {
+    const query = excludeCopyId 
+      ? "SELECT id FROM copies WHERE accession_number = ? AND id != ?" 
+      : "SELECT id FROM copies WHERE accession_number = ?";
+    const params = excludeCopyId ? [cleanA, excludeCopyId] : [cleanA];
+    const existing = await db.select<{ id: string }[]>(query, params);
+    if (existing.length > 0) {
+      throw new Error(`A copy with index/accession "${cleanA}" already exists in the system. Please use a unique index.`);
+    }
+    return cleanA;
+  }
+
+  let baseAccession = `ACC-${id().substring(0, 8).toUpperCase()}`;
+  let existing = await db.select<{ id: string }[]>("SELECT id FROM copies WHERE accession_number = ?", [baseAccession]);
+  let attempt = 0;
+  while (existing[0] && attempt < 10) {
+    baseAccession = `ACC-${id().substring(0, 8).toUpperCase()}`;
+    existing = await db.select<{ id: string }[]>("SELECT id FROM copies WHERE accession_number = ?", [baseAccession]);
+    attempt++;
+  }
+  return baseAccession;
+}
+
 export async function addCopy(bookId: string, barcode: string, accessionNumber: string, condition: string, shelfCode?: string | null): Promise<void> {
   const db = await database();
   const now = timestamp();
-  const cleanB = cleanBarcode(barcode);
-  const cleanA = cleanAccession(accessionNumber);
   
   let shelfId: string | null = null;
   if (shelfCode?.trim()) {
@@ -291,8 +347,11 @@ export async function addCopy(bookId: string, barcode: string, accessionNumber: 
     }
   }
 
+  const finalAccession = await ensureUniqueAccession(db, accessionNumber);
+  const finalBarcode = await ensureUniqueBarcode(db, barcode, finalAccession);
+
   await db.execute("INSERT INTO copies (id,book_id,accession_number,barcode,shelf_id,status,condition,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?)", 
-    [id(), bookId, cleanA || `ACC-${Date.now()}`, cleanB, shelfId, "available", condition, now, now]);
+    [id(), bookId, finalAccession, finalBarcode, shelfId, "available", condition, now, now]);
 }
 
 export async function updateCopy(copyId: string, updates: Partial<Copy> & { shelf?: string | null }): Promise<void> {
@@ -303,6 +362,16 @@ export async function updateCopy(copyId: string, updates: Partial<Copy> & { shel
   
   if (updates.status !== undefined) { fields.push("status = ?"); params.push(updates.status); }
   if (updates.condition !== undefined) { fields.push("condition = ?"); params.push(updates.condition); }
+  if (updates.barcode !== undefined && updates.barcode) {
+    const finalBarcode = await ensureUniqueBarcode(db, updates.barcode, undefined, copyId);
+    fields.push("barcode = ?");
+    params.push(finalBarcode);
+  }
+  if (updates.accession_number !== undefined && updates.accession_number) {
+    const finalAccession = await ensureUniqueAccession(db, updates.accession_number, copyId);
+    fields.push("accession_number = ?");
+    params.push(finalAccession);
+  }
   
   if (updates.shelf !== undefined) {
     let shelfId: string | null = null;
@@ -514,4 +583,55 @@ export async function importMembersFromDb(dbPath: string): Promise<{ importedCou
     } catch (_) {}
   }
 }
+
+export async function getShelves(): Promise<any[]> {
+  const db = await database();
+  return db.select<any[]>(`
+    SELECT s.*, 
+      (SELECT COUNT(*) FROM copies WHERE shelf_id = s.id AND status != 'archived') as copy_count
+    FROM shelves s
+    ORDER BY s.section, s.code
+  `);
+}
+
+export async function createShelf(section: string, code: string, capacity: number, notes?: string | null, room?: string | null, floor?: string | null): Promise<void> {
+  const db = await database();
+  const now = timestamp();
+  await db.execute(
+    "INSERT INTO shelves (id, code, section, capacity, notes, room, floor, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+    [id(), cleanText(code), cleanText(section), capacity, notes ? cleanText(notes) : null, room ? cleanText(room) : null, floor ? cleanText(floor) : null, now, now]
+  );
+}
+
+export async function updateShelf(shelfId: string, updates: { code?: string; section?: string; capacity?: number; notes?: string | null; room?: string | null; floor?: string | null }): Promise<void> {
+  const db = await database();
+  const now = timestamp();
+  const fields: string[] = [];
+  const params: any[] = [];
+
+  if (updates.code !== undefined) { fields.push("code = ?"); params.push(cleanText(updates.code)); }
+  if (updates.section !== undefined) { fields.push("section = ?"); params.push(cleanText(updates.section)); }
+  if (updates.capacity !== undefined) { fields.push("capacity = ?"); params.push(updates.capacity); }
+  if (updates.notes !== undefined) { fields.push("notes = ?"); params.push(updates.notes ? cleanText(updates.notes) : null); }
+  if (updates.room !== undefined) { fields.push("room = ?"); params.push(updates.room ? cleanText(updates.room) : null); }
+  if (updates.floor !== undefined) { fields.push("floor = ?"); params.push(updates.floor ? cleanText(updates.floor) : null); }
+
+  if (fields.length === 0) return;
+
+  fields.push("updated_at = ?");
+  params.push(now);
+  params.push(shelfId);
+
+  await db.execute(`UPDATE shelves SET ${fields.join(", ")} WHERE id = ?`, params);
+}
+
+export async function deleteShelf(shelfId: string): Promise<void> {
+  const db = await database();
+  const copiesCount = await db.select<{ count: number }[]>("SELECT COUNT(*) as count FROM copies WHERE shelf_id = ? AND status != 'archived'", [shelfId]);
+  if ((copiesCount[0]?.count ?? 0) > 0) {
+    throw new Error("Cannot delete shelf because it contains copies of books. Relocate or archive the copies first.");
+  }
+  await db.execute("DELETE FROM shelves WHERE id = ?", [shelfId]);
+}
+
 
