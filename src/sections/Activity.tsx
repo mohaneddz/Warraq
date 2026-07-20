@@ -85,12 +85,22 @@ export function ActivityPage() {
       const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
       const url = URL.createObjectURL(blob);
       
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, "0");
+      const day = String(now.getDate()).padStart(2, "0");
+      const hours = String(now.getHours()).padStart(2, "0");
+      const minutes = String(now.getMinutes()).padStart(2, "0");
+      const seconds = String(now.getSeconds()).padStart(2, "0");
+      const timestamp = `${year}-${month}-${day}_${hours}-${minutes}-${seconds}`;
+
       const link = document.createElement("a");
       link.href = url;
-      link.setAttribute("download", `warraq_audit_log_${new Date().toISOString().split("T")[0]}.csv`);
+      link.setAttribute("download", `warraq_audit_log_${timestamp}.csv`);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      URL.revokeObjectURL(url);
       
       toast.success(t("activity.alerts.exportSuccess", { count: filteredLogs.length }) || `Successfully exported ${filteredLogs.length} audit logs as CSV.`);
     } catch (e: any) {

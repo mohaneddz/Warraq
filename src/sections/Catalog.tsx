@@ -5,16 +5,16 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   BookOpen, Plus, Search,
-  MoreHorizontal, ChevronLeft, ChevronRight, X, Clock, Edit2, Trash2, MapPin, Sparkles
+  MoreHorizontal, ChevronLeft, ChevronRight, X, Clock, Edit2, Trash2, MapPin, Sparkles,
+  Newspaper, BookMarked, Bookmark, Package, Disc
 } from "lucide-react";
 import {
   books, saveBook, updateBook, deleteBook, getCopiesForBook,
-  addCopy, deleteCopy, addReservation, members, auditLog,
+  addCopy, deleteCopy, auditLog,
   getShelves
 } from "../data/repositories/library";
 import type { Book } from "../types";
 import { Modal, Input, Button, StatusBadge } from "../components/ui/primitives";
-import { SearchableSelect } from "../components/ui/shared";
 import { toast } from "sonner";
 import { 
   isValidIsbn, normalizeIsbn, cleanBarcode, 
@@ -30,8 +30,54 @@ import { formatDisplayDate } from "../utils/dates";
 
 const invalidate = () => queryClient.invalidateQueries();
 
+export function getItemTypeIcon(type?: string) {
+  switch (type) {
+    case "magazine":
+      return <Newspaper size={14} className="text-amber-500" />;
+    case "notebook":
+      return <BookMarked size={14} className="text-purple-500" />;
+    case "journal":
+      return <Bookmark size={14} className="text-blue-500" />;
+    case "newspaper":
+      return <Newspaper size={14} className="text-cyan-500" />;
+    case "disc":
+    case "discs":
+      return <Disc size={14} className="text-rose-500" />;
+    case "other":
+      return <Package size={14} className="text-slate-500" />;
+    case "book":
+    default:
+      return <BookOpen size={14} className="text-emerald dark:text-emerald-light" />;
+  }
+}
+
+export function ItemTypeBadge({ type }: { type?: string }) {
+  const { t } = useTranslation();
+  const normalized = type || "book";
+  const label = t(`itemTypes.${normalized}`, normalized);
+
+  const styleMap: Record<string, string> = {
+    book: "bg-emerald/10 text-emerald dark:text-emerald-light border-emerald/20",
+    magazine: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20",
+    notebook: "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20",
+    journal: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20",
+    newspaper: "bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/20",
+    disc: "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20",
+    discs: "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20",
+    other: "bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20",
+  };
+
+  return (
+    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold border ${styleMap[normalized] || styleMap.other}`}>
+      {getItemTypeIcon(normalized)}
+      {label}
+    </span>
+  );
+}
+
 const bookSchema = z.object({
   title: z.string().min(2, "A title is required"),
+  item_type: z.string().optional(),
   subtitle: z.string().optional(),
   arabic_title: z.string().optional(),
   tags: z.string().optional(),
@@ -62,6 +108,7 @@ export function CatalogPage() {
   const [savedView, setSavedView] = useState("All Books");
   const [langFilter, setLangFilter] = useState("All Languages");
   const [catFilter, setCatFilter] = useState("All Categories");
+  const [typeFilter, setTypeFilter] = useState("All Items");
   const [page, setPage] = useState(1);
   const itemsPerPage = useUiStore((state) => state.preferences.pageSize) || 10;
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -88,11 +135,11 @@ export function CatalogPage() {
   }, [location.search]);
 
   // Quick fetch
-  const result = useQuery({ queryKey: ["books", term], queryFn: () => books(term) });
+  const result = useQuery({ queryKey: ["books", term, typeFilter], queryFn: () => books(term, typeFilter) });
 
   const addForm = useForm<BookValues>({
     resolver: zodResolver(bookSchema),
-    defaultValues: { title: "", subtitle: "", arabic_title: "", tags: "", author: "", isbn: "", language: "English", publisher: "", category: "", barcode: "", accession: "", description: "", cover_path: null }
+    defaultValues: { title: "", item_type: "book", subtitle: "", arabic_title: "", tags: "", author: "", isbn: "", language: "English", publisher: "", category: "", barcode: "", accession: "", description: "", cover_path: null }
   });
   const watchedTags = addForm.watch("tags");
 
@@ -114,6 +161,7 @@ export function CatalogPage() {
       if (isbn && !isValidIsbn(isbn)) throw new Error(t("catalog.alerts.invalidIsbn") || "Enter a valid ISBN-10 or ISBN-13.");
       return saveBook({
         title: cleanText(values.title),
+        item_type: values.item_type || "book",
         language: cleanText(values.language),
         subtitle: values.subtitle ? cleanText(values.subtitle) : null,
         arabic_title: values.arabic_title ? cleanText(values.arabic_title) : null,
@@ -359,6 +407,22 @@ export function CatalogPage() {
             />
           </div>
 
+          {/* Item Type Filter Select */}
+          <select
+            value={typeFilter}
+            onChange={(e) => { setTypeFilter(e.target.value); setPage(1); }}
+            className="bg-white dark:bg-[#1d2926] border border-black/5 dark:border-white/5 rounded-lg py-2 px-4 text-[13px] font-semibold text-[#122222]/70 dark:text-white/70 outline-none cursor-pointer hover:border-emerald/30 transition-colors"
+          >
+            <option value="All Items">{t("itemTypes.allItems", "All Item Types")}</option>
+            <option value="book">{t("itemTypes.book", "Book")}</option>
+            <option value="magazine">{t("itemTypes.magazine", "Magazine")}</option>
+            <option value="notebook">{t("itemTypes.notebook", "Notebook")}</option>
+            <option value="journal">{t("itemTypes.journal", "Journal")}</option>
+            <option value="newspaper">{t("itemTypes.newspaper", "Newspaper")}</option>
+            <option value="disc">{t("itemTypes.disc", "Disc / Media")}</option>
+            <option value="other">{t("itemTypes.other", "Other / Misc")}</option>
+          </select>
+
           {/* Category Filter Select */}
           <select
             value={catFilter}
@@ -439,6 +503,9 @@ export function CatalogPage() {
                     <th className="px-4 py-3 cursor-pointer hover:text-emerald dark:hover:text-emerald-light" onClick={() => handleSort("title")}>
                       {t("catalog.headers.title")} {sortBy === "title" ? (sortOrder === "asc" ? "▲" : "▼") : "↕"}
                     </th>
+                    <th className="px-4 py-3">
+                      {t("catalog.headers.type", "TYPE")}
+                    </th>
                     <th className="px-4 py-3 cursor-pointer hover:text-emerald dark:hover:text-emerald-light" onClick={() => handleSort("author")}>
                       {t("catalog.headers.author")} {sortBy === "author" ? (sortOrder === "asc" ? "▲" : "▼") : "↕"}
                     </th>
@@ -490,7 +557,7 @@ export function CatalogPage() {
                             <img src={book.cover_path} alt="" className="w-8 h-12 rounded object-cover shadow-sm border border-black/10 shrink-0" />
                           ) : (
                             <div className="w-8 h-12 bg-[#f4ebdd] dark:bg-[#1a2522] rounded border border-black/10 flex items-center justify-center shrink-0">
-                              <BookOpen size={14} className="text-[#b96f3e]/40" />
+                              {getItemTypeIcon(book.item_type)}
                             </div>
                           )}
                           <div className="min-w-0 flex-1">
@@ -498,6 +565,9 @@ export function CatalogPage() {
                             {book.subtitle && <div className="text-[11px] text-[#122222]/50 dark:text-white/50 font-arabic mt-0.5 line-clamp-2" title={book.subtitle}>{book.subtitle}</div>}
                           </div>
                         </div>
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <ItemTypeBadge type={book.item_type} />
                       </td>
                       <td className="px-4 py-3 text-[#122222]/70 dark:text-white/70">
                         <div className="line-clamp-2" title={book.author || ""}>{book.author || "—"}</div>
@@ -583,6 +653,21 @@ export function CatalogPage() {
                   <Sparkles size={14} /> {lookupLoading ? t("catalog.addModal.autofilling") : t("catalog.addModal.autofill")}
                 </Button>
               </div>
+            </label>
+            <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 md:col-span-2">
+              <span>{t("catalog.itemType", "Item Type")} <span className="text-red-500">*</span></span>
+              <select
+                {...addForm.register("item_type")}
+                className="w-full bg-white dark:bg-[#1d2926] border border-black/10 dark:border-white/10 rounded-lg py-2 px-3 text-[13px] text-[#122222] dark:text-white outline-none focus:border-emerald mt-1 font-semibold cursor-pointer"
+              >
+                <option value="book">📖 {t("itemTypes.book", "Book")}</option>
+                <option value="magazine">📰 {t("itemTypes.magazine", "Magazine")}</option>
+                <option value="notebook">📓 {t("itemTypes.notebook", "Notebook")}</option>
+                <option value="journal">🔖 {t("itemTypes.journal", "Journal")}</option>
+                <option value="newspaper">🗞️ {t("itemTypes.newspaper", "Newspaper")}</option>
+                <option value="disc">💿 {t("itemTypes.disc", "Disc / Media")}</option>
+                <option value="other">📦 {t("itemTypes.other", "Other / Misc")}</option>
+              </select>
             </label>
             <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 md:col-span-2"><span>{t("catalog.addModal.titleLabel")} <span className="text-red-500">*</span></span>
               <Input {...registerClean(addForm, "title", cleanText)} placeholder="e.g. The Canon of Medicine" />
@@ -679,10 +764,9 @@ export function CatalogPage() {
 
 function BookSidebar({ book, onClose, registerClean }: { book: Book; onClose: () => void; registerClean: any }) {
   const { t } = useTranslation();
-  const [activeTab, setActiveTab] = useState<"details" | "copies" | "reserve">("details");
+  const [activeTab, setActiveTab] = useState<"details" | "copies">("details");
   const [isEditing, setIsEditing] = useState(false);
   const [addCopyOpen, setAddCopyOpen] = useState(false);
-  const [reservingMemberId, setReservingMemberId] = useState("");
 
   // Queries
   const { data: copiesList, refetch: refetchCopies } = useQuery({
@@ -690,7 +774,7 @@ function BookSidebar({ book, onClose, registerClean }: { book: Book; onClose: ()
     queryFn: () => getCopiesForBook(book.id)
   });
 
-  const membersQuery = useQuery({ queryKey: ["members-all-catalog"], queryFn: () => members() });
+
   const auditQuery = useQuery({ queryKey: ["book-audit-logs", book.id], queryFn: () => auditLog() });
 
   const bookAudits = useMemo(() => {
@@ -701,6 +785,7 @@ function BookSidebar({ book, onClose, registerClean }: { book: Book; onClose: ()
   const editForm = useForm({
     defaultValues: {
       title: book.title,
+      item_type: book.item_type || "book",
       subtitle: book.subtitle || "",
       arabic_title: book.arabic_title || "",
       tags: book.tags || "",
@@ -784,6 +869,7 @@ function BookSidebar({ book, onClose, registerClean }: { book: Book; onClose: ()
       const isbn = normalizeIsbn(values.isbn);
       return updateBook(book.id, {
         title: cleanText(values.title),
+        item_type: values.item_type || "book",
         subtitle: values.subtitle ? cleanText(values.subtitle) : null,
         arabic_title: values.arabic_title ? cleanText(values.arabic_title) : null,
         tags: values.tags ? cleanText(values.tags) : null,
@@ -845,15 +931,7 @@ function BookSidebar({ book, onClose, registerClean }: { book: Book; onClose: ()
     onError: (err: any) => toast.error(err.message)
   });
 
-  const reserveMutation = useMutation({
-    mutationFn: () => addReservation(book.id, reservingMemberId),
-    onSuccess: () => {
-      toast.success(t("catalog.alerts.reservationPlaced") || "Reservation placed.");
-      setReservingMemberId("");
-      invalidate();
-    },
-    onError: (err: any) => toast.error(err.message)
-  });
+
 
   return (
     <div className="w-[340px] shrink-0 bg-white dark:bg-[#1d2926] border border-black/5 dark:border-white/5 rounded-2xl shadow-card flex flex-col h-full overflow-hidden relative transition-transform">
@@ -892,13 +970,6 @@ function BookSidebar({ book, onClose, registerClean }: { book: Book; onClose: ()
           >
             {t("catalog.details.copies", { count: copiesList?.length ?? 0 })}
           </button>
-          <button
-            onClick={() => setActiveTab("reserve")}
-            className={`flex-1 pb-2 text-[12px] font-bold border-b-2 text-center transition-all cursor-pointer ${activeTab === "reserve" ? "border-emerald text-emerald dark:border-emerald-light dark:text-emerald-light" : "border-transparent text-[#122222]/50 dark:text-white/50"
-              }`}
-          >
-            {t("catalog.details.reserve")}
-          </button>
         </div>
 
         {activeTab === "details" && (
@@ -920,6 +991,7 @@ function BookSidebar({ book, onClose, registerClean }: { book: Book; onClose: ()
                   )}
                 </div>
                 <div className="space-y-3">
+                  <InfoRow label={t("catalog.itemType", "Item Type")} value={<ItemTypeBadge type={book.item_type} />} />
                   <InfoRow label={t("catalog.details.author")} value={book.author || "—"} />
                   <InfoRow label={t("catalog.details.category")} value={book.category || t("catalog.uncategorized") || "Uncategorized"} />
                   <InfoRow label={t("catalog.details.language")} value={book.language} />
@@ -978,6 +1050,20 @@ function BookSidebar({ book, onClose, registerClean }: { book: Book; onClose: ()
                     label={t("catalog.addModal.cover")}
                   />
                 </div>
+                <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">{t("catalog.itemType", "Item Type")}
+                  <select
+                    {...editForm.register("item_type")}
+                    className="w-full bg-white dark:bg-[#1d2926] border border-black/10 dark:border-white/10 rounded-lg py-1 px-2.5 text-[13px] text-[#122222] dark:text-white outline-none focus:border-emerald mt-1 font-semibold cursor-pointer"
+                  >
+                    <option value="book">📖 {t("itemTypes.book", "Book")}</option>
+                    <option value="magazine">📰 {t("itemTypes.magazine", "Magazine")}</option>
+                    <option value="notebook">📓 {t("itemTypes.notebook", "Notebook")}</option>
+                    <option value="journal">🔖 {t("itemTypes.journal", "Journal")}</option>
+                    <option value="newspaper">🗞️ {t("itemTypes.newspaper", "Newspaper")}</option>
+                    <option value="disc">💿 {t("itemTypes.disc", "Disc / Media")}</option>
+                    <option value="other">📦 {t("itemTypes.other", "Other / Misc")}</option>
+                  </select>
+                </label>
                 <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">{t("catalog.addModal.titleLabel")}
                   <Input {...registerClean(editForm, "title", cleanText)} className="py-1 px-2.5 text-[13px]" />
                 </label>
@@ -1147,42 +1233,12 @@ function BookSidebar({ book, onClose, registerClean }: { book: Book; onClose: ()
             )}
           </div>
         )}
-
-        {activeTab === "reserve" && (
-          <div className="w-full space-y-4">
-            <h3 className="font-bold text-[14px] text-[#122222] dark:text-white mb-1">{t("catalog.details.reserveTitle") || "Place reservation hold"}</h3>
-            <p className="text-[12px] text-[#122222]/65 dark:text-parchment/65">{t("catalog.details.reserveDesc") || "If all copies are checked out, you can place a reservation hold for a member. They will be notified when a copy is returned."}</p>
-
-            <label className="text-[11px] font-bold text-[#122222]/50 dark:text-white/50 uppercase tracking-wider block">
-              {t("catalog.details.searchMember") || "Search member"}
-              <div className="mt-1">
-                <SearchableSelect
-                  options={membersQuery.data ?? []}
-                  labelKey="full_name"
-                  valueKey="id"
-                  subLabelKey="member_number"
-                  placeholder={t("catalog.details.searchMemberPlaceholder") || "Type name or membership number..."}
-                  value={reservingMemberId}
-                  onChange={(val) => setReservingMemberId(val)}
-                />
-              </div>
-            </label>
-
-            <button
-              onClick={() => reserveMutation.mutate()}
-              disabled={!reservingMemberId || reserveMutation.isPending}
-              className="w-full bg-[#1a4d40] text-white py-2.5 rounded-lg font-bold text-[13px] hover:bg-[#1a4d40]/90 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-            >
-              {t("catalog.details.confirmReserve") || "Confirm Reservation Hold"}
-            </button>
-          </div>
-        )}
       </div>
     </div>
   );
 }
 
-function InfoRow({ label, value }: { label: string; value: string }) {
+function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div>
       <span className="text-[10px] font-bold text-[#122222]/40 dark:text-white/40 uppercase tracking-wider block">{label}</span>
