@@ -6,7 +6,7 @@ import {
   getShelves, createShelf, updateShelf, deleteShelf,
   renameBuilding, deleteBuilding, renameFloor, deleteFloor
 } from "../data/repositories/library";
-import { Modal, Input, Button, StatusBadge } from "../components/ui/primitives";
+import { Modal, Input, Button, StatusBadge, ItemTypeBadge } from "../components/ui/primitives";
 import { toast } from "sonner";
 import { queryClient } from "../app/providers";
 import type { Copy } from "../types";
@@ -14,7 +14,7 @@ import { useTranslation } from "react-i18next";
 import { cleanBarcode, cleanText } from "../utils/isbn";
 import { useUiStore } from "../store/uiStore";
 import {
-  ScanLine, BookCopy, Trash2,
+  BookCopy, Trash2,
   ChevronLeft, ChevronRight, ChevronDown, LayoutGrid, List, Search, RefreshCw,
   MapPin, X, Wifi, Pause, Play, Check, PlusCircle, Library, Info,
   Pencil, Plus, Building2, Layers, Trash
@@ -38,6 +38,7 @@ function ShelfRowIcon({ size = 12, className = "" }: { size?: number; className?
 interface ScannedItem {
   barcode: string;
   title: string;
+  item_type?: string;
   currentShelf: string;
   result: "found" | "misplaced" | "unknown";
   copyId?: string;
@@ -190,6 +191,19 @@ export function InventoryPage() {
   const [barcodeInput, setBarcodeInput] = useState("");
   const scanInputRef = useRef<HTMLInputElement>(null);
 
+  // Browse & Assign Items Modal
+  const [browseModalOpen, setBrowseModalOpen] = useState(false);
+  const [targetShelfForBrowse, setTargetShelfForBrowse] = useState<string | null>(null);
+  const [browseSearch, setBrowseSearch] = useState("");
+  const [browseTypeFilter, setBrowseTypeFilter] = useState("all");
+
+  const handleOpenBrowseModal = (shelfCode: string) => {
+    setTargetShelfForBrowse(shelfCode);
+    setBrowseSearch("");
+    setBrowseTypeFilter("all");
+    setBrowseModalOpen(true);
+  };
+
   const [availableRows, setAvailableRows] = useState<string[]>(["A", "B", "C", "D", "E", "F", "G", "H"]);
   const [customRowInput, setCustomRowInput] = useState("");
   const [selectedRows, setSelectedRows] = useState<string[]>(["A", "B", "C", "D"]);
@@ -259,6 +273,30 @@ export function InventoryPage() {
       };
     });
   }, [allShelves, allCopies]);
+
+  const targetBrowseShelfDetails = useMemo(() => {
+    if (!targetShelfForBrowse) return null;
+    return parsedShelves.find(s => s.code.toUpperCase() === targetShelfForBrowse.toUpperCase()) || null;
+  }, [parsedShelves, targetShelfForBrowse]);
+
+  const filteredBrowseCopies = useMemo(() => {
+    if (!targetShelfForBrowse) return [];
+    const q = browseSearch.trim().toLowerCase();
+    
+    return allCopies.filter(c => {
+      if (browseTypeFilter !== "all") {
+        const copyType = (c.item_type || "book").toLowerCase();
+        if (copyType !== browseTypeFilter) return false;
+      }
+      if (q) {
+        const titleMatch = c.title?.toLowerCase().includes(q);
+        const barcodeMatch = c.barcode?.toLowerCase().includes(q);
+        const accessionMatch = c.accession_number?.toLowerCase().includes(q);
+        if (!titleMatch && !barcodeMatch && !accessionMatch) return false;
+      }
+      return true;
+    });
+  }, [allCopies, targetShelfForBrowse, browseSearch, browseTypeFilter]);
 
   // Filtered shelves based on the selected location/floor
   const filteredShelves = useMemo(() => {
@@ -419,7 +457,14 @@ export function InventoryPage() {
     );
     if (matched) {
       const isCorrect = (matched.shelf?.trim().toUpperCase() ?? "") === targetShelf;
-      setScannedItems(prev => [{ barcode, title: matched.title, currentShelf: matched.shelf ?? "Unassigned", result: isCorrect ? "found" : "misplaced", copyId: matched.id }, ...prev]);
+      setScannedItems(prev => [{ 
+        barcode, 
+        title: matched.title, 
+        item_type: matched.item_type || "book",
+        currentShelf: matched.shelf ?? "Unassigned", 
+        result: isCorrect ? "found" : "misplaced", 
+        copyId: matched.id 
+      }, ...prev]);
       toast.success(`Scanned: ${matched.title}`);
     } else {
       setScannedItems(prev => [{ barcode, title: "Unknown Item", currentShelf: "Unknown", result: "unknown" }, ...prev]);
@@ -434,7 +479,7 @@ export function InventoryPage() {
       for (const item of misplaced) await updateCopy(item.copyId!, { shelf: targetShelf });
     },
     onSuccess: () => {
-      toast.success("Shelf scan complete. Book positions updated.");
+      toast.success("Shelf scan complete. Item positions updated.");
       setActiveSession(false);
       setScannedItems([]);
       setTargetShelf("");
@@ -883,6 +928,7 @@ export function InventoryPage() {
                           />
                         </th>
                         <th className="px-5 py-3">Barcode</th>
+                        <th className="px-5 py-3">Type</th>
                         <th className="px-5 py-3">Title</th>
                         <th className="px-5 py-3">Shelf</th>
                         <th className="px-5 py-3">Condition</th>
@@ -904,6 +950,7 @@ export function InventoryPage() {
                             />
                           </td>
                           <td className="px-5 py-3 font-mono font-bold text-[12px] text-[#122222] dark:text-white whitespace-nowrap">{copy.barcode}</td>
+                          <td className="px-5 py-3"><ItemTypeBadge type={copy.item_type} /></td>
                           <td className="px-5 py-3 font-semibold text-[#122222]/80 dark:text-white/80"><div className="line-clamp-2" title={copy.title}>{copy.title}</div></td>
                           <td className="px-5 py-3">
                             {copy.shelf ? (
@@ -996,7 +1043,7 @@ export function InventoryPage() {
                     value={barcodeInput}
                     onChange={e => setBarcodeInput(e.target.value)}
                     disabled={sessionPaused}
-                    placeholder="Scan ISBN / barcode..."
+                    placeholder="Scan barcode, ISSN, ISBN, or Accession..."
                     className="w-full bg-white dark:bg-[#111d1a] border border-black/10 rounded-lg py-2 px-3 text-[12px] outline-none focus:border-emerald disabled:opacity-50"
                   />
                 </form>
@@ -1006,7 +1053,7 @@ export function InventoryPage() {
               <div className="grid grid-cols-3 gap-2 border-t border-b border-black/5 py-3">
                 {[
                   { label: "On shelf", val: sessionFound, color: "#478574", sub: "Correct shelf" },
-                  { label: "Wrong shelf", val: sessionMisplaced, color: "#dd7a4a", sub: "Misplaced book" },
+                  { label: "Wrong shelf", val: sessionMisplaced, color: "#dd7a4a", sub: "Misplaced item" },
                   { label: "Not found", val: sessionUnknown, color: "#dd4a4a", sub: "Missing record" },
                 ].map(s => (
                   <div key={s.label} className="text-center">
@@ -1028,7 +1075,10 @@ export function InventoryPage() {
                     {scannedItems.filter(i => i.result !== "found").map(item => (
                       <div key={item.barcode} className={`flex items-start justify-between p-2.5 rounded-lg text-[11px] border ${item.result === "misplaced" ? "bg-orange-50/20 border-orange-500/15" : "bg-red-50/20 border-red-500/15"}`}>
                         <div className="flex-1 min-w-0">
-                          <div className="font-mono font-bold text-[#122222] truncate">{item.barcode}</div>
+                          <div className="flex items-center gap-1.5 mb-0.5">
+                            <span className="font-mono font-bold text-[#122222] truncate">{item.barcode}</span>
+                            <ItemTypeBadge type={item.item_type} />
+                          </div>
                           <div className="text-[#122222]/50 truncate">{item.title}</div>
                         </div>
                         <div className="text-right ml-2 shrink-0">
@@ -1112,10 +1162,18 @@ export function InventoryPage() {
               </div>
 
               <div className="flex flex-col gap-2">
-                <div className="text-[11px] font-bold text-[#122222]/40 uppercase tracking-wider">Placed book copies</div>
+                <div className="flex items-center justify-between">
+                  <div className="text-[11px] font-bold text-[#122222]/40 uppercase tracking-wider">Placed items</div>
+                  <button
+                    onClick={() => handleOpenBrowseModal(selectedShelfDetails.code)}
+                    className="text-[11px] font-bold text-emerald hover:underline flex items-center gap-1 cursor-pointer"
+                  >
+                    <Plus size={12} /> Add items
+                  </button>
+                </div>
                 <div className="space-y-1.5 max-h-60 overflow-y-auto pr-1 no-scrollbar border-t border-black/5 pt-2">
                   {selectedShelfDetails.copiesList.length === 0 ? (
-                    <p className="text-center py-6 text-[12px] text-[#122222]/40">No book copies currently placed on this shelf.</p>
+                    <p className="text-center py-6 text-[12px] text-[#122222]/40">No items currently placed on this shelf.</p>
                   ) : (
                     selectedShelfDetails.copiesList.map((c: any) => (
                       <div
@@ -1123,9 +1181,12 @@ export function InventoryPage() {
                         onClick={() => setSelectedCopy(c)}
                         className="flex items-center justify-between p-2 rounded-lg bg-black/[0.01] border border-black/5 hover:bg-emerald/5 cursor-pointer transition-all"
                       >
-                        <div className="min-w-0 pr-2">
-                          <div className="font-semibold text-[12px] truncate" title={c.title}>{c.title}</div>
-                          <div className="font-mono text-[9px] text-[#122222]/40 mt-0.5">{c.barcode}</div>
+                        <div className="min-w-0 pr-2 flex-1">
+                          <div className="flex items-center gap-1.5 mb-0.5">
+                            <span className="font-semibold text-[12px] truncate" title={c.title}>{c.title}</span>
+                            <ItemTypeBadge type={c.item_type} />
+                          </div>
+                          <div className="font-mono text-[9px] text-[#122222]/40">{c.barcode}</div>
                         </div>
                         <div className="shrink-0">
                           <span className={`text-[9px] font-bold capitalize px-1.5 py-0.5 rounded-full ${c.condition === "damaged" ? "bg-red-100 text-red-700" : "bg-emerald/10 text-[#1a4d40]"}`}>{c.condition}</span>
@@ -1149,15 +1210,10 @@ export function InventoryPage() {
                     <Trash2 size={14} />
                   </button>
                   <button
-                    onClick={() => {
-                      setTargetShelf(selectedShelfDetails.code);
-                      setScannedItems([]);
-                      setActiveSession(true);
-                      setSessionPaused(false);
-                    }}
-                    className="flex-1 py-2 text-center rounded-xl bg-white border border-black/10 hover:bg-black/5 hover:text-emerald text-[12px] font-bold cursor-pointer flex items-center justify-center gap-1.5"
+                    onClick={() => handleOpenBrowseModal(selectedShelfDetails.code)}
+                    className="flex-1 py-2 text-center rounded-xl bg-white border border-black/10 hover:bg-black/5 hover:text-emerald text-[12px] font-bold cursor-pointer flex items-center justify-center gap-1.5 transition-colors"
                   >
-                    <ScanLine size={13} /> Scan shelf
+                    <Plus size={14} /> Add Books
                   </button>
                   <button
                     onClick={() => handleOpenEditShelf(selectedShelfDetails)}
@@ -1175,6 +1231,163 @@ export function InventoryPage() {
       {selectedCopy && (
         <CopyEditModal copy={selectedCopy} onClose={() => { setSelectedCopy(null); invalidate(); }} shelves={allShelves} />
       )}
+
+      {/* Browse & Assign Items to Shelf Modal */}
+      <Modal
+        isOpen={browseModalOpen}
+        onClose={() => setBrowseModalOpen(false)}
+        title={`Add / Assign Items to Shelf ${targetShelfForBrowse || ""}`}
+        size="xl"
+      >
+        <div className="space-y-4 text-[13px]">
+          {/* Information & Occupancy Bar */}
+          <div className="flex items-center justify-between bg-[#fcfbf8] dark:bg-[#111d1a] p-3 rounded-xl border border-black/5 dark:border-white/5">
+            <div className="text-[12px] text-[#122222]/70 dark:text-white/70">
+              Browse your library catalog to place items onto shelf <span className="font-bold text-emerald font-mono">{targetShelfForBrowse}</span>.
+            </div>
+            {targetBrowseShelfDetails && (
+              <span className="text-[11px] font-bold px-2.5 py-1 rounded-md bg-emerald/10 text-emerald dark:text-emerald-light shrink-0">
+                Occupancy: {targetBrowseShelfDetails.copiesList.length} / {targetBrowseShelfDetails.capacity}
+              </span>
+            )}
+          </div>
+
+          {/* Filter & Search Controls */}
+          <div className="flex gap-3 items-center">
+            <div className="flex-1 relative">
+              <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#122222]/40" />
+              <Input
+                type="text"
+                value={browseSearch}
+                onChange={(e) => setBrowseSearch(e.target.value)}
+                placeholder="Search items by title, author, barcode, accession number..."
+                className="pl-9 text-[13px] py-2"
+              />
+            </div>
+
+            <select
+              value={browseTypeFilter}
+              onChange={(e) => setBrowseTypeFilter(e.target.value)}
+              className="bg-white dark:bg-[#1d2926] border border-black/10 dark:border-white/10 rounded-lg py-2 px-3 text-[13px] font-semibold text-[#122222] dark:text-white outline-none focus:border-emerald cursor-pointer"
+            >
+              <option value="all">All Types</option>
+              <option value="book">Book</option>
+              <option value="magazine">Magazine</option>
+              <option value="notebook">Notebook</option>
+              <option value="journal">Journal</option>
+              <option value="newspaper">Newspaper</option>
+              <option value="disc">Disc / Media</option>
+              <option value="other">Other / Misc</option>
+            </select>
+          </div>
+
+          {/* Item Catalog List */}
+          <div className="max-h-[460px] overflow-y-auto pr-1 space-y-2.5 no-scrollbar">
+            {filteredBrowseCopies.length === 0 ? (
+              <div className="text-center py-12 text-[#122222]/40 dark:text-white/40">
+                <BookCopy size={36} className="mx-auto mb-2 opacity-30" />
+                <p className="font-bold text-[14px]">No matching items found</p>
+                <p className="text-[12px] mt-0.5">Try adjusting your search or item type filter.</p>
+              </div>
+            ) : (
+              filteredBrowseCopies.map((c) => {
+                const isCurrentShelf = (c.shelf?.trim().toUpperCase() ?? "") === (targetShelfForBrowse?.trim().toUpperCase() ?? "");
+                const isOtherShelf = c.shelf && !isCurrentShelf;
+
+                return (
+                  <div
+                    key={c.id}
+                    className="flex items-center justify-between p-3 rounded-xl border border-black/5 dark:border-white/5 bg-white dark:bg-[#1d2926] hover:border-emerald/30 transition-all shadow-sm gap-4"
+                  >
+                    {/* Cover Thumbnail */}
+                    <div className="w-12 h-16 rounded-lg bg-[#f4ebdd] dark:bg-[#1a2522] border border-black/10 flex items-center justify-center shrink-0 overflow-hidden relative shadow-sm">
+                      <div className="absolute left-1 top-0 bottom-0 w-0.5 bg-black/10" />
+                      {c.cover_path ? (
+                        <img src={c.cover_path} alt={c.title} className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-[10px] font-bold text-[#122222]/40 dark:text-white/40 uppercase tracking-tighter">
+                          {(c.item_type || "BOK").slice(0, 3)}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Content Details */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <h4 className="font-bold text-[14px] text-[#122222] dark:text-white truncate" title={c.title}>
+                          {c.title}
+                        </h4>
+                        <ItemTypeBadge type={c.item_type} />
+                      </div>
+                      {c.author && (
+                        <p className="text-[12px] text-[#122222]/60 dark:text-white/60 truncate mb-1">
+                          {c.author}
+                        </p>
+                      )}
+                      <div className="flex items-center gap-2.5 text-[11px] text-[#122222]/50 dark:text-white/50 font-mono">
+                        <span>Barcode: <strong className="text-[#122222]/80 dark:text-white/80">{c.barcode}</strong></span>
+                        <span>·</span>
+                        <span>Accession: <strong className="text-[#122222]/80 dark:text-white/80">{c.accession_number}</strong></span>
+                      </div>
+                    </div>
+
+                    {/* Shelf Status & Action Button */}
+                    <div className="flex items-center gap-3 shrink-0">
+                      {isCurrentShelf ? (
+                        <span className="text-[11px] font-bold text-emerald bg-emerald/10 dark:bg-emerald-light/20 text-emerald dark:text-emerald-light px-2.5 py-1 rounded-md">
+                          Placed on this shelf
+                        </span>
+                      ) : isOtherShelf ? (
+                        <span className="text-[11px] font-semibold text-orange-600 dark:text-orange-400 bg-orange-500/10 px-2.5 py-1 rounded-md">
+                          Shelf {c.shelf}
+                        </span>
+                      ) : (
+                        <span className="text-[11px] text-[#122222]/40 dark:text-white/40 bg-black/5 dark:bg-white/5 px-2.5 py-1 rounded-md font-semibold">
+                          Unassigned
+                        </span>
+                      )}
+
+                      {isCurrentShelf ? (
+                        <Button
+                          variant="ghost"
+                          className="text-[12px] text-red-500 hover:bg-red-500/10 py-1.5 px-3"
+                          onClick={async () => {
+                            await updateCopy(c.id, { shelf: null });
+                            toast.success(`Removed "${c.title}" from shelf ${targetShelfForBrowse}`);
+                            invalidate();
+                            shelvesQuery.refetch();
+                          }}
+                        >
+                          Remove
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="primary"
+                          className="text-[12px] py-1.5 px-3"
+                          onClick={async () => {
+                            await updateCopy(c.id, { shelf: targetShelfForBrowse });
+                            toast.success(`Assigned "${c.title}" to shelf ${targetShelfForBrowse}`);
+                            invalidate();
+                            shelvesQuery.refetch();
+                          }}
+                        >
+                          <Plus size={13} /> Add to Shelf
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          <div className="flex justify-end pt-3 border-t border-black/5 dark:border-white/5">
+            <Button variant="secondary" onClick={() => setBrowseModalOpen(false)}>
+              Done
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       {/* New Bookcase modal */}
       {newBookcaseOpen && (

@@ -20,7 +20,7 @@ import {
 } from "../data/repositories/library";
 import { seedDummyData } from "../data/seed";
 import { queryClient } from "../app/providers";
-import { Button, Card, EmptyState, Input, StatusBadge, Modal } from "../components/ui/primitives";
+import { Button, Card, EmptyState, Input, StatusBadge, Modal, ItemTypeBadge } from "../components/ui/primitives";
 import { daysLate, formatDisplayDate } from "../utils/dates";
 import { isValidIsbn, normalizeIsbn } from "../utils/isbn";
 import { useUiStore } from "../store/uiStore";
@@ -1112,7 +1112,7 @@ export function CirculationPage() {
               type="text" 
               value={barcodeInput}
               onChange={(e) => setBarcodeInput(e.target.value)}
-              placeholder="Quick Scan: enter barcode or accession number to return or select copy..." 
+              placeholder="Quick Scan: enter barcode, ISSN, ISBN, or accession number to return or select copy..." 
               className="w-full rounded-control border border-emerald/30 bg-white pl-10 pr-3 py-2 text-sm text-ink outline-none placeholder:text-ink/40 focus:border-emerald focus:ring-2 focus:ring-emerald/20 dark:border-emerald/40 dark:bg-ink/30 dark:text-parchment"
               autoFocus
             />
@@ -1170,8 +1170,11 @@ export function CirculationPage() {
                     onChange={(e) => setReturns((current) => e.target.checked ? [...current, loan.copy_id] : current.filter((id) => id !== loan.copy_id))}
                   />
                   <span className="min-w-0 flex-1">
-                    <strong className="block text-sm truncate">{loan.title}</strong>
-                    <small className="block text-xs text-ink/55 dark:text-parchment/55 mt-0.5">{loan.member_name} · {loan.barcode}</small>
+                    <span className="flex items-center gap-2 mb-0.5">
+                      <strong className="block text-sm truncate">{loan.title}</strong>
+                      <ItemTypeBadge type={loan.item_type} />
+                    </span>
+                    <small className="block text-xs text-ink/55 dark:text-parchment/55">{loan.member_name} · {loan.barcode}</small>
                   </span>
                   {daysLate(loan.due_at) > 0 && <StatusBadge value="overdue"/>}
                 </label>
@@ -1192,7 +1195,10 @@ export function CirculationPage() {
             {loanQuery.data.map((loan) => (
               <tr key={loan.id}>
                 <Cell>
-                  <strong>{loan.title}</strong>
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <strong>{loan.title}</strong>
+                    <ItemTypeBadge type={loan.item_type} />
+                  </div>
                   <p className="text-xs text-ink/55 dark:text-parchment/55">{loan.barcode}</p>
                 </Cell>
                 <Cell>{loan.member_name}</Cell>
