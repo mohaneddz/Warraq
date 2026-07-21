@@ -4,7 +4,7 @@ import { dueDate, today } from "../../utils/dates";
 import type { Book, Copy, DashboardMetrics, Loan, Member, Reservation } from "../../types";
 import { 
   normalizeIsbn, cleanBarcode, cleanAccession, 
-  cleanPhone, cleanText, cleanMemberNumber 
+  cleanPhone, cleanText, cleanMemberNumber, generateRandomMemberNumber 
 } from "../../utils/isbn";
 
 const id = () => crypto.randomUUID();
@@ -418,13 +418,42 @@ export async function saveMember(input: Omit<Member, "id" | "member_number" | "j
   const now = timestamp();
   const memberNumber = input.member_number?.trim() 
     ? cleanMemberNumber(input.member_number) 
-    : `MB-${String(Date.now()).slice(-6)}`;
+    : generateRandomMemberNumber(6);
   const fullName = cleanText(input.full_name);
   const email = input.email ? cleanText(input.email) : null;
   const phone = input.phone ? cleanPhone(input.phone) : null;
   const department = input.department ? cleanText(input.department) : null;
   const role = input.role ? cleanText(input.role) : null;
   await db.execute("INSERT INTO members (id,member_number,full_name,email,phone,department,role,status,expiry_date,avatar_path,joined_at,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)", [id(), memberNumber, fullName, email, phone, department, role, input.status, input.expiry_date ?? null, input.avatar_path ?? null, today(), now, now]);
+}
+
+export async function repopulateMembersDatabase(): Promise<void> {
+  const db = await database();
+  const now = timestamp();
+  const todayStr = today();
+
+  // Clear existing members table
+  await db.execute("DELETE FROM members");
+
+  const cleanMembers = [
+    { name: "Mohaned MANAA", number: "104829", dpt: "Computer Science", role: "Student", email: "mohaned.manaa@university.dz", phone: "0550123456", status: "active" },
+    { name: "Fatima RAHMOUNI", number: "209381", dpt: "Radiology", role: "Researcher", email: "fatima.rahmouni@hospital.dz", phone: "0770123456", status: "active" },
+    { name: "Karim BENALI", number: "482019", dpt: "Surgery", role: "Doctor", email: "karim.benali@hospital.dz", phone: "0661987654", status: "active" },
+    { name: "Salima KADRI", number: "730192", dpt: "Pediatrics", role: "Faculty", email: "salima.kadri@university.dz", phone: "0552345678", status: "active" },
+    { name: "Yacine ZIANI", number: "582910", dpt: "Neurology", role: "Student", email: "yacine.ziani@university.dz", phone: "0771234567", status: "active" },
+    { name: "Meriem ZERROUKI", number: "391028", dpt: "Internal Medicine", role: "Faculty", email: "meriem.zerrouki@hospital.dz", phone: "0660123456", status: "active" },
+    { name: "Nassim KHALDI", number: "602918", dpt: "Emergency", role: "Staff", email: "nassim.khaldi@hospital.dz", phone: "0559876543", status: "active" },
+    { name: "Sofia BRAHIMI", number: "819203", dpt: "Pharmacy", role: "Researcher", email: "sofia.brahimi@university.dz", phone: "0775432109", status: "suspended" },
+    { name: "Oumar HASSANI", number: "194820", dpt: "Cardiology", role: "Visitor", email: "oumar.hassani@gmail.com", phone: "0664321098", status: "expired" },
+    { name: "Ines TOUATI", number: "940182", dpt: "Biology", role: "Student", email: "ines.touati@university.dz", phone: "0554321098", status: "active" }
+  ];
+
+  for (const m of cleanMembers) {
+    await db.execute(
+      "INSERT INTO members (id, member_number, full_name, email, phone, department, role, status, expiry_date, avatar_path, joined_at, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
+      [id(), m.number, m.name, m.email, m.phone, m.dpt, m.role, m.status, null, null, todayStr, now, now]
+    );
+  }
 }
 
 export async function updateMember(memberId: string, updates: Partial<Member>): Promise<void> {

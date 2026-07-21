@@ -314,6 +314,8 @@
       "title": "Add New Member",
       "editTitle": "Edit Member",
       "fullName": "Full name",
+      "firstName": "First Name",
+      "lastName": "Last Name",
       "email": "Email",
       "phone": "Phone",
       "dept": "Department",
@@ -321,6 +323,18 @@
       "status": "Status",
       "cancel": "Cancel",
       "save": "Save member"
+    },
+    "expired": "Expired",
+    "archived": "Archived",
+    "roles": {
+      "student": "Student",
+      "staff": "Staff",
+      "researcher": "Researcher",
+      "visitor": "Visitor",
+      "faculty": "Faculty",
+      "doctor": "Doctor",
+      "nurse": "Nurse",
+      "other": "Other"
     },
     "searchPlaceholder": "Search members by name, email, or ID...",
     "allDepartments": "All Departments",

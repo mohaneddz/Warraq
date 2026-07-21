@@ -626,13 +626,16 @@ export async function seedDummyData() {
   pastMonth.setMonth(today.getMonth() - 1);
 
   const membersData = [
-    { name: "Ahmed Yelles", dpt: "Cardiology", role: "Resident" },
-    { name: "Salima K.", dpt: "Pediatrics", role: "Specialist" },
-    { name: "Yacine B.", dpt: "Neurology", role: "Resident" },
-    { name: "Meriem Z.", dpt: "Internal Medicine", role: "Professor" },
-    { name: "Karim F.", dpt: "Surgery", role: "Nurse" },
-    { name: "Fatima R.", dpt: "Radiology", role: "Resident" },
-    { name: "Nassim D.", dpt: "Emergency", role: "Doctor" },
+    { name: "Mohaned MANAA", number: "104829", dpt: "Computer Science", role: "Student", email: "mohaned.manaa@university.dz", phone: "0550123456", status: "active" },
+    { name: "Fatima RAHMOUNI", number: "209381", dpt: "Radiology", role: "Researcher", email: "fatima.rahmouni@hospital.dz", phone: "0770123456", status: "active" },
+    { name: "Karim BENALI", number: "482019", dpt: "Surgery", role: "Doctor", email: "karim.benali@hospital.dz", phone: "0661987654", status: "active" },
+    { name: "Salima KADRI", number: "730192", dpt: "Pediatrics", role: "Faculty", email: "salima.kadri@university.dz", phone: "0552345678", status: "active" },
+    { name: "Yacine ZIANI", number: "582910", dpt: "Neurology", role: "Student", email: "yacine.ziani@university.dz", phone: "0771234567", status: "active" },
+    { name: "Meriem ZERROUKI", number: "391028", dpt: "Internal Medicine", role: "Faculty", email: "meriem.zerrouki@hospital.dz", phone: "0660123456", status: "active" },
+    { name: "Nassim KHALDI", number: "602918", dpt: "Emergency", role: "Staff", email: "nassim.khaldi@hospital.dz", phone: "0559876543", status: "active" },
+    { name: "Sofia BRAHIMI", number: "819203", dpt: "Pharmacy", role: "Researcher", email: "sofia.brahimi@university.dz", phone: "0775432109", status: "suspended" },
+    { name: "Oumar HASSANI", number: "194820", dpt: "Cardiology", role: "Visitor", email: "oumar.hassani@gmail.com", phone: "0664321098", status: "expired" },
+    { name: "Ines TOUATI", number: "940182", dpt: "Biology", role: "Student", email: "ines.touati@university.dz", phone: "0554321098", status: "active" }
   ];
 
   const createdMembers: string[] = [];
@@ -640,8 +643,8 @@ export async function seedDummyData() {
     const m = membersData[i];
     const memberId = id();
     await db.execute(
-      "INSERT INTO members (id, member_number, full_name, email, department, role, status, joined_at, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, 'active', $7, $8, $9)",
-      [memberId, `M-${1042 + i}`, m.name, `${m.name.toLowerCase().replace(/ /g, '.')}@hospital.dz`, m.dpt, m.role, randomDateBetween(new Date(2023, 0, 1), pastMonth), today.toISOString(), today.toISOString()]
+      "INSERT INTO members (id, member_number, full_name, email, phone, department, role, status, joined_at, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)",
+      [memberId, m.number, m.name, m.email, m.phone, m.dpt, m.role, m.status, randomDateBetween(new Date(2023, 0, 1), pastMonth), today.toISOString(), today.toISOString()]
     );
     createdMembers.push(memberId);
   }
