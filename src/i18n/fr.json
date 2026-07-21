@@ -91,15 +91,36 @@
     "extendLoan": "Prolonger l'emprunt"
   },
   "itemTypes": {
-    "allItems": "Tous les types",
+    "allItems": "Tous les types d'éléments",
     "book": "Livre",
     "magazine": "Magazine",
-    "notebook": "Cahier / Carnet",
-    "journal": "Revue scientifique",
+    "notebook": "Carnet",
+    "journal": "Revue / Journal académique",
     "newspaper": "Journal / Presse",
     "disc": "Disque / Média",
     "discs": "Disques",
-    "other": "Autre matériel"
+    "other": "Autre / Divers"
+  },
+  "itemFields": {
+    "issueNumber": "Numéro de parution / Volume",
+    "frequency": "Périodicité",
+    "issn": "ISSN",
+    "pubDate": "Mois / Date de publication",
+    "issueDate": "Édition / Date du numéro",
+    "press": "Presse / Éditeur",
+    "region": "Ville / Région",
+    "editor": "Rédacteur en chef / Société",
+    "rulingType": "Type de réglure",
+    "pageCount": "Nombre de pages",
+    "paperSize": "Format de papier",
+    "brand": "Marque / Fabricant",
+    "mediaFormat": "Format de média",
+    "duration": "Durée / Exécution",
+    "modelNumber": "Numéro de modèle / Série",
+    "specifications": "Spécifications / Détails",
+    "artist": "Artiste / Réalisateur / Créateur",
+    "studio": "Studio / Label",
+    "owner": "Propriétaire / Département"
   },
   "catalog": {
     "title": "Catalogue",
@@ -113,6 +134,12 @@
     "savedViews": "Vues enregistrées",
     "allBooks": "Tous les éléments",
     "recentAdditions": "Ajouts récents",
+    "availableNow": "Disponible actuellement",
+    "lowStock": "Stock faible",
+    "outOfStock": "Rupture de stock",
+    "noCopies": "Sans exemplaires",
+    "missingCover": "Sans couverture",
+    "missingIsbn": "Sans ISBN",
     "medicalCore": "Cœur médical",
     "headers": {
       "title": "TITRE",

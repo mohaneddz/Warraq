@@ -28,8 +28,31 @@ export function StatusBadge({ value }: { value: string }) {
     ? "bg-emerald/15 text-emerald" 
     : value === "on-loan" || value === "queued" 
       ? "bg-copper/15 text-copper" 
-      : "bg-ink/10 text-ink dark:bg-parchment/10 dark:text-parchment"; 
-  return <span className={cn("inline-flex rounded-full px-2.5 py-1 text-xs font-semibold capitalize", color)}>{t("status." + value) || value.replace("-", " ")}</span>; 
+      : "bg-red-700/15 text-red-700"; 
+  return <span className={cn("inline-block rounded-full px-2.5 py-0.5 text-xs font-bold capitalize", color)}>{t(value, value)}</span>; 
+}
+
+export function ItemTypeBadge({ type, className }: { type?: string; className?: string }) {
+  const { t } = useTranslation();
+  const normalized = (type || "book").toLowerCase();
+  const label = t(`itemTypes.${normalized}`, normalized);
+
+  const styleMap: Record<string, string> = {
+    book: "bg-emerald/10 text-emerald dark:text-emerald-light border-emerald/20",
+    magazine: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20",
+    notebook: "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20",
+    journal: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20",
+    newspaper: "bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/20",
+    disc: "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20",
+    discs: "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20",
+    other: "bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20",
+  };
+
+  return (
+    <span className={cn("inline-flex items-center px-2.5 py-0.5 rounded-md text-[11px] font-bold border", styleMap[normalized] || styleMap.other, className)}>
+      {label}
+    </span>
+  );
 }
 
 export function EmptyState({ title, description, action, icon: Icon }: { title: string; description: string; action?: React.ReactNode; icon?: React.ElementType }) { 
@@ -48,18 +71,28 @@ interface ModalProps {
   onClose: () => void;
   title: string;
   children: React.ReactNode;
+  size?: "md" | "lg" | "xl" | "2xl";
+  className?: string;
 }
 
-export function Modal({ isOpen, onClose, title, children }: ModalProps) {
+export function Modal({ isOpen, onClose, title, children, size = "lg", className }: ModalProps) {
   const { t } = useTranslation();
   if (!isOpen) return null;
+
+  const sizeClasses = {
+    md: "max-w-xl",
+    lg: "max-w-2xl",
+    xl: "max-w-4xl",
+    "2xl": "max-w-5xl"
+  };
+
   return createPortal(
     <div 
       className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md transition-all duration-200"
       onClick={onClose}
     >
       <div 
-        className="relative w-full max-w-2xl max-h-[85vh] overflow-y-auto rounded-card border border-ink/10 bg-white p-6 shadow-2xl dark:border-parchment/10 dark:bg-[#1d2926] dark:text-parchment flex flex-col animate-in fade-in zoom-in-95 duration-150"
+        className={cn("relative w-full max-h-[88vh] overflow-y-auto rounded-card border border-ink/10 bg-white p-6 shadow-2xl dark:border-parchment/10 dark:bg-[#1d2926] dark:text-parchment flex flex-col animate-in fade-in zoom-in-95 duration-150", sizeClasses[size], className)}
         onClick={(e) => e.stopPropagation()}
       >
         <header className="flex items-center justify-between border-b border-ink/10 pb-3 mb-4 dark:border-parchment/10">

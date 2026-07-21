@@ -19,4 +19,10 @@ export async function initializeDatabase() {
   } catch (_) {
     // Column already exists
   }
+
+  try {
+    await db.execute("ALTER TABLE books ADD COLUMN metadata TEXT");
+  } catch (_) {
+    // Column already exists
+  }
 }

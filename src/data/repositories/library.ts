@@ -144,11 +144,13 @@ export async function saveBook(input: Omit<Book, "id" | "created_at"> & { author
   const language = cleanText(input.language);
   const callNumber = input.call_number ? cleanText(input.call_number) : null;
 
+  const metadata = input.metadata ? input.metadata : null;
+
   let publisherId: string | null = null;
   if (publisher) { const existing = await db.select<{ id: string }[]>("SELECT id FROM publishers WHERE name=?", [publisher]); publisherId = existing[0]?.id ?? id(); if (!existing[0]) await db.execute("INSERT INTO publishers (id,name,created_at,updated_at) VALUES (?,?,?,?)", [publisherId, publisher, now, now]); }
   let categoryId: string | null = null;
   if (category) { const existing = await db.select<{ id: string }[]>("SELECT id FROM categories WHERE name=?", [category]); categoryId = existing[0]?.id ?? id(); if (!existing[0]) await db.execute("INSERT INTO categories (id,name) VALUES (?,?)", [categoryId, category]); }
-  await db.execute("INSERT INTO books (id,item_type,isbn10,isbn13,title,subtitle,arabic_title,description,language,publisher_id,category_id,call_number,cover_path,source,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", [bookId, itemType, isbn10, isbn13, title, subtitle, arabicTitle, description, language, publisherId, categoryId, callNumber, input.cover_path ?? null, "manual", now, now]);
+  await db.execute("INSERT INTO books (id,item_type,isbn10,isbn13,title,subtitle,arabic_title,description,language,publisher_id,category_id,call_number,cover_path,source,metadata,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", [bookId, itemType, isbn10, isbn13, title, subtitle, arabicTitle, description, language, publisherId, categoryId, callNumber, input.cover_path ?? null, "manual", metadata, now, now]);;
   if (author) { const normalized = author.toLocaleLowerCase(); const existing = await db.select<{ id: string }[]>("SELECT id FROM authors WHERE normalized_name=?", [normalized]); const authorId = existing[0]?.id ?? id(); if (!existing[0]) await db.execute("INSERT INTO authors (id,name,normalized_name,created_at,updated_at) VALUES (?,?,?,?,?)", [authorId, author, normalized, now, now]); await db.execute("INSERT INTO book_authors (book_id,author_id,author_order) VALUES (?,?,0)", [bookId, authorId]); }
   if (barcode || accession) {
     const finalAccession = await ensureUniqueAccession(db, accession);
@@ -219,6 +221,7 @@ export async function updateBook(bookId: string, input: Partial<Book> & { author
     if (input.isbn10 !== undefined) { fields.push("isbn10 = ?"); params.push(input.isbn10 ? normalizeIsbn(input.isbn10) : null); }
     if (input.isbn13 !== undefined) { fields.push("isbn13 = ?"); params.push(input.isbn13 ? normalizeIsbn(input.isbn13) : null); }
     if (input.cover_path !== undefined) { fields.push("cover_path = ?"); params.push(input.cover_path); }
+    if (input.metadata !== undefined) { fields.push("metadata = ?"); params.push(input.metadata); }
     if (publisherId !== undefined) { fields.push("publisher_id = ?"); params.push(publisherId); }
     if (categoryId !== undefined) { fields.push("category_id = ?"); params.push(categoryId); }
     
@@ -452,15 +455,15 @@ export async function deleteMember(memberId: string): Promise<void> {
   await db.execute("UPDATE members SET archived_at = ?, status = 'archived', updated_at = ? WHERE id = ?", [now, now, memberId]);
 }
 
-export async function copies(query = ""): Promise<(Copy & { title: string })[]> {
+export async function copies(query = ""): Promise<(Copy & { title: string; item_type?: string; metadata?: string | null; cover_path?: string | null; author?: string | null })[]> {
   const db = await database();
   const term = `%${query.trim()}%`;
-  return db.select<(Copy & { title: string })[]>("SELECT c.*,b.title, s.code as shelf FROM copies c JOIN books b ON b.id=c.book_id LEFT JOIN shelves s ON s.id=c.shelf_id WHERE (?='' OR c.barcode LIKE ? OR c.accession_number LIKE ? OR b.title LIKE ?) ORDER BY b.title", [query.trim(), term, term, term]);
+  return db.select<(Copy & { title: string; item_type?: string; metadata?: string | null; cover_path?: string | null; author?: string | null })[]>("SELECT c.*, b.title, b.item_type, b.metadata, b.cover_path, b.author, s.code as shelf FROM copies c JOIN books b ON b.id=c.book_id LEFT JOIN shelves s ON s.id=c.shelf_id WHERE (?='' OR c.barcode LIKE ? OR c.accession_number LIKE ? OR b.title LIKE ?) ORDER BY b.title", [query.trim(), term, term, term]);
 }
 
 export async function loans(openOnly = false): Promise<Loan[]> {
   const db = await database();
-  return db.select<Loan[]>(`SELECT l.*, b.title, c.barcode, m.full_name member_name FROM loans l JOIN copies c ON c.id=l.copy_id JOIN books b ON b.id=c.book_id JOIN members m ON m.id=l.member_id ${openOnly ? "WHERE l.returned_at IS NULL" : ""} ORDER BY l.borrowed_at DESC`);
+  return db.select<Loan[]>(`SELECT l.*, b.title, b.item_type, c.barcode, m.full_name member_name FROM loans l JOIN copies c ON c.id=l.copy_id JOIN books b ON b.id=c.book_id JOIN members m ON m.id=l.member_id ${openOnly ? "WHERE l.returned_at IS NULL" : ""} ORDER BY l.borrowed_at DESC`);
 }
 
 export async function getLoansForMember(memberId: string): Promise<Loan[]> {
