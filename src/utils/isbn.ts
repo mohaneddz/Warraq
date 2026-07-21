@@ -28,11 +28,30 @@ export function cleanPhone(value: string): string {
 }
 
 export function cleanMemberNumber(value: string): string {
-  return value.trim().toUpperCase();
+  const digits = value.replace(/\D/g, "");
+  return digits || value.trim();
+}
+
+export function formatMemberNumber(value: string | number | null | undefined): string {
+  if (!value) return "";
+  const str = String(value).trim();
+  const digits = str.replace(/\D/g, "");
+  if (!digits) return str;
+  return `MB-${digits}`;
+}
+
+export function generateRandomMemberNumber(digitsCount = 6): string {
+  const min = Math.pow(10, digitsCount - 1);
+  const max = Math.pow(10, digitsCount) - 1;
+  return String(Math.floor(min + Math.random() * (max - min + 1)));
 }
 
 export function cleanText(value: string): string {
   return value.trim();
+}
+
+export function cleanLastName(value: string): string {
+  return value.trim().toUpperCase();
 }
 
 export function formatIsbn(value: string | null | undefined): string {

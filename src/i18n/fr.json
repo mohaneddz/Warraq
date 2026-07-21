@@ -314,6 +314,8 @@
       "title": "Ajouter un nouveau membre",
       "editTitle": "Modifier le membre",
       "fullName": "Nom complet",
+      "firstName": "Prénom",
+      "lastName": "Nom",
       "email": "E-mail",
       "phone": "Téléphone",
       "dept": "Département",
@@ -321,6 +323,18 @@
       "status": "Statut",
       "cancel": "Annuler",
       "save": "Enregistrer le membre"
+    },
+    "expired": "Expiré",
+    "archived": "Archivé",
+    "roles": {
+      "student": "Étudiant",
+      "staff": "Personnel",
+      "researcher": "Chercheur",
+      "visitor": "Visiteur",
+      "faculty": "Enseignant",
+      "doctor": "Médecin",
+      "nurse": "Infirmier",
+      "other": "Autre"
     },
     "searchPlaceholder": "Rechercher des membres par nom, e-mail ou ID...",
     "allDepartments": "Tous les départements",

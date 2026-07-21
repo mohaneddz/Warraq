@@ -1031,6 +1031,7 @@ export function CatalogPage() {
       {/* Right Sidebar (Details Panel) */}
       {selectedBook && (
         <BookSidebar
+          key={selectedBook.id}
           book={selectedBook}
           onClose={() => {
             setSelectedBook(null);
@@ -1433,162 +1434,96 @@ function BookSidebar({ book, onClose, registerClean }: { book: Book; onClose: ()
 
         {activeTab === "details" && (
           <div className="w-full space-y-4">
-            {!isEditing ? (
-              <>
-                <div>
-                  <h2 className="text-[18px] font-bold text-[#122222] dark:text-white leading-tight mb-1">{book.title}</h2>
-                  {book.subtitle && <p className="text-[13px] text-[#122222]/60 dark:text-white/60 mb-1">{book.subtitle}</p>}
-                  {book.arabic_title && <p className="text-[13px] font-arabic text-[#122222]/60 dark:text-white/60 mb-2 font-medium">{book.arabic_title}</p>}
-                  {book.tags && (
-                    <div className="flex flex-wrap gap-1 mt-2 mb-2">
-                      {book.tags.split(",").map((t, idx) => (
-                        <span key={idx} className="px-2 py-0.5 bg-emerald/10 dark:bg-emerald-light/20 text-emerald dark:text-emerald-light rounded text-[10px] font-bold">
-                          {t.trim()}
-                        </span>
-                      ))}
-                    </div>
-                  )}
+            <div>
+              <h2 className="text-[18px] font-bold text-[#122222] dark:text-white leading-tight mb-1">{book.title}</h2>
+              {book.subtitle && <p className="text-[13px] text-[#122222]/60 dark:text-white/60 mb-1">{book.subtitle}</p>}
+              {book.arabic_title && <p className="text-[13px] font-arabic text-[#122222]/60 dark:text-white/60 mb-2 font-medium">{book.arabic_title}</p>}
+              {book.tags && (
+                <div className="flex flex-wrap gap-1 mt-2 mb-2">
+                  {book.tags.split(",").map((t, idx) => (
+                    <span key={idx} className="px-2 py-0.5 bg-emerald/10 dark:bg-emerald-light/20 text-emerald dark:text-emerald-light rounded text-[10px] font-bold">
+                      {t.trim()}
+                    </span>
+                  ))}
                 </div>
+              )}
+            </div>
+            <div className="space-y-3">
+              <InfoRow label={t("catalog.itemType", "Item Type")} value={<ItemTypeBadge type={book.item_type} />} />
+              <InfoRow label={t("catalog.details.author")} value={book.author || "—"} />
+              <InfoRow label={t("catalog.details.category")} value={book.category || t("catalog.uncategorized") || "Uncategorized"} />
+              <InfoRow label={t("catalog.details.language")} value={book.language} />
+              <InfoRow label={t("catalog.details.publisher")} value={book.publisher || "—"} />
+              <div className="grid grid-cols-2 gap-4">
+                <InfoRow label={t("catalog.details.pubYear")} value={book.publication_year ? String(book.publication_year) : "—"} />
+                <InfoRow label={t("catalog.details.callNumber")} value={book.call_number || "—"} />
+              </div>
+              <InfoRow label={t("catalog.details.isbn10")} value={formatIsbn(book.isbn10) || "—"} />
+              <InfoRow label={t("catalog.details.isbn13")} value={formatIsbn(book.isbn13) || "—"} />
+
+              {Object.keys(parsedMetadata).length > 0 && (
+                <div className="pt-3 border-t border-black/5 dark:border-white/5 space-y-2">
+                  <div className="text-[11px] font-bold text-[#122222]/50 dark:text-white/50 uppercase tracking-wider mb-2">
+                    {t("catalog.details.specifications", "Item Specifications")}
+                  </div>
+                  {parsedMetadata.issue_number && <InfoRow label={t("itemFields.issueNumber", "Issue / Volume")} value={parsedMetadata.issue_number} />}
+                  {parsedMetadata.frequency && <InfoRow label={t("itemFields.frequency", "Frequency")} value={parsedMetadata.frequency} />}
+                  {parsedMetadata.issn && <InfoRow label={t("itemFields.issn", "ISSN")} value={parsedMetadata.issn} />}
+                  {parsedMetadata.pub_date && <InfoRow label={t("itemFields.pubDate", "Pub Date / Month")} value={parsedMetadata.pub_date} />}
+                  {parsedMetadata.issue_date && <InfoRow label={t("itemFields.issueDate", "Edition / Issue Date")} value={parsedMetadata.issue_date} />}
+                  {parsedMetadata.press && <InfoRow label={t("itemFields.press", "Press / Publisher")} value={parsedMetadata.press} />}
+                  {parsedMetadata.region && <InfoRow label={t("itemFields.region", "Region / City")} value={parsedMetadata.region} />}
+                  {parsedMetadata.editor && <InfoRow label={t("itemFields.editor", "Chief Editor / Society")} value={parsedMetadata.editor} />}
+                  {parsedMetadata.ruling_type && <InfoRow label={t("itemFields.rulingType", "Ruling Type")} value={parsedMetadata.ruling_type} />}
+                  {parsedMetadata.page_count && <InfoRow label={t("itemFields.pageCount", "Page Count")} value={parsedMetadata.page_count} />}
+                  {parsedMetadata.paper_size && <InfoRow label={t("itemFields.paperSize", "Paper Size")} value={parsedMetadata.paper_size} />}
+                  {parsedMetadata.brand && <InfoRow label={t("itemFields.brand", "Brand / Manufacturer")} value={parsedMetadata.brand} />}
+                  {parsedMetadata.media_format && <InfoRow label={t("itemFields.mediaFormat", "Media Format")} value={parsedMetadata.media_format} />}
+                  {parsedMetadata.duration && <InfoRow label={t("itemFields.duration", "Runtime / Duration")} value={parsedMetadata.duration} />}
+                  {parsedMetadata.model_number && <InfoRow label={t("itemFields.modelNumber", "Model / Serial #")} value={parsedMetadata.model_number} />}
+                  {parsedMetadata.artist && <InfoRow label={t("itemFields.artist", "Artist / Creator")} value={parsedMetadata.artist} />}
+                  {parsedMetadata.studio && <InfoRow label={t("itemFields.studio", "Studio / Label")} value={parsedMetadata.studio} />}
+                  {parsedMetadata.owner && <InfoRow label={t("itemFields.owner", "Owner / Department")} value={parsedMetadata.owner} />}
+                  {parsedMetadata.specifications && <InfoRow label={t("itemFields.specifications", "Details")} value={parsedMetadata.specifications} />}
+                </div>
+              )}
+
+              {book.description && (
+                <div className="pt-2">
+                  <div className="text-[11px] font-bold text-[#122222]/50 dark:text-white/50 uppercase tracking-wider mb-1">{t("catalog.details.description")}</div>
+                  <p className="text-[12px] text-[#122222]/70 dark:text-white/70 leading-relaxed bg-[#fcfbf8] dark:bg-[#111d1a] p-3 rounded-lg border border-black/5 dark:border-white/5 max-h-40 overflow-y-auto">{book.description}</p>
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-2 pt-4 border-t border-black/5 dark:border-white/5 w-full">
+              <button
+                onClick={() => setIsEditing(true)}
+                className="flex-1 flex items-center justify-center gap-2 bg-[#fcfbf8] dark:bg-[#111d1a] border border-black/10 dark:border-white/10 text-[12px] font-bold text-[#122222] dark:text-white py-2 rounded-lg hover:bg-black/5 transition-colors cursor-pointer"
+              >
+                <Edit2 size={14} /> {t("catalog.details.edit")}
+              </button>
+              <button
+                onClick={() => {
+                  if (confirm(t("catalog.alerts.confirmDelete") || "Are you sure you want to delete this item? This will archive all of its copies.")) {
+                    deleteBookMutation.mutate();
+                  }
+                }}
+                className="flex-1 flex items-center justify-center gap-2 bg-red-500/10 text-red-500 text-[12px] font-bold py-2 rounded-lg hover:bg-red-500/20 transition-colors cursor-pointer"
+              >
+                <Trash2 size={14} /> {t("catalog.details.archive")}
+              </button>
+            </div>
+
+            {bookAudits.length > 0 && (
+              <div className="w-full pt-6 border-t border-black/5 dark:border-white/5">
+                <h3 className="font-bold text-[13px] text-[#122222] dark:text-white flex items-center gap-2 mb-3"><Clock size={12} strokeWidth={2.5} /> {t("catalog.details.recentActivity")}</h3>
                 <div className="space-y-3">
-                  <InfoRow label={t("catalog.itemType", "Item Type")} value={<ItemTypeBadge type={book.item_type} />} />
-                  <InfoRow label={t("catalog.details.author")} value={book.author || "—"} />
-                  <InfoRow label={t("catalog.details.category")} value={book.category || t("catalog.uncategorized") || "Uncategorized"} />
-                  <InfoRow label={t("catalog.details.language")} value={book.language} />
-                  <InfoRow label={t("catalog.details.publisher")} value={book.publisher || "—"} />
-                  <div className="grid grid-cols-2 gap-4">
-                    <InfoRow label={t("catalog.details.pubYear")} value={book.publication_year ? String(book.publication_year) : "—"} />
-                    <InfoRow label={t("catalog.details.callNumber")} value={book.call_number || "—"} />
-                  </div>
-                  <InfoRow label={t("catalog.details.isbn10")} value={formatIsbn(book.isbn10) || "—"} />
-                  <InfoRow label={t("catalog.details.isbn13")} value={formatIsbn(book.isbn13) || "—"} />
-
-                  {Object.keys(parsedMetadata).length > 0 && (
-                    <div className="pt-3 border-t border-black/5 dark:border-white/5 space-y-2">
-                      <div className="text-[11px] font-bold text-[#122222]/50 dark:text-white/50 uppercase tracking-wider mb-2">
-                        {t("catalog.details.specifications", "Item Specifications")}
-                      </div>
-                      {parsedMetadata.issue_number && <InfoRow label={t("itemFields.issueNumber", "Issue / Volume")} value={parsedMetadata.issue_number} />}
-                      {parsedMetadata.frequency && <InfoRow label={t("itemFields.frequency", "Frequency")} value={parsedMetadata.frequency} />}
-                      {parsedMetadata.issn && <InfoRow label={t("itemFields.issn", "ISSN")} value={parsedMetadata.issn} />}
-                      {parsedMetadata.pub_date && <InfoRow label={t("itemFields.pubDate", "Pub Date / Month")} value={parsedMetadata.pub_date} />}
-                      {parsedMetadata.issue_date && <InfoRow label={t("itemFields.issueDate", "Edition / Issue Date")} value={parsedMetadata.issue_date} />}
-                      {parsedMetadata.press && <InfoRow label={t("itemFields.press", "Press / Publisher")} value={parsedMetadata.press} />}
-                      {parsedMetadata.region && <InfoRow label={t("itemFields.region", "Region / City")} value={parsedMetadata.region} />}
-                      {parsedMetadata.editor && <InfoRow label={t("itemFields.editor", "Chief Editor / Society")} value={parsedMetadata.editor} />}
-                      {parsedMetadata.ruling_type && <InfoRow label={t("itemFields.rulingType", "Ruling Type")} value={parsedMetadata.ruling_type} />}
-                      {parsedMetadata.page_count && <InfoRow label={t("itemFields.pageCount", "Page Count")} value={parsedMetadata.page_count} />}
-                      {parsedMetadata.paper_size && <InfoRow label={t("itemFields.paperSize", "Paper Size")} value={parsedMetadata.paper_size} />}
-                      {parsedMetadata.brand && <InfoRow label={t("itemFields.brand", "Brand / Manufacturer")} value={parsedMetadata.brand} />}
-                      {parsedMetadata.media_format && <InfoRow label={t("itemFields.mediaFormat", "Media Format")} value={parsedMetadata.media_format} />}
-                      {parsedMetadata.duration && <InfoRow label={t("itemFields.duration", "Runtime / Duration")} value={parsedMetadata.duration} />}
-                      {parsedMetadata.model_number && <InfoRow label={t("itemFields.modelNumber", "Model / Serial #")} value={parsedMetadata.model_number} />}
-                      {parsedMetadata.artist && <InfoRow label={t("itemFields.artist", "Artist / Creator")} value={parsedMetadata.artist} />}
-                      {parsedMetadata.studio && <InfoRow label={t("itemFields.studio", "Studio / Label")} value={parsedMetadata.studio} />}
-                      {parsedMetadata.owner && <InfoRow label={t("itemFields.owner", "Owner / Department")} value={parsedMetadata.owner} />}
-                      {parsedMetadata.specifications && <InfoRow label={t("itemFields.specifications", "Details")} value={parsedMetadata.specifications} />}
-                    </div>
-                  )}
-
-                  {book.description && (
-                    <div className="pt-2">
-                      <div className="text-[11px] font-bold text-[#122222]/50 dark:text-white/50 uppercase tracking-wider mb-1">{t("catalog.details.description")}</div>
-                      <p className="text-[12px] text-[#122222]/70 dark:text-white/70 leading-relaxed bg-[#fcfbf8] dark:bg-[#111d1a] p-3 rounded-lg border border-black/5 dark:border-white/5 max-h-40 overflow-y-auto">{book.description}</p>
-                    </div>
-                  )}
+                  {bookAudits.map((item) => (
+                    <ActivityRow key={item.id} date={formatDisplayDate(item.created_at)} action={item.action} actor={item.actor} />
+                  ))}
                 </div>
-
-                <div className="flex gap-2 pt-4 border-t border-black/5 dark:border-white/5 w-full">
-                  <button
-                    onClick={() => setIsEditing(true)}
-                    className="flex-1 flex items-center justify-center gap-2 bg-[#fcfbf8] dark:bg-[#111d1a] border border-black/10 dark:border-white/10 text-[12px] font-bold text-[#122222] dark:text-white py-2 rounded-lg hover:bg-black/5 transition-colors cursor-pointer"
-                  >
-                    <Edit2 size={14} /> {t("catalog.details.edit")}
-                  </button>
-                  <button
-                    onClick={() => {
-                      if (confirm(t("catalog.alerts.confirmDelete") || "Are you sure you want to delete this item? This will archive all of its copies.")) {
-                        deleteBookMutation.mutate();
-                      }
-                    }}
-                    className="flex-1 flex items-center justify-center gap-2 bg-red-500/10 text-red-500 text-[12px] font-bold py-2 rounded-lg hover:bg-red-500/20 transition-colors cursor-pointer"
-                  >
-                    <Trash2 size={14} /> {t("catalog.details.archive")}
-                  </button>
-                </div>
-
-                {bookAudits.length > 0 && (
-                  <div className="w-full pt-6 border-t border-black/5 dark:border-white/5">
-                    <h3 className="font-bold text-[13px] text-[#122222] dark:text-white flex items-center gap-2 mb-3"><Clock size={12} strokeWidth={2.5} /> {t("catalog.details.recentActivity")}</h3>
-                    <div className="space-y-3">
-                      {bookAudits.map((item) => (
-                        <ActivityRow key={item.id} date={formatDisplayDate(item.created_at)} action={item.action} actor={item.actor} />
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </>
-            ) : (
-              <form onSubmit={editForm.handleSubmit((v) => updateBookMutation.mutate(v))} className="space-y-3 w-full text-[13px]">
-                <div className="flex justify-center py-1">
-                  <ImageUpload
-                    value={editForm.watch("cover_path")}
-                    onChange={(val) => editForm.setValue("cover_path", val || "")}
-                    shape="cover"
-                    label={t("catalog.addModal.cover")}
-                  />
-                </div>
-                <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">{t("catalog.itemType", "Item Type")}
-                  <select
-                    {...editForm.register("item_type")}
-                    className="w-full bg-white dark:bg-[#1d2926] border border-black/10 dark:border-white/10 rounded-lg py-1 px-2.5 text-[13px] text-[#122222] dark:text-white outline-none focus:border-emerald mt-1 font-semibold cursor-pointer"
-                  >
-                    <option value="book">{t("itemTypes.book", "Book")}</option>
-                    <option value="magazine">{t("itemTypes.magazine", "Magazine")}</option>
-                    <option value="notebook">{t("itemTypes.notebook", "Notebook")}</option>
-                    <option value="journal">{t("itemTypes.journal", "Journal")}</option>
-                    <option value="newspaper">{t("itemTypes.newspaper", "Newspaper")}</option>
-                    <option value="disc">{t("itemTypes.disc", "Disc / Media")}</option>
-                    <option value="other">{t("itemTypes.other", "Other / Misc")}</option>
-                  </select>
-                </label>
-                <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">{t("catalog.addModal.titleLabel")}
-                  <Input {...registerClean(editForm, "title", cleanText)} className="py-1 px-2.5 text-[13px]" />
-                </label>
-
-                <TypeSpecificFields
-                  itemType={editForm.watch("item_type") || "book"}
-                  form={editForm}
-                  registerClean={registerClean}
-                  t={t}
-                />
-
-                <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block font-semibold">{t("catalog.addModal.tagsLabel")}
-                  <Input {...registerClean(editForm, "tags", cleanText)} className="py-1 px-2.5 text-[13px]" />
-                  {watchedEditTags && (
-                    <div className="flex flex-wrap gap-1 mt-1.5">
-                      {watchedEditTags.split(",").map((t, idx) => {
-                        const clean = t.trim();
-                        if (!clean) return null;
-                        return (
-                          <span key={idx} className="px-2 py-0.5 bg-emerald/10 dark:bg-emerald-light/20 text-emerald dark:text-emerald-light rounded text-[10px] font-bold">
-                            {clean}
-                          </span>
-                        );
-                      })}
-                    </div>
-                  )}
-                </label>
-                <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">{t("catalog.addModal.descLabel")}
-                  <textarea
-                    {...registerClean(editForm, "description", cleanText)}
-                    className="w-full bg-[#fcfbf8] dark:bg-[#111d1a] border border-black/10 dark:border-white/10 rounded-lg py-1.5 px-2.5 text-[13px] text-[#122222] dark:text-white outline-none focus:border-emerald min-h-[60px] mt-1"
-                  />
-                </label>
-                <div className="flex gap-2 justify-end pt-3 border-t border-black/5 dark:border-white/5">
-                  <Button type="button" variant="ghost" onClick={() => setIsEditing(false)}>{t("catalog.addModal.cancel")}</Button>
-                  <Button type="submit" disabled={updateBookMutation.isPending}>{updateBookMutation.isPending ? "Saving..." : t("save")}</Button>
-                </div>
-              </form>
+              </div>
             )}
           </div>
         )}
@@ -1699,6 +1634,73 @@ function BookSidebar({ book, onClose, registerClean }: { book: Book; onClose: ()
             )}
           </div>
         )}
+
+      {/* Edit Item Modal */}
+      {isEditing && (
+        <Modal isOpen={isEditing} onClose={() => setIsEditing(false)} title={t("catalog.addModal.editTitle") || "Edit Item"}>
+          <form onSubmit={editForm.handleSubmit((v) => updateBookMutation.mutate(v))} className="grid gap-4 md:grid-cols-2 text-[13px]">
+            <div className="md:col-span-2 flex justify-center py-1">
+              <ImageUpload
+                value={editForm.watch("cover_path")}
+                onChange={(val) => editForm.setValue("cover_path", val || "")}
+                shape="cover"
+                label={t("catalog.addModal.cover")}
+              />
+            </div>
+            <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 md:col-span-2">{t("catalog.itemType", "Item Type")}
+              <select
+                {...editForm.register("item_type")}
+                className="w-full bg-white dark:bg-[#1d2926] border border-black/10 dark:border-white/10 rounded-lg py-2 px-3 text-[13px] text-[#122222] dark:text-white outline-none focus:border-emerald mt-1 font-semibold cursor-pointer"
+              >
+                <option value="book">{t("itemTypes.book", "Book")}</option>
+                <option value="magazine">{t("itemTypes.magazine", "Magazine")}</option>
+                <option value="notebook">{t("itemTypes.notebook", "Notebook")}</option>
+                <option value="journal">{t("itemTypes.journal", "Journal")}</option>
+                <option value="newspaper">{t("itemTypes.newspaper", "Newspaper")}</option>
+                <option value="disc">{t("itemTypes.disc", "Disc / Media")}</option>
+                <option value="other">{t("itemTypes.other", "Other / Misc")}</option>
+              </select>
+            </label>
+            <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 md:col-span-2">{t("catalog.addModal.titleLabel")}
+              <Input {...registerClean(editForm, "title", cleanText)} />
+            </label>
+
+            <TypeSpecificFields
+              itemType={editForm.watch("item_type") || "book"}
+              form={editForm}
+              registerClean={registerClean}
+              t={t}
+            />
+
+            <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 md:col-span-2 block font-semibold">{t("catalog.addModal.tagsLabel")}
+              <Input {...registerClean(editForm, "tags", cleanText)} />
+              {watchedEditTags && (
+                <div className="flex flex-wrap gap-1 mt-1.5">
+                  {watchedEditTags.split(",").map((t, idx) => {
+                    const clean = t.trim();
+                    if (!clean) return null;
+                    return (
+                      <span key={idx} className="px-2 py-0.5 bg-emerald/10 dark:bg-emerald-light/20 text-emerald dark:text-emerald-light rounded text-[10px] font-bold">
+                        {clean}
+                      </span>
+                    );
+                  })}
+                </div>
+              )}
+            </label>
+            <label className="md:col-span-2 text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">{t("catalog.addModal.descLabel")}
+              <textarea
+                {...registerClean(editForm, "description", cleanText)}
+                className="w-full bg-[#fcfbf8] dark:bg-[#111d1a] border border-black/10 dark:border-white/10 rounded-lg py-2 px-3 text-[13px] text-[#122222] dark:text-white outline-none focus:border-emerald min-h-[60px] mt-1"
+              />
+            </label>
+            <div className="md:col-span-2 flex gap-2 justify-end pt-4 border-t border-black/5 dark:border-white/5">
+              <Button type="button" variant="ghost" onClick={() => setIsEditing(false)}>{t("catalog.addModal.cancel")}</Button>
+              <Button type="submit" disabled={updateBookMutation.isPending}>{updateBookMutation.isPending ? "Saving..." : t("save")}</Button>
+            </div>
+          </form>
+        </Modal>
+      )}
       </div>
     </div>
   );

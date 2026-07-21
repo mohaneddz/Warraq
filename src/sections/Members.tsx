@@ -6,11 +6,12 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { 
   Plus, Search, ChevronLeft, ChevronRight, X, 
-  Trash2, IdCard, Phone, Edit2
+  Trash2, IdCard, Phone, Edit2, RefreshCw
 } from "lucide-react";
 import { 
   members, saveMember, updateMember, deleteMember, getLoansForMember, 
-  getReservationsForMember, renewLoan, returnCopies, cancelReservation 
+  getReservationsForMember, renewLoan, returnCopies, cancelReservation,
+  repopulateMembersDatabase
 } from "../data/repositories/library";
 import type { Member } from "../types";
 import { Modal, Input, Button } from "../components/ui/primitives";
@@ -19,17 +20,45 @@ import { daysLate, formatDisplayDate } from "../utils/dates";
 import { queryClient } from "../app/providers";
 import { useUiStore } from "../store/uiStore";
 import { ImageUpload } from "../components/ui/ImageUpload";
-import { cleanPhone, cleanMemberNumber, cleanText } from "../utils/isbn";
+import { cleanPhone, cleanMemberNumber, cleanText, cleanLastName, formatMemberNumber, generateRandomMemberNumber } from "../utils/isbn";
 import { useTranslation } from "react-i18next";
 
 const invalidate = () => queryClient.invalidateQueries();
 
+export function splitFullName(fullName?: string | null) {
+  if (!fullName) return { first_name: "", last_name: "" };
+  const parts = fullName.trim().split(/\s+/);
+  if (parts.length === 0) return { first_name: "", last_name: "" };
+  if (parts.length === 1) return { first_name: parts[0], last_name: "" };
+  return {
+    first_name: parts[0],
+    last_name: parts.slice(1).join(" ").toUpperCase()
+  };
+}
+
+export function formatMemberShortName(fullName?: string | null) {
+  if (!fullName) return "";
+  const { first_name, last_name } = splitFullName(fullName);
+  if (!first_name) return fullName;
+  if (!last_name) return first_name;
+  return `${first_name[0].toUpperCase()}. ${last_name}`;
+}
+
+export function getMemberInitials(fullName?: string | null) {
+  if (!fullName) return "MB";
+  const { first_name, last_name } = splitFullName(fullName);
+  if (!first_name) return "MB";
+  if (!last_name) return first_name.substring(0, 2).toUpperCase();
+  return `${first_name[0]}${last_name[0]}`.toUpperCase();
+}
+
 const memberSchema = z.object({
-  full_name: z.string().min(2, "A full name is required"),
+  first_name: z.string().min(1, "First name is required"),
+  last_name: z.string().min(1, "Last name is required"),
   member_number: z.string().min(3, "A membership number is required"),
   email: z.string().email("Enter a valid email").or(z.literal("")),
   phone: z.string().optional(),
-  role: z.string().min(2, "Role is required"),
+  role: z.string().min(1, "Role is required"),
   department: z.string().optional(),
   status: z.enum(["active", "suspended", "expired", "archived"]),
   avatar_path: z.string().nullable().optional()
@@ -87,7 +116,26 @@ export function MembersPage() {
 
   const addForm = useForm<MemberValues>({
     resolver: zodResolver(memberSchema),
-    defaultValues: { full_name: "", member_number: "", email: "", phone: "", role: "Staff", department: "", status: "active", avatar_path: null }
+    defaultValues: {
+      first_name: "",
+      last_name: "",
+      member_number: generateRandomMemberNumber(6),
+      email: "",
+      phone: "",
+      role: "Student",
+      department: "",
+      status: "active",
+      avatar_path: null
+    }
+  });
+
+  const repopulateMutation = useMutation({
+    mutationFn: () => repopulateMembersDatabase(),
+    onSuccess: () => {
+      invalidate();
+      toast.success(t("members.alerts.repopulated") || "Members database reset and repopulated.");
+    },
+    onError: (err: any) => toast.error(err.message)
   });
 
   const addMutation = useMutation({
@@ -96,8 +144,9 @@ export function MembersPage() {
       const exists = result.data?.some(m => m.member_number.toUpperCase() === values.member_number.toUpperCase());
       if (exists) throw new Error(t("members.alerts.exists") || "A member with this number already exists.");
       
+      const fullName = cleanText(`${values.first_name} ${cleanLastName(values.last_name)}`);
       return saveMember({
-        full_name: cleanText(values.full_name),
+        full_name: fullName,
         member_number: cleanMemberNumber(values.member_number),
         email: values.email ? cleanText(values.email) : "",
         phone: values.phone ? cleanPhone(values.phone) : "",
@@ -110,7 +159,17 @@ export function MembersPage() {
     onSuccess: () => {
       invalidate();
       toast.success(t("members.alerts.memberSaved") || "Member saved successfully.");
-      addForm.reset();
+      addForm.reset({
+        first_name: "",
+        last_name: "",
+        member_number: generateRandomMemberNumber(6),
+        email: "",
+        phone: "",
+        role: "Student",
+        department: "",
+        status: "active",
+        avatar_path: null
+      });
       setAdding(false);
     },
     onError: (err: any) => toast.error(err.message)
@@ -199,7 +258,21 @@ export function MembersPage() {
           </div>
           <div className="flex items-center gap-3">
             <button 
-              onClick={() => setAdding(true)}
+              onClick={() => {
+                if (confirm(t("members.alerts.confirmReset") || "Are you sure you want to clear and repopulate the members database with clean standardized data?")) {
+                  repopulateMutation.mutate();
+                }
+              }}
+              disabled={repopulateMutation.isPending}
+              className="flex items-center gap-2 bg-[#fcfbf8] dark:bg-[#111d1a] border border-black/10 dark:border-white/10 text-[13px] font-bold text-[#122222] dark:text-white px-3.5 py-2 rounded-lg hover:bg-black/5 transition-colors cursor-pointer"
+            >
+              <RefreshCw size={15} className={repopulateMutation.isPending ? "animate-spin" : ""} /> {t("members.repopulate", "Repopulate Database")}
+            </button>
+            <button 
+              onClick={() => {
+                addForm.setValue("member_number", generateRandomMemberNumber(6));
+                setAdding(true);
+              }}
               className="flex items-center gap-2 bg-emerald text-white px-4 py-2 rounded-lg font-bold text-[13px] hover:bg-emerald/90 transition-colors shadow-sm shadow-emerald/20 cursor-pointer"
             >
               <Plus size={16} /> {t("members.addMember")}
@@ -301,9 +374,8 @@ export function MembersPage() {
             {paginatedMembers.length ? (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-3 pb-4">
                 {paginatedMembers.map((member) => {
-                  const initials = member.full_name
-                    ? member.full_name.split(/\s+/).map(n => n[0]).join("").substring(0, 2).toUpperCase()
-                    : "??";
+                  const initials = getMemberInitials(member.full_name);
+                  const shortName = formatMemberShortName(member.full_name);
                   
                   return (
                     <div 
@@ -359,9 +431,12 @@ export function MembersPage() {
                       <h3 className="font-bold text-[13px] text-[#122222] dark:text-white text-center leading-snug mt-1.5 truncate w-full px-1" title={member.full_name}>
                         {member.full_name}
                       </h3>
+                      <span className="text-[10px] text-[#122222]/50 dark:text-white/50 font-semibold block text-center truncate px-1">
+                        {shortName}
+                      </span>
                       
                       <span className="inline-block font-mono text-[9px] font-bold text-emerald dark:text-[#1b9277] bg-emerald/5 dark:bg-emerald-light/10 border border-emerald/10 dark:border-emerald-light/10 px-1.5 py-0.5 rounded-md mt-1 shrink-0">
-                        {member.member_number}
+                        {formatMemberNumber(member.member_number)}
                       </span>
 
                       <div className="w-full border-t border-dashed border-black/5 dark:border-white/5 my-2 shrink-0" />
@@ -419,6 +494,7 @@ export function MembersPage() {
       {/* Right Sidebar Details */}
       {selectedMember && (
         <MemberSidebar 
+          key={selectedMember.id}
           member={selectedMember} 
           onClose={() => {
             setSelectedMember(null);
@@ -441,32 +517,57 @@ export function MembersPage() {
               />
             </div>
             
-            <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 md:col-span-2">
-              <span>{t("members.fullName")} <span className="text-red-500">*</span></span>
-              <Input {...registerClean(addForm, "full_name", cleanText)} placeholder="e.g. Mohamed Benali" />
-              {addForm.formState.errors.full_name && <small className="text-red-500">{addForm.formState.errors.full_name.message}</small>}
+            <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60">
+              <span>{t("members.firstName", "First Name")} <span className="text-red-500">*</span></span>
+              <Input {...registerClean(addForm, "first_name", cleanText)} placeholder="e.g. Mohamed" />
+              {addForm.formState.errors.first_name && <small className="text-red-500">{addForm.formState.errors.first_name.message}</small>}
+            </label>
+
+            <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60">
+              <span>{t("members.lastName", "Last Name")} <span className="text-red-500">*</span></span>
+              <Input {...registerClean(addForm, "last_name", cleanLastName)} placeholder="e.g. BENALI" className="uppercase font-semibold" />
+              {addForm.formState.errors.last_name && <small className="text-red-500">{addForm.formState.errors.last_name.message}</small>}
             </label>
             
             <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60">
               <span>{t("members.membershipNumber")} <span className="text-red-500">*</span></span>
-              <Input {...registerClean(addForm, "member_number", cleanMemberNumber)} placeholder="e.g. MB-987654" />
+              <div className="flex items-center gap-1 mt-1">
+                <Input {...registerClean(addForm, "member_number", cleanMemberNumber)} placeholder="e.g. 104829" className="mt-0 flex-1" />
+                <button
+                  type="button"
+                  onClick={() => addForm.setValue("member_number", generateRandomMemberNumber(6))}
+                  className="p-2.5 rounded-lg border border-black/10 dark:border-white/10 bg-[#fcfbf8] dark:bg-[#111d1a] text-[#122222]/70 dark:text-white/70 hover:bg-black/5 cursor-pointer shrink-0"
+                  title="Generate random 6-digit number"
+                >
+                  <RefreshCw size={14} />
+                </button>
+              </div>
               {addForm.formState.errors.member_number && <small className="text-red-500">{addForm.formState.errors.member_number.message}</small>}
             </label>
 
             <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60">
               <span>{t("members.email")}</span>
-              <Input {...registerClean(addForm, "email", cleanText)} placeholder="name@hospital.com" />
+              <Input {...registerClean(addForm, "email", cleanText)} placeholder="name@domain.com" />
               {addForm.formState.errors.email && <small className="text-red-500">{addForm.formState.errors.email.message}</small>}
             </label>
 
             <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60">
               <span>{t("members.phone")}</span>
-              <Input {...registerClean(addForm, "phone", cleanPhone)} placeholder="+213 555 12 34 56" />
+              <Input {...registerClean(addForm, "phone", cleanPhone)} placeholder="0xxxxxxxxx" />
             </label>
 
             <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60">
               <span>{t("members.roleLabel")} <span className="text-red-500">*</span></span>
-              <Input {...registerClean(addForm, "role", cleanText)} placeholder="e.g. Doctor, Nurse, Student" />
+              <select {...addForm.register("role")} className="field-select text-[13px] py-2 px-3 mt-1 font-semibold w-full bg-white dark:bg-[#1d2926]">
+                <option value="Student">{t("roles.student", "Student")}</option>
+                <option value="Staff">{t("roles.staff", "Staff")}</option>
+                <option value="Researcher">{t("roles.researcher", "Researcher")}</option>
+                <option value="Visitor">{t("roles.visitor", "Visitor")}</option>
+                <option value="Faculty">{t("roles.faculty", "Faculty")}</option>
+                <option value="Doctor">{t("roles.doctor", "Doctor")}</option>
+                <option value="Nurse">{t("roles.nurse", "Nurse")}</option>
+                <option value="Other">{t("roles.other", "Other")}</option>
+              </select>
               {addForm.formState.errors.role && <small className="text-red-500">{addForm.formState.errors.role.message}</small>}
             </label>
 
@@ -477,9 +578,11 @@ export function MembersPage() {
 
             <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60">
               <span>{t("status")}</span>
-              <select {...addForm.register("status")} className="field-select text-[13px] py-2 px-3 mt-1 font-semibold">
+              <select {...addForm.register("status")} className="field-select text-[13px] py-2 px-3 mt-1 font-semibold w-full bg-white dark:bg-[#1d2926]">
                 <option value="active">{t("members.active") || "Active"}</option>
                 <option value="suspended">{t("members.suspended") || "Suspended"}</option>
+                <option value="expired">{t("members.expired") || "Expired"}</option>
+                <option value="archived">{t("members.archived") || "Archived"}</option>
               </select>
             </label>
 
@@ -545,29 +648,50 @@ function MemberSidebar({ member, onClose, registerClean }: { member: Member; onC
   const editForm = useForm<MemberValues>({
     resolver: zodResolver(memberSchema),
     defaultValues: {
-      full_name: member.full_name,
+      first_name: splitFullName(member.full_name).first_name,
+      last_name: splitFullName(member.full_name).last_name,
       member_number: member.member_number,
       email: member.email || "",
       phone: member.phone || "",
-      role: member.role || "Staff",
+      role: member.role || "Student",
       department: member.department || "",
       status: member.status,
       avatar_path: member.avatar_path || null
     }
   });
 
+  // Sync form values whenever member changes
+  useEffect(() => {
+    const { first_name, last_name } = splitFullName(member.full_name);
+    editForm.reset({
+      first_name,
+      last_name,
+      member_number: member.member_number,
+      email: member.email || "",
+      phone: member.phone || "",
+      role: member.role || "Student",
+      department: member.department || "",
+      status: member.status,
+      avatar_path: member.avatar_path || null
+    });
+    setIsEditing(false);
+  }, [member, editForm]);
+
   // Mutations
   const updateMutation = useMutation({
-    mutationFn: (values: MemberValues) => updateMember(member.id, {
-      full_name: cleanText(values.full_name),
-      member_number: cleanMemberNumber(values.member_number),
-      email: values.email ? cleanText(values.email) : "",
-      phone: values.phone ? cleanPhone(values.phone) : "",
-      role: cleanText(values.role),
-      department: values.department ? cleanText(values.department) : "",
-      status: values.status,
-      avatar_path: values.avatar_path || null
-    }),
+    mutationFn: (values: MemberValues) => {
+      const fullName = cleanText(`${values.first_name} ${cleanLastName(values.last_name)}`);
+      return updateMember(member.id, {
+        full_name: fullName,
+        member_number: cleanMemberNumber(values.member_number),
+        email: values.email ? cleanText(values.email) : "",
+        phone: values.phone ? cleanPhone(values.phone) : "",
+        role: cleanText(values.role),
+        department: values.department ? cleanText(values.department) : "",
+        status: values.status,
+        avatar_path: values.avatar_path || null
+      });
+    },
     onSuccess: () => {
       toast.success(t("members.alerts.updated") || "Member profile updated.");
       setIsEditing(false);
@@ -634,12 +758,13 @@ function MemberSidebar({ member, onClose, registerClean }: { member: Member; onC
             <img src={member.avatar_path} alt="" className="w-20 h-20 rounded-full object-cover shadow border border-black/10" />
           ) : (
             <div className="w-20 h-20 rounded-full bg-emerald text-white flex items-center justify-center text-[24px] font-bold shadow-inner">
-              {member.full_name.split(/\s+/).map(n => n[0]).join("").substring(0,2).toUpperCase()}
+              {getMemberInitials(member.full_name)}
             </div>
           )}
           <div>
             <h2 className="text-[17px] font-bold text-[#122222] dark:text-white leading-tight">{member.full_name}</h2>
-            <p className="text-[11px] font-mono text-[#122222]/50 mt-1">{member.member_number}</p>
+            <p className="text-[12px] font-semibold text-[#122222]/60 dark:text-white/60 mt-0.5">{formatMemberShortName(member.full_name)}</p>
+            <p className="text-[11px] font-mono text-[#122222]/50 mt-1">{formatMemberNumber(member.member_number)}</p>
           </div>
           <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${
             member.status === 'active' ? 'bg-emerald-500/10 text-emerald-600' : 'bg-red-500/10 text-red-500'
@@ -651,7 +776,7 @@ function MemberSidebar({ member, onClose, registerClean }: { member: Member; onC
         {/* Tab Selection */}
         <div className="flex w-full border-b border-black/5 dark:border-white/5 shrink-0">
           <button 
-            onClick={() => { setActiveTab("profile"); setIsEditing(false); }}
+            onClick={() => setActiveTab("profile")}
             className={`flex-1 pb-2 text-[12px] font-bold border-b-2 text-center transition-all cursor-pointer ${
               activeTab === "profile" ? "border-emerald text-emerald dark:border-emerald-light dark:text-emerald-light" : "border-transparent text-[#122222]/50 dark:text-white/50"
             }`}
@@ -678,81 +803,112 @@ function MemberSidebar({ member, onClose, registerClean }: { member: Member; onC
 
         {activeTab === "profile" && (
           <div className="w-full space-y-4">
-            {!isEditing ? (
-              <>
-                <div className="space-y-3">
-                  <SidebarInfoRow label={t("members.roleLabel")} value={member.role || "—"} />
-                  <SidebarInfoRow label={t("members.departmentLabel")} value={member.department || "—"} />
-                  {member.phone && <SidebarInfoRow label={t("members.phone")} value={member.phone} />}
-                  {member.email && (
-                    <div>
-                      <span className="text-[10px] font-bold text-[#122222]/40 dark:text-white/40 uppercase tracking-wider block">{t("members.email")}</span>
-                      <a href={`mailto:${member.email}`} className="text-[13px] font-semibold text-emerald hover:underline block mt-0.5 truncate">{member.email}</a>
-                    </div>
-                  )}
-                  <SidebarInfoRow label={t("members.registeredOn")} value={formatDisplayDate(member.joined_at)} />
+            <div className="space-y-3">
+              <SidebarInfoRow label={t("members.roleLabel")} value={member.role || "—"} />
+              <SidebarInfoRow label={t("members.departmentLabel")} value={member.department || "—"} />
+              {member.phone && <SidebarInfoRow label={t("members.phone")} value={member.phone} />}
+              {member.email && (
+                <div>
+                  <span className="text-[10px] font-bold text-[#122222]/40 dark:text-white/40 uppercase tracking-wider block">{t("members.email")}</span>
+                  <a href={`mailto:${member.email}`} className="text-[13px] font-semibold text-emerald hover:underline block mt-0.5 truncate">{member.email}</a>
                 </div>
+              )}
+              <SidebarInfoRow label={t("members.registeredOn")} value={formatDisplayDate(member.joined_at)} />
+            </div>
 
-                <div className="flex gap-2 pt-4 border-t border-black/5 dark:border-white/5 w-full">
-                  <button 
-                    onClick={() => setIsEditing(true)}
-                    className="flex-1 flex items-center justify-center gap-2 bg-[#fcfbf8] dark:bg-[#111d1a] border border-black/10 dark:border-white/10 text-[12px] font-bold text-[#122222] dark:text-white py-2 rounded-lg hover:bg-black/5 transition-colors cursor-pointer"
-                  >
-                    <Edit2 size={14} /> {t("catalog.details.edit")}
-                  </button>
-                  <button 
-                    onClick={() => {
-                      if (confirm(t("members.alerts.confirmDelete") || "Are you sure you want to delete this member? All history is retained, but eligibility ceases.")) {
-                        deleteMutation.mutate();
-                      }
-                    }}
-                    className="flex-1 flex items-center justify-center gap-2 bg-red-500/10 text-red-500 text-[12px] font-bold py-2 rounded-lg hover:bg-red-500/20 transition-colors cursor-pointer"
-                  >
-                    <Trash2 size={14} /> {t("catalog.details.archive")}
-                  </button>
-                </div>
-              </>
-            ) : (
-              <form onSubmit={editForm.handleSubmit((v) => updateMutation.mutate(v))} className="space-y-3 w-full text-[13px]">
-                <div className="flex justify-center py-1">
-                  <ImageUpload
-                    value={editForm.watch("avatar_path")}
-                    onChange={(val) => editForm.setValue("avatar_path", val || null)}
-                    shape="circle"
-                    label={t("members.avatar")}
-                  />
-                </div>
-                <label className="text-[11px] font-semibold text-[#122222]/60 block">{t("members.fullName")}
-                  <Input {...registerClean(editForm, "full_name", cleanText)} className="py-1 px-2.5 text-[13px]" />
-                </label>
-                <label className="text-[11px] font-semibold text-[#122222]/60 block">{t("members.membershipNumber")}
-                  <Input {...registerClean(editForm, "member_number", cleanMemberNumber)} className="py-1 px-2.5 text-[13px]" />
-                </label>
-                <label className="text-[11px] font-semibold text-[#122222]/60 block">{t("members.email")}
-                  <Input {...registerClean(editForm, "email", cleanText)} className="py-1 px-2.5 text-[13px]" />
-                </label>
-                <label className="text-[11px] font-semibold text-[#122222]/60 block">{t("members.phone")}
-                  <Input {...registerClean(editForm, "phone", cleanPhone)} className="py-1 px-2.5 text-[13px]" />
-                </label>
-                <label className="text-[11px] font-semibold text-[#122222]/60 block">{t("members.roleLabel")}
-                  <Input {...registerClean(editForm, "role", cleanText)} className="py-1 px-2.5 text-[13px]" />
-                </label>
-                <label className="text-[11px] font-semibold text-[#122222]/60 block">{t("members.departmentLabel")}
-                  <Input {...registerClean(editForm, "department", cleanText)} className="py-1 px-2.5 text-[13px]" />
-                </label>
-                <label className="text-[11px] font-semibold text-[#122222]/60 block">{t("status")}
-                  <select {...editForm.register("status")} className="field-select text-[13px] py-1.5 px-2.5 mt-1 font-semibold">
-                    <option value="active">{t("members.active") || "Active"}</option>
-                    <option value="suspended">{t("members.suspended") || "Suspended"}</option>
-                  </select>
-                </label>
-                <div className="flex gap-2 justify-end pt-3 border-t border-black/5 dark:border-white/5">
-                  <Button type="button" variant="ghost" onClick={() => setIsEditing(false)}>{t("catalog.addModal.cancel")}</Button>
-                  <Button type="submit" disabled={updateMutation.isPending}>{updateMutation.isPending ? "Saving..." : t("save")}</Button>
-                </div>
-              </form>
-            )}
+            <div className="flex gap-2 pt-4 border-t border-black/5 dark:border-white/5 w-full">
+              <button 
+                onClick={() => setIsEditing(true)}
+                className="flex-1 flex items-center justify-center gap-2 bg-[#fcfbf8] dark:bg-[#111d1a] border border-black/10 dark:border-white/10 text-[12px] font-bold text-[#122222] dark:text-white py-2 rounded-lg hover:bg-black/5 transition-colors cursor-pointer"
+              >
+                <Edit2 size={14} /> {t("catalog.details.edit")}
+              </button>
+              <button 
+                onClick={() => {
+                  if (confirm(t("members.alerts.confirmDelete") || "Are you sure you want to delete this member? All history is retained, but eligibility ceases.")) {
+                    deleteMutation.mutate();
+                  }
+                }}
+                className="flex-1 flex items-center justify-center gap-2 bg-red-500/10 text-red-500 text-[12px] font-bold py-2 rounded-lg hover:bg-red-500/20 transition-colors cursor-pointer"
+              >
+                <Trash2 size={14} /> {t("catalog.details.archive")}
+              </button>
+            </div>
           </div>
+        )}
+
+        {/* Edit Member Modal */}
+        {isEditing && (
+          <Modal isOpen={isEditing} onClose={() => setIsEditing(false)} title={t("members.addModal.editTitle") || "Edit Member"}>
+            <form onSubmit={editForm.handleSubmit((v) => updateMutation.mutate(v))} className="grid gap-4 md:grid-cols-2 text-[13px]">
+              <div className="md:col-span-2 flex justify-center py-1">
+                <ImageUpload
+                  value={editForm.watch("avatar_path")}
+                  onChange={(val) => editForm.setValue("avatar_path", val || null)}
+                  shape="circle"
+                  label={t("members.avatar")}
+                />
+              </div>
+
+              <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60">
+                <span>{t("members.firstName", "First Name")} <span className="text-red-500">*</span></span>
+                <Input {...registerClean(editForm, "first_name", cleanText)} />
+                {editForm.formState.errors.first_name && <small className="text-red-500">{editForm.formState.errors.first_name.message}</small>}
+              </label>
+
+              <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60">
+                <span>{t("members.lastName", "Last Name")} <span className="text-red-500">*</span></span>
+                <Input {...registerClean(editForm, "last_name", cleanLastName)} className="uppercase font-semibold" />
+                {editForm.formState.errors.last_name && <small className="text-red-500">{editForm.formState.errors.last_name.message}</small>}
+              </label>
+
+              <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60">
+                <span>{t("members.membershipNumber")} <span className="text-red-500">*</span></span>
+                <Input {...registerClean(editForm, "member_number", cleanMemberNumber)} />
+                {editForm.formState.errors.member_number && <small className="text-red-500">{editForm.formState.errors.member_number.message}</small>}
+              </label>
+              <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60">
+                <span>{t("members.email")}</span>
+                <Input {...registerClean(editForm, "email", cleanText)} />
+                {editForm.formState.errors.email && <small className="text-red-500">{editForm.formState.errors.email.message}</small>}
+              </label>
+              <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60">
+                <span>{t("members.phone")}</span>
+                <Input {...registerClean(editForm, "phone", cleanPhone)} placeholder="0xxxxxxxxx" />
+              </label>
+              <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60">
+                <span>{t("members.roleLabel")} <span className="text-red-500">*</span></span>
+                <select {...editForm.register("role")} className="field-select text-[13px] py-2 px-3 mt-1 font-semibold w-full bg-white dark:bg-[#1d2926]">
+                  <option value="Student">{t("roles.student", "Student")}</option>
+                  <option value="Staff">{t("roles.staff", "Staff")}</option>
+                  <option value="Researcher">{t("roles.researcher", "Researcher")}</option>
+                  <option value="Visitor">{t("roles.visitor", "Visitor")}</option>
+                  <option value="Faculty">{t("roles.faculty", "Faculty")}</option>
+                  <option value="Doctor">{t("roles.doctor", "Doctor")}</option>
+                  <option value="Nurse">{t("roles.nurse", "Nurse")}</option>
+                  <option value="Other">{t("roles.other", "Other")}</option>
+                </select>
+                {editForm.formState.errors.role && <small className="text-red-500">{editForm.formState.errors.role.message}</small>}
+              </label>
+              <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60">
+                <span>{t("members.departmentLabel")}</span>
+                <Input {...registerClean(editForm, "department", cleanText)} />
+              </label>
+              <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60">
+                <span>{t("status")}</span>
+                <select {...editForm.register("status")} className="field-select text-[13px] py-2 px-3 mt-1 font-semibold w-full bg-white dark:bg-[#1d2926]">
+                  <option value="active">{t("members.active") || "Active"}</option>
+                  <option value="suspended">{t("members.suspended") || "Suspended"}</option>
+                  <option value="expired">{t("members.expired") || "Expired"}</option>
+                  <option value="archived">{t("members.archived") || "Archived"}</option>
+                </select>
+              </label>
+              <div className="md:col-span-2 flex gap-2 justify-end pt-4 border-t border-black/5 dark:border-white/5">
+                <Button type="button" variant="ghost" onClick={() => setIsEditing(false)}>{t("catalog.addModal.cancel")}</Button>
+                <Button type="submit" disabled={updateMutation.isPending}>{updateMutation.isPending ? "Saving..." : t("catalog.addModal.save")}</Button>
+              </div>
+            </form>
+          </Modal>
         )}
 
         {activeTab === "loans" && (
