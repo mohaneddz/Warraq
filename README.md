@@ -39,6 +39,12 @@ Warraq is a local-first desktop system for the Mustapha Bacha Hospital library. 
 
 ---
 
+<img src="screenshots/catalog.png" alt="Warraq inventory and shelves view" width="88%"/>
+
+**Inventory:** Shelf, floor, and copy-condition controls for physical collection operations.
+
+---
+
 ## Project Structure
 
 ```text
@@ -101,3 +107,22 @@ pnpm tauri dev    # Run the desktop app
 - Preferences use Tauri Store; sensitive provider credentials belong in Tauri Stronghold.
 - Backup and export data must not include Stronghold secrets.
 - Provider URLs are validated by native code and require HTTPS except localhost during development.
+
+---
+
+## Everyday Workflows
+
+- **Cataloguing:** Search or add records, enrich them with metadata providers, and maintain copy information.
+- **Circulation:** Track active loans, member activity, reservations, and returns from the local desktop workspace.
+- **Inventory:** Review shelves by location and floor, then record copy condition and availability.
+- **Reporting:** Use the reporting and export views to share library activity without exporting secure credential data.
+
+---
+
+## Keyboard and Tray Behavior
+
+- `Ctrl/Cmd + K` opens the command palette.
+- `/` focuses the main search workflow.
+- `Ctrl/Cmd + ,` opens settings.
+- The system tray can restore the app, open search or circulation, open settings, and quit explicitly.
+- When configured, closing the window hides it to the tray instead of terminating the application.
