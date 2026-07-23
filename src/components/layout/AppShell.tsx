@@ -1,6 +1,7 @@
-import { BookOpen, CalendarClock, ChartNoAxesCombined, ClipboardList, Cog, LayoutDashboard, Search, Bell, Minus, Square, Users, Warehouse, X, ChevronDown, Menu, Moon, Sun, HardDrive, Sparkles, RefreshCw, ArrowLeft, ArrowRight, Copy, Maximize } from "lucide-react";
+import { BookOpen, CalendarClock, ChartNoAxesCombined, ClipboardList, Cog, LayoutDashboard, Search, Bell, Minus, Square, Users, Warehouse, X, ChevronDown, Menu, Moon, Sun, HardDrive, Sparkles, RefreshCw, ArrowLeft, ArrowRight, Maximize, UserCheck } from "lucide-react";
 import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useEffect, useState, useRef } from "react";
+
 import { useUiStore } from "../../store/uiStore";
 import { useQuery } from "@tanstack/react-query";
 import { dashboard, reservations } from "../../data/repositories/library";
@@ -9,6 +10,9 @@ import { useTranslation } from "react-i18next";
 import { useContextMenu } from "../ui/ContextMenu";
 import { queryClient } from "../../app/providers";
 import { toast } from "sonner";
+import { UserSelectionModal } from "../auth/UserSelectionModal";
+
+
 
 
 const links = [
@@ -26,6 +30,7 @@ export function AppShell() {
   const { sidebarOpen, toggleSidebar, setPaletteOpen, preferences, updatePreferences } = useUiStore();
   const navigate = useNavigate(); 
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showUserModal, setShowUserModal] = useState(false);
 
   // Profile hover cards states
   const [showTopbarProfileCard, setShowTopbarProfileCard] = useState(false);
@@ -201,6 +206,11 @@ export function AppShell() {
         toggleSidebar();
       }
 
+      if (event.key === "F11") {
+        event.preventDefault();
+        toggleFullscreen();
+      }
+
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") { 
         event.preventDefault(); 
         setPaletteOpen(true); 
@@ -214,6 +224,21 @@ export function AppShell() {
     window.addEventListener("keydown", handler); 
     return () => window.removeEventListener("keydown", handler); 
   }, [navigate, setPaletteOpen, toggleSidebar]);
+
+  const toggleFullscreen = async () => {
+    try {
+      const { getCurrentWindow } = await import("@tauri-apps/api/window");
+      const appWindow = getCurrentWindow();
+      const isFS = await appWindow.isFullscreen();
+      await appWindow.setFullscreen(!isFS);
+    } catch {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      } else {
+        document.exitFullscreen().catch(() => {});
+      }
+    }
+  };
 
   const { showContextMenu } = useContextMenu();
 
@@ -266,29 +291,15 @@ export function AppShell() {
         shortcut: "Ctrl+K",
       },
       {
-        id: "copy-url",
-        label: t("contextMenu.copyPageLink", "Copy Page Link"),
-        icon: Copy,
-        onClick: () => {
-          navigator.clipboard.writeText(window.location.href);
-          toast.success(t("contextMenu.copiedLink", "Page link copied to clipboard"));
-        },
-      },
-      {
         id: "fullscreen",
         label: t("contextMenu.fullscreen", "Toggle Fullscreen"),
         icon: Maximize,
-        onClick: () => {
-          if (!document.fullscreenElement) {
-            document.documentElement.requestFullscreen().catch(() => {});
-          } else {
-            document.exitFullscreen().catch(() => {});
-          }
-        },
+        onClick: () => toggleFullscreen(),
         shortcut: "F11",
       },
     ], { title: t("contextMenu.appTitle", "Warraq Context Menu") });
   };
+
 
   const windowAction = (action: "minimize" | "toggleMaximize" | "close") => { 
     void import("@tauri-apps/api/window").then(({ getCurrentWindow }) => getCurrentWindow()[action]()); 
@@ -606,8 +617,9 @@ export function AppShell() {
                     <img src={preferences.operatorAvatar} alt="" className="h-8 w-8 rounded-full object-cover shrink-0" />
                   ) : (
                     <div className="h-8 w-8 rounded-full bg-[#122222] dark:bg-white/10 text-white flex items-center justify-center text-[12px] font-bold shrink-0">
-                      <User size={14} />
+                      <Users size={14} />
                     </div>
+
                   )}
                   <span className="text-[14px] font-semibold text-[#122222] dark:text-white hidden sm:block truncate max-w-[80px]">
                     {preferences.operatorName || "Librarian"}
@@ -624,6 +636,10 @@ export function AppShell() {
                     setPaletteOpen={setPaletteOpen}
                     navigate={navigate}
                     t={t}
+                    onOpenUserModal={() => {
+                      setShowTopbarProfileCard(false);
+                      setShowUserModal(true);
+                    }}
                   />
                 )}
               </div>
@@ -656,12 +672,10 @@ export function AppShell() {
           </div>
         </main>
       </div>
+
+      <UserSelectionModal isOpen={showUserModal} onClose={() => setShowUserModal(false)} />
     </div>
   );
-}
-
-function User({ size }: { size: number }) {
-  return <Users size={size} />;
 }
 
 function ProfileCard({ 
@@ -671,7 +685,8 @@ function ProfileCard({
   updatePreferences, 
   setPaletteOpen, 
   navigate, 
-  t 
+  t,
+  onOpenUserModal
 }: { 
   position: "topbar" | "sidebar"; 
   onClose: () => void; 
@@ -680,7 +695,9 @@ function ProfileCard({
   setPaletteOpen: any; 
   navigate: any; 
   t: any; 
+  onOpenUserModal?: () => void;
 }) {
+
   const [backingUp, setBackingUp] = useState(false);
   const isRtl = preferences.locale === "ar";
 
@@ -743,12 +760,29 @@ function ProfileCard({
       <div className="mt-3 space-y-1">
         <h4 className={`text-[10px] font-bold text-[#122222]/40 dark:text-white/40 uppercase tracking-wider mb-1.5 px-1 ${isRtl ? "text-right" : "text-left"}`}>{t("profileCard.quickActions")}</h4>
         
+        {/* Switch / Create User */}
+        <button 
+          onClick={() => {
+            onClose();
+            if (onOpenUserModal) onOpenUserModal();
+          }}
+          className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-[#122222]/80 dark:text-[#f0ebe1]/80 hover:bg-[#b96f3e]/10 hover:text-[#b96f3e] dark:hover:bg-white/5 dark:hover:text-white transition-all group ${isRtl ? "text-right flex-row-reverse" : "text-left"}`}
+        >
+          <div className={`flex items-center gap-2.5 ${isRtl ? "flex-row-reverse" : ""}`}>
+            <span className="w-6 h-6 rounded-lg bg-[#b96f3e]/10 text-[#b96f3e] flex items-center justify-center font-bold transition-colors">
+              <UserCheck size={14} />
+            </span>
+            <span className="font-semibold text-[13px]">{t("profileCard.switchUser") || "Switch / Create User"}</span>
+          </div>
+        </button>
+
         {/* Settings */}
         <button 
           onClick={() => {
             navigate("/settings");
             onClose();
           }}
+
           className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-[#122222]/80 dark:text-[#f0ebe1]/80 hover:bg-[#b96f3e]/10 hover:text-[#b96f3e] dark:hover:bg-white/5 dark:hover:text-white transition-all group ${isRtl ? "text-right flex-row-reverse" : "text-left"}`}
         >
           <div className={`flex items-center gap-2.5 ${isRtl ? "flex-row-reverse" : ""}`}>
