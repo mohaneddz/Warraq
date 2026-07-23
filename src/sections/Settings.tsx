@@ -12,6 +12,9 @@ import {
 import { useUiStore } from "../store/uiStore";
 import { ImageUpload } from "../components/ui/ImageUpload";
 import { useTranslation } from "react-i18next";
+import { useContextMenu } from "../components/ui/ContextMenu";
+import { toast } from "sonner";
+
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type Tab =
@@ -81,8 +84,46 @@ export function SettingsPage() {
     ? allTabs.map(g => ({ ...g, items: g.items.filter(i => i.toLowerCase().includes(search.toLowerCase())) })).filter(g => g.items.length > 0)
     : allTabs;
 
+  const { showContextMenu } = useContextMenu();
+
+
+  const handleSettingsContextMenu = (e: React.MouseEvent) => {
+    showContextMenu(e, [
+      {
+        id: "save-prefs",
+        label: t("settings.saved", "Save Preferences"),
+        icon: Check,
+        variant: "accent",
+        onClick: () => {
+          updatePreferences(preferences);
+          toast.success(t("settings.savedMsg", "Settings saved successfully"));
+        },
+      },
+      { divider: true },
+      {
+        id: "tab-general",
+        label: t("settings.groups.general", "General Settings"),
+        icon: SettingsIcon,
+        onClick: () => setActiveTab("General"),
+      },
+      {
+        id: "tab-appearance",
+        label: t("settings.groups.appearance", "Appearance & Theme"),
+        icon: Palette,
+        onClick: () => setActiveTab("Appearance"),
+      },
+      {
+        id: "tab-backup",
+        label: t("settings.groups.backup", "Backup & Restore"),
+        icon: HardDrive,
+        onClick: () => setActiveTab("Backup & Restore"),
+      },
+    ], { title: t("settings.title", "Application Settings") });
+  };
+
   return (
-    <div className="flex h-full w-full">
+    <div onContextMenu={handleSettingsContextMenu} className="flex h-full w-full">
+
       {/* ── Left Nav ─────────────────────────────────────────────────────────── */}
       <div className="w-[260px] shrink-0 border-r border-black/5 dark:border-white/5 pr-6 mr-6 flex flex-col h-full overflow-y-auto no-scrollbar">
         <div className="flex items-center gap-2.5 mb-6 text-[#b96f3e]">

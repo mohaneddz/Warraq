@@ -1442,12 +1442,12 @@ export function ReportsPage() {
 }
 
 export function ActivityPage() { 
-  const result = useQuery({ queryKey: ["activity"], queryFn: auditLog }); 
+  const result = useQuery({ queryKey: ["activity"], queryFn: () => auditLog() }); 
   return (
     <>
       <PageTitle title="Activity" detail="Immutable local audit history for important library actions."/>
       <Table headers={["When", "Actor", "Action", "Entity"]}>
-        {result.data?.map((item) => (
+        {result.data?.map((item: any) => (
           <tr key={item.id}>
             <Cell>{formatDisplayDate(item.created_at)}</Cell>
             <Cell>{item.actor}</Cell>

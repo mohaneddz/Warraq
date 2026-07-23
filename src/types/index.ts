@@ -6,7 +6,37 @@ export interface Book { id: string; title: string; item_type?: ItemType | string
 export interface Copy { id: string; book_id: string; accession_number: string; barcode: string; status: CopyStatus; shelf?: string | null; condition: string; title?: string; item_type?: string; metadata?: string | null; cover_path?: string | null; author?: string | null; }
 export interface Member { id: string; member_number: string; full_name: string; email?: string | null; phone?: string | null; department?: string | null; role?: string | null; status: MemberStatus; expiry_date?: string | null; avatar_path?: string | null; joined_at: string; }
 export interface Loan { id: string; copy_id: string; member_id: string; borrowed_at: string; due_at: string; returned_at?: string | null; renewed_count: number; title?: string; item_type?: string; barcode?: string; member_name?: string; }
-export interface Reservation { id: string; book_id: string; member_id: string; status: "queued" | "ready" | "fulfilled" | "cancelled" | "expired"; position: number; reserved_at: string; expires_at?: string | null; title?: string; member_name?: string; }
+export interface Reservation { 
+  id: string; 
+  book_id: string; 
+  member_id: string; 
+  copy_id?: string | null; 
+  status: "queued" | "ready" | "fulfilled" | "cancelled" | "expired"; 
+  position: number; 
+  reserved_at: string; 
+  expires_at?: string | null; 
+  title?: string; 
+  subtitle?: string | null;
+  arabic_title?: string | null;
+  author?: string | null;
+  category?: string | null;
+  publisher?: string | null;
+  item_type?: string | null;
+  cover_path?: string | null;
+  isbn13?: string | null;
+  call_number?: string | null;
+  member_name?: string; 
+  member_number?: string | null;
+  member_email?: string | null;
+  member_phone?: string | null;
+  member_dept?: string | null;
+  member_role?: string | null;
+  member_avatar?: string | null;
+  copy_barcode?: string | null; 
+  copy_accession?: string | null; 
+  copy_shelf?: string | null; 
+  copy_condition?: string | null;
+}
 export interface DashboardMetrics { titles: number; copies: number; onLoan: number; members: number; overdue: number; readyReservations: number; recentLoans: Loan[]; overdueLoans: Loan[]; activity: { date: string; count: number }[]; activeDepartments?: { name: string; count: number }[]; circulationRhythm?: { time: string; checkouts: number; returns: number }[]; }
 
 export interface Preferences {
