@@ -92,10 +92,10 @@ export function Modal({ isOpen, onClose, title, children, size = "lg", className
       onClick={onClose}
     >
       <div 
-        className={cn("relative w-full max-h-[88vh] overflow-y-auto rounded-card border border-ink/10 bg-white p-6 shadow-2xl dark:border-parchment/10 dark:bg-[#1d2926] dark:text-parchment flex flex-col animate-in fade-in zoom-in-95 duration-150", sizeClasses[size], className)}
+        className={cn("relative w-full max-h-[88vh] overflow-hidden rounded-card border border-ink/10 bg-white p-6 shadow-2xl dark:border-parchment/10 dark:bg-[#1d2926] dark:text-parchment flex flex-col animate-in fade-in zoom-in-95 duration-150", sizeClasses[size], className)}
         onClick={(e) => e.stopPropagation()}
       >
-        <header className="flex items-center justify-between border-b border-ink/10 pb-3 mb-4 dark:border-parchment/10">
+        <header className="flex items-center justify-between border-b border-ink/10 pb-3 mb-4 dark:border-parchment/10 shrink-0">
           <h3 className="font-display text-lg font-bold">{title}</h3>
           <button 
             onClick={onClose} 
@@ -105,7 +105,7 @@ export function Modal({ isOpen, onClose, title, children, size = "lg", className
             <X size={18} />
           </button>
         </header>
-        <div className="flex-1 min-h-0">
+        <div className="flex-1 min-h-0 flex flex-col">
           {children}
         </div>
       </div>

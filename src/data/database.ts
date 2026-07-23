@@ -25,4 +25,22 @@ export async function initializeDatabase() {
   } catch (_) {
     // Column already exists
   }
+
+  try {
+    await db.execute("ALTER TABLE reservations ADD COLUMN copy_id TEXT");
+  } catch (_) {
+    // Column already exists
+  }
+
+  // Automatically promote queued reservations to ready if an available copy exists
+  try {
+    await db.execute(`
+      UPDATE reservations 
+      SET status = 'ready' 
+      WHERE status = 'queued' 
+        AND book_id IN (SELECT DISTINCT book_id FROM copies WHERE status = 'available')
+    `);
+  } catch (_) {
+    // Ignore migration sync errors
+  }
 }

@@ -1,4 +1,4 @@
-import { BookOpen, CalendarClock, ChartNoAxesCombined, ClipboardList, Cog, LayoutDashboard, Search, Bell, Minus, Square, Users, Warehouse, X, ChevronDown, Menu, Moon, Sun, HardDrive, Sparkles } from "lucide-react";
+import { BookOpen, CalendarClock, ChartNoAxesCombined, ClipboardList, Cog, LayoutDashboard, Search, Bell, Minus, Square, Users, Warehouse, X, ChevronDown, Menu, Moon, Sun, HardDrive, Sparkles, RefreshCw, ArrowLeft, ArrowRight, Copy, Maximize } from "lucide-react";
 import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useEffect, useState, useRef } from "react";
 import { useUiStore } from "../../store/uiStore";
@@ -6,6 +6,10 @@ import { useQuery } from "@tanstack/react-query";
 import { dashboard, reservations } from "../../data/repositories/library";
 import { formatDisplayDate } from "../../utils/dates";
 import { useTranslation } from "react-i18next";
+import { useContextMenu } from "../ui/ContextMenu";
+import { queryClient } from "../../app/providers";
+import { toast } from "sonner";
+
 
 const links = [
   ["/dashboard", "Dashboard", LayoutDashboard], 
@@ -211,12 +215,91 @@ export function AppShell() {
     return () => window.removeEventListener("keydown", handler); 
   }, [navigate, setPaletteOpen, toggleSidebar]);
 
+  const { showContextMenu } = useContextMenu();
+
+  const handleGlobalContextMenu = (e: React.MouseEvent) => {
+    showContextMenu(e, [
+      {
+        id: "refresh",
+        label: t("contextMenu.refresh", "Refresh Page / Data"),
+        icon: RefreshCw,
+        onClick: () => {
+          queryClient.invalidateQueries();
+          toast.success(t("contextMenu.refreshed", "Data refreshed successfully"));
+        },
+        shortcut: "Ctrl+R",
+        variant: "accent",
+      },
+      { divider: true },
+      {
+        id: "back",
+        label: t("contextMenu.goBack", "Go Back"),
+        icon: ArrowLeft,
+        onClick: () => navigate(-1),
+        shortcut: "Alt+←",
+      },
+      {
+        id: "forward",
+        label: t("contextMenu.goForward", "Go Forward"),
+        icon: ArrowRight,
+        onClick: () => navigate(1),
+        shortcut: "Alt+→",
+      },
+      {
+        id: "dashboard",
+        label: t("contextMenu.dashboard", "Go to Dashboard"),
+        icon: LayoutDashboard,
+        onClick: () => navigate("/dashboard"),
+      },
+      { divider: true },
+      {
+        id: "theme",
+        label: preferences.theme === "dark" ? t("contextMenu.lightTheme", "Switch to Light Mode") : t("contextMenu.darkTheme", "Switch to Dark Mode"),
+        icon: preferences.theme === "dark" ? Sun : Moon,
+        onClick: () => updatePreferences({ theme: preferences.theme === "dark" ? "light" : "dark" }),
+      },
+      {
+        id: "palette",
+        label: t("contextMenu.commandPalette", "Quick Search / Command Palette"),
+        icon: Sparkles,
+        onClick: () => setPaletteOpen(true),
+        shortcut: "Ctrl+K",
+      },
+      {
+        id: "copy-url",
+        label: t("contextMenu.copyPageLink", "Copy Page Link"),
+        icon: Copy,
+        onClick: () => {
+          navigator.clipboard.writeText(window.location.href);
+          toast.success(t("contextMenu.copiedLink", "Page link copied to clipboard"));
+        },
+      },
+      {
+        id: "fullscreen",
+        label: t("contextMenu.fullscreen", "Toggle Fullscreen"),
+        icon: Maximize,
+        onClick: () => {
+          if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen().catch(() => {});
+          } else {
+            document.exitFullscreen().catch(() => {});
+          }
+        },
+        shortcut: "F11",
+      },
+    ], { title: t("contextMenu.appTitle", "Warraq Context Menu") });
+  };
+
   const windowAction = (action: "minimize" | "toggleMaximize" | "close") => { 
     void import("@tauri-apps/api/window").then(({ getCurrentWindow }) => getCurrentWindow()[action]()); 
   };
 
   return (
-    <div className={`app-workspace h-screen overflow-hidden bg-[#F9F8F4] text-[#122222] dark:bg-[#111d1a] dark:text-[#f0ebe1] flex flex-col font-sans ${isDragging ? "select-none cursor-col-resize" : ""}`}>
+    <div
+      onContextMenu={handleGlobalContextMenu}
+      className={`app-workspace h-screen overflow-hidden bg-[#F9F8F4] text-[#122222] dark:bg-[#111d1a] dark:text-[#f0ebe1] flex flex-col font-sans ${isDragging ? "select-none cursor-col-resize" : ""}`}
+    >
+
       {/* Titlebar for OS */}
       <header className="flex h-8 items-center bg-[#122222] px-3 z-50">
         <span data-tauri-drag-region className="flex flex-1 select-none items-center h-full"></span>
