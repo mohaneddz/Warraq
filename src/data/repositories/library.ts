@@ -511,9 +511,28 @@ export async function deleteMember(memberId: string): Promise<void> {
   const db = await database();
   const now = timestamp();
   const member = await db.select<{ full_name: string; member_number: string }[]>("SELECT full_name, member_number FROM members WHERE id = ?", [memberId]);
+  
+  // Cascade cancel active/queued reservations for this member
+  await db.execute("UPDATE reservations SET status = 'cancelled', updated_at = ? WHERE member_id = ? AND status IN ('queued', 'ready')", [now, memberId]);
+  
+  // Archive member record
   await db.execute("UPDATE members SET archived_at = ?, status = 'archived', updated_at = ? WHERE id = ?", [now, now, memberId]);
   await audit(db, "archive_member", "member", memberId, null, JSON.stringify({ full_name: member[0]?.full_name, member_number: member[0]?.member_number }));
 }
+
+export async function hardDeleteMember(memberId: string): Promise<void> {
+  const db = await database();
+  const member = await db.select<{ full_name: string; member_number: string }[]>("SELECT full_name, member_number FROM members WHERE id = ?", [memberId]);
+
+  
+  // Cascade delete dependent loans and reservations
+  await db.execute("DELETE FROM reservations WHERE member_id = ?", [memberId]);
+  await db.execute("DELETE FROM loans WHERE member_id = ?", [memberId]);
+  await db.execute("DELETE FROM members WHERE id = ?", [memberId]);
+  
+  await audit(db, "delete_member_permanent", "member", memberId, null, JSON.stringify({ full_name: member[0]?.full_name, member_number: member[0]?.member_number }));
+}
+
 
 export async function copies(query = ""): Promise<(Copy & { title: string; item_type?: string; metadata?: string | null; cover_path?: string | null; author?: string | null })[]> {
   const db = await database();
