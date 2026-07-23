@@ -5,8 +5,11 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   BookOpen, Plus, Search,
-  MoreHorizontal, ChevronLeft, ChevronRight, X, Clock, Edit2, Trash2, MapPin, Sparkles
+  MoreHorizontal, ChevronLeft, ChevronRight, X, Clock, Edit2, Trash2, MapPin, Sparkles,
+  Eye, Copy, CalendarClock
 } from "lucide-react";
+import { useContextMenu } from "../components/ui/ContextMenu";
+
 import {
   books, saveBook, updateBook, deleteBook, getCopiesForBook,
   addCopy, deleteCopy, auditLog,
@@ -22,7 +25,8 @@ import {
 import { queryClient } from "../app/providers";
 import { fetchBookMetadata, enrichMetadataWithGroq } from "../utils/metadata";
 import { useUiStore } from "../store/uiStore";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
+
 import { ImageUpload } from "../components/ui/ImageUpload";
 import { useTranslation } from "react-i18next";
 import { formatDisplayDate } from "../utils/dates";
@@ -423,9 +427,67 @@ function TypeSpecificFields({
 export function CatalogPage() {
   const { t } = useTranslation();
   const location = useLocation();
+  const navigate = useNavigate();
+  const { showContextMenu } = useContextMenu();
 
   const [term, setTerm] = useState("");
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
+
+  const handleBookContextMenu = (e: React.MouseEvent, book: Book) => {
+    showContextMenu(e, [
+      {
+        id: "view-details",
+        label: t("catalog.contextMenu.viewDetails", "View Book Details & Copies"),
+        icon: Eye,
+        onClick: () => setSelectedBook(book),
+      },
+      {
+        id: "copy-isbn",
+        label: t("catalog.contextMenu.copyIsbn", "Copy ISBN"),
+        icon: Copy,
+        hidden: !book.isbn13 && !book.isbn10,
+        onClick: () => {
+          const val = book.isbn13 || book.isbn10 || "";
+          navigator.clipboard.writeText(val);
+          toast.success(t("catalog.copiedIsbn", "ISBN copied to clipboard"));
+        },
+      },
+      {
+        id: "copy-title",
+        label: t("catalog.contextMenu.copyTitle", "Copy Title"),
+        icon: Copy,
+        onClick: () => {
+          navigator.clipboard.writeText(book.title);
+          toast.success(t("catalog.copiedTitle", "Title copied to clipboard"));
+        },
+      },
+      { divider: true },
+      {
+        id: "reserve-book",
+        label: t("catalog.contextMenu.reserveBook", "Reserve Book"),
+        icon: CalendarClock,
+        onClick: () => {
+          navigate(`/reservations?book_id=${book.id}`);
+        },
+      },
+      { divider: true },
+      {
+        id: "delete-book",
+        label: t("catalog.contextMenu.deleteBook", "Delete Item"),
+        icon: Trash2,
+        variant: "danger",
+        onClick: async () => {
+          if (confirm(t("catalog.alerts.confirmDelete", { title: book.title }) || `Are you sure you want to delete ${book.title}?`)) {
+            await deleteBook(book.id);
+            if (selectedBook?.id === book.id) setSelectedBook(null);
+            invalidate();
+            toast.success(t("catalog.alerts.bookDeleted", "Item deleted successfully"));
+          }
+        },
+      },
+    ], { title: book.title });
+  };
+
   const [adding, setAdding] = useState(false);
   const [lookupLoading, setLookupLoading] = useState(false);
 
@@ -934,7 +996,9 @@ export function CatalogPage() {
                     <tr
                       key={book.id}
                       onClick={() => setSelectedBook(book)}
+                      onContextMenu={(e) => handleBookContextMenu(e, book)}
                       className={`cursor-pointer transition-colors ${
+
                         selectedIds.includes(book.id) 
                           ? 'bg-emerald/5 dark:bg-emerald-light/5' 
                           : selectedBook?.id === book.id 

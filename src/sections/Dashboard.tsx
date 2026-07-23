@@ -4,13 +4,18 @@ import { useNavigate } from "react-router-dom";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { 
   ArrowRight, BookOpen, Clock3, AlertTriangle, Bookmark, 
-  ScanLine, BookCopy, UsersRound, Warehouse, CalendarClock, RotateCcw
+  ScanLine, BookCopy, UsersRound, Warehouse, CalendarClock, RotateCcw,
+  RefreshCw, Plus
 } from "lucide-react";
 import { dashboard, reservations } from "../data/repositories/library";
 import { daysLate, formatDisplayDate } from "../utils/dates";
 import { useTranslation } from "react-i18next";
 import { useUiStore } from "../store/uiStore";
 import { formatDisplayCurrency } from "../utils/currency";
+import { useContextMenu } from "../components/ui/ContextMenu";
+import { queryClient } from "../app/providers";
+import { toast } from "sonner";
+
 
 export function DashboardPage() {
   const navigate = useNavigate();
@@ -83,8 +88,65 @@ export function DashboardPage() {
     });
   }, [metrics.activity, prefs.locale]);
 
+  const { showContextMenu } = useContextMenu();
+
+
+  const handleDashboardContextMenu = (e: React.MouseEvent) => {
+    showContextMenu(e, [
+      {
+        id: "refresh-dashboard",
+        label: t("dashboard.refresh", "Refresh Dashboard Data"),
+        icon: RefreshCw,
+        variant: "accent",
+        onClick: () => {
+          queryClient.invalidateQueries();
+          toast.success(t("dashboard.refreshed", "Dashboard data updated"));
+        },
+      },
+      { divider: true },
+      {
+        id: "goto-catalog",
+        label: t("dashboard.gotoCatalog", "Go to Catalog"),
+        icon: BookOpen,
+        onClick: () => navigate("/catalog"),
+      },
+      {
+        id: "goto-members",
+        label: t("dashboard.gotoMembers", "Go to Members"),
+        icon: UsersRound,
+        onClick: () => navigate("/members"),
+      },
+      {
+        id: "goto-reservations",
+        label: t("dashboard.gotoReservations", "Go to Reservations"),
+        icon: CalendarClock,
+        onClick: () => navigate("/reservations"),
+      },
+      {
+        id: "goto-inventory",
+        label: t("dashboard.gotoInventory", "Go to Inventory"),
+        icon: Warehouse,
+        onClick: () => navigate("/inventory"),
+      },
+      { divider: true },
+      {
+        id: "add-member",
+        label: t("members.addMember", "Add New Member"),
+        icon: Plus,
+        onClick: () => navigate("/members?action=add-member"),
+      },
+      {
+        id: "add-book",
+        label: t("catalog.addBook", "Add New Book"),
+        icon: Plus,
+        onClick: () => navigate("/catalog?action=add-book"),
+      },
+    ], { title: t("dashboard.title", "Dashboard Overview") });
+  };
+
   return (
-    <div className="flex flex-col gap-6 w-full">
+    <div onContextMenu={handleDashboardContextMenu} className="flex flex-col gap-6 w-full">
+
       {/* Top Header & Greeting Row */}
       <div className="flex flex-col md:flex-row gap-6 justify-between items-start md:items-center">
         <div>

@@ -6,8 +6,11 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { 
   Plus, Search, ChevronLeft, ChevronRight, X, 
-  Trash2, IdCard, Phone, Edit2, RefreshCw
+  Trash2, IdCard, Phone, Edit2, RefreshCw,
+  UserCheck, UserX, Clock, Archive, Eye, Copy, Mail
 } from "lucide-react";
+import { useContextMenu } from "../components/ui/ContextMenu";
+
 import { 
   members, saveMember, updateMember, deleteMember, getLoansForMember, 
   getReservationsForMember, renewLoan, returnCopies, cancelReservation,
@@ -241,6 +244,115 @@ export function MembersPage() {
     return sortedMembers.slice(start, start + itemsPerPage);
   }, [sortedMembers, page]);
 
+  const { showContextMenu } = useContextMenu();
+
+  const handleMemberContextMenu = (e: React.MouseEvent, member: Member) => {
+    showContextMenu(e, [
+      {
+        id: "set-active",
+        label: t("members.setActive", "Set Active"),
+        icon: UserCheck,
+        hidden: member.status === "active",
+        variant: "success",
+        onClick: async () => {
+          await updateMember(member.id, { ...member, status: "active" });
+          invalidate();
+          toast.success(t("members.statusUpdated", "Member status set to Active"));
+        },
+      },
+      {
+        id: "set-suspended",
+        label: t("members.setSuspended", "Set Suspended"),
+        icon: UserX,
+        hidden: member.status === "suspended",
+        variant: "warning",
+        onClick: async () => {
+          await updateMember(member.id, { ...member, status: "suspended" });
+          invalidate();
+          toast.warning(t("members.statusUpdated", "Member status set to Suspended"));
+        },
+      },
+      {
+        id: "set-expired",
+        label: t("members.setExpired", "Set Expired"),
+        icon: Clock,
+        hidden: member.status === "expired",
+        variant: "danger",
+        onClick: async () => {
+          await updateMember(member.id, { ...member, status: "expired" });
+          invalidate();
+          toast.error(t("members.statusUpdated", "Member status set to Expired"));
+        },
+      },
+      {
+        id: "set-archived",
+        label: t("members.setArchived", "Set Archived"),
+        icon: Archive,
+        hidden: member.status === "archived",
+        onClick: async () => {
+          await updateMember(member.id, { ...member, status: "archived" });
+          invalidate();
+          toast.info(t("members.statusUpdated", "Member status set to Archived"));
+        },
+      },
+      { divider: true },
+      {
+        id: "view-details",
+        label: t("members.viewDetails", "View Details & Loans"),
+        icon: Eye,
+        onClick: () => setSelectedMember(member),
+      },
+      {
+        id: "copy-id",
+        label: t("members.copyNumber", "Copy Membership ID"),
+        icon: Copy,
+        onClick: () => {
+          navigator.clipboard.writeText(member.member_number);
+          toast.success(t("members.copiedNumber", "Member ID copied"));
+        },
+      },
+      {
+        id: "copy-email",
+        label: t("members.copyEmail", "Copy Email"),
+        icon: Mail,
+        hidden: !member.email,
+        onClick: () => {
+          if (member.email) {
+            navigator.clipboard.writeText(member.email);
+            toast.success(t("members.copiedEmail", "Email copied"));
+          }
+        },
+      },
+      {
+        id: "copy-phone",
+        label: t("members.copyPhone", "Copy Phone"),
+        icon: Phone,
+        hidden: !member.phone,
+        onClick: () => {
+          if (member.phone) {
+            navigator.clipboard.writeText(member.phone);
+            toast.success(t("members.copiedPhone", "Phone copied"));
+          }
+        },
+      },
+      { divider: true },
+      {
+        id: "delete-member",
+        label: t("members.deleteMember", "Delete Member"),
+        icon: Trash2,
+        variant: "danger",
+        onClick: async () => {
+          if (confirm(t("members.confirmDelete", { name: member.full_name }) || `Are you sure you want to delete ${member.full_name}?`)) {
+            await deleteMember(member.id);
+            if (selectedMember?.id === member.id) setSelectedMember(null);
+            invalidate();
+            toast.success(t("members.alerts.archived", "Member record archived"));
+          }
+        },
+      },
+    ], { title: member.full_name });
+  };
+
   const totalPages = Math.ceil(sortedMembers.length / itemsPerPage) || 1;
 
   const toggleSortOrder = () => setSortOrder(o => o === "asc" ? "desc" : "asc");
@@ -381,6 +493,7 @@ export function MembersPage() {
                     <div 
                       key={member.id} 
                       onClick={() => setSelectedMember(member)}
+                      onContextMenu={(e) => handleMemberContextMenu(e, member)}
                       className={`relative flex flex-col items-center p-3.5 pt-9 mt-7 bg-white dark:bg-[#1d2926] border rounded-xl shadow-card transition-all duration-300 cursor-pointer ${
                         selectedIds.includes(member.id)
                           ? 'border-emerald dark:border-emerald-light ring-2 ring-emerald dark:ring-emerald-light bg-emerald/5 dark:bg-emerald/10'

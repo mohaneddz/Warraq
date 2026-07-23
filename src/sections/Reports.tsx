@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Calendar, Printer, RefreshCw, BarChart2 } from "lucide-react";
+import { Calendar, Printer, RefreshCw, BarChart2, Copy } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { dashboard, loans } from "../data/repositories/library";
 import { database } from "../data/database";
@@ -7,6 +7,9 @@ import { daysLate } from "../utils/dates";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useUiStore } from "../store/uiStore";
+import { useContextMenu } from "../components/ui/ContextMenu";
+import { toast } from "sonner";
+
 
 export function ReportsPage() {
   const { t } = useTranslation();
@@ -87,8 +90,46 @@ export function ReportsPage() {
     return Math.max(...categoriesList.map(c => c.value), 1);
   }, [categoriesList]);
 
+  const { showContextMenu } = useContextMenu();
+
+
+  const handleReportsContextMenu = (e: React.MouseEvent) => {
+    showContextMenu(e, [
+      {
+        id: "refresh-reports",
+        label: t("reports.refreshReports", "Refresh Reports"),
+        icon: RefreshCw,
+        variant: "accent",
+        onClick: () => {
+          dashQuery.refetch();
+          loansQuery.refetch();
+          categoriesQuery.refetch();
+          toast.success(t("reports.refreshed", "Reports refreshed"));
+        },
+      },
+      {
+        id: "print-reports",
+        label: t("reports.printReport", "Print Report Page"),
+        icon: Printer,
+        onClick: () => window.print(),
+      },
+      { divider: true },
+      {
+        id: "copy-summary",
+        label: t("reports.copySummary", "Copy Stat Summary"),
+        icon: Copy,
+        onClick: () => {
+          const summaryText = `Library Reports Summary:\nTotal Loans: ${stats.totalLoans}\nActive Members: ${stats.activeMembers}\nOverdue Rate: ${stats.overdueRate}\nTotal Copies: ${stats.acquisitions}`;
+          navigator.clipboard.writeText(summaryText);
+          toast.success(t("reports.copiedSummary", "Stat summary copied to clipboard"));
+        },
+      },
+    ], { title: t("reports.title", "Analytics & Reports") });
+  };
+
   return (
-    <div className="flex flex-col h-full w-full text-[13px]">
+    <div onContextMenu={handleReportsContextMenu} className="flex flex-col h-full w-full text-[13px]">
+
       {/* Header */}
       <div className="flex justify-between items-end mb-8">
         <div>

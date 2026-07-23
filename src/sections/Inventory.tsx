@@ -17,8 +17,13 @@ import {
   BookCopy, Trash2,
   ChevronLeft, ChevronRight, ChevronDown, LayoutGrid, List, Search, RefreshCw,
   MapPin, X, Wifi, Pause, Play, Check, PlusCircle, Library, Info,
-  Pencil, Plus, Building2, Layers, Trash
+  Pencil, Plus, Building2, Layers, Trash,
+  CheckCircle2, Clock, Wrench, AlertTriangle, Eye, Copy as CopyIcon
 } from "lucide-react";
+
+import { useContextMenu } from "../components/ui/ContextMenu";
+
+
 
 const invalidate = () => queryClient.invalidateQueries();
 
@@ -148,9 +153,97 @@ function ShelfSvgVisual({ copiesList, capacity, rowOrder = "asc" }: { copiesList
 }
 
 export function InventoryPage() {
+  const { t } = useTranslation();
+  const { showContextMenu } = useContextMenu();
+
+  const handleCopyContextMenu = (e: React.MouseEvent, copy: Copy & { title: string }) => {
+    showContextMenu(e, [
+      {
+        id: "set-available",
+        label: t("inventory.setAvailable", "Set Available"),
+        icon: CheckCircle2,
+        hidden: copy.status === "available",
+        variant: "success",
+        onClick: async () => {
+          await updateCopy(copy.id, { status: "available" });
+          invalidate();
+          toast.success(t("inventory.statusUpdated", "Copy status updated to Available"));
+        },
+      },
+      {
+        id: "set-loaned",
+        label: t("inventory.setLoaned", "Set On Loan"),
+        icon: Clock,
+        hidden: copy.status === "on-loan",
+        variant: "accent",
+        onClick: async () => {
+          await updateCopy(copy.id, { status: "on-loan" });
+          invalidate();
+          toast.info(t("inventory.statusUpdated", "Copy status updated to On Loan"));
+        },
+      },
+      {
+        id: "set-repair",
+        label: t("inventory.setRepair", "Set In Repair"),
+        icon: Wrench,
+        hidden: copy.status === "repair",
+        variant: "warning",
+        onClick: async () => {
+          await updateCopy(copy.id, { status: "repair" });
+          invalidate();
+          toast.warning(t("inventory.statusUpdated", "Copy status updated to In Repair"));
+        },
+      },
+      {
+        id: "set-lost",
+        label: t("inventory.setLost", "Set Lost"),
+        icon: AlertTriangle,
+        hidden: copy.status === "lost",
+        variant: "danger",
+        onClick: async () => {
+          await updateCopy(copy.id, { status: "lost" });
+          invalidate();
+          toast.error(t("inventory.statusUpdated", "Copy status updated to Lost"));
+        },
+      },
+      { divider: true },
+      {
+        id: "view-copy",
+        label: t("inventory.viewCopy", "View / Edit Details"),
+        icon: Eye,
+        onClick: () => setSelectedCopy(copy),
+      },
+      {
+        id: "copy-barcode",
+        label: t("inventory.copyBarcode", "Copy Barcode"),
+        icon: CopyIcon,
+        onClick: () => {
+          navigator.clipboard.writeText(copy.barcode);
+          toast.success(t("inventory.copiedBarcode", "Barcode copied to clipboard"));
+        },
+      },
+      { divider: true },
+      {
+        id: "delete-copy",
+        label: t("inventory.deleteCopy", "Delete Copy"),
+        icon: Trash2,
+        variant: "danger",
+        onClick: async () => {
+          if (confirm(t("inventory.confirmDelete", { barcode: copy.barcode }) || `Are you sure you want to delete copy #${copy.barcode}?`)) {
+            await deleteCopy(copy.id);
+            if (selectedCopy?.id === copy.id) setSelectedCopy(null);
+            invalidate();
+            toast.success(t("inventory.copyDeleted", "Copy deleted successfully"));
+          }
+        },
+      },
+    ], { title: `Barcode ${copy.barcode}` });
+  };
+
   const [view, setView] = useState<"grid" | "list">("grid");
   const [searchTerm, setSearchTerm] = useState("");
   const [conditionFilter, setConditionFilter] = useState("all");
+
   const [rowOrder, setRowOrder] = useState<"asc" | "desc">("asc");
   
   // Selected shelf code (e.g. B04)
@@ -536,11 +629,13 @@ export function InventoryPage() {
   };
 
   // Summary floor details calculation
+
   const totalFloorShelves = filteredShelves.length;
   const totalFloorCapacity = filteredShelves.reduce((sum, s) => sum + s.capacity, 0);
 
   return (
     <div className="flex flex-col gap-0 w-full text-[#122222] dark:text-white">
+
 
       {/* ── Header ── */}
       <div className="flex justify-between items-start mb-6">
@@ -940,8 +1035,10 @@ export function InventoryPage() {
                         <tr
                           key={copy.id}
                           onClick={() => setSelectedCopy(copy)}
+                          onContextMenu={(e) => handleCopyContextMenu(e, copy)}
                           className={`hover:bg-black/[0.02] dark:hover:bg-white/[0.02] cursor-pointer transition-colors ${selectedIds.includes(copy.id) ? "bg-emerald/5" : ""}`}
                         >
+
                           <td className="px-5 py-3" onClick={e => e.stopPropagation()}>
                             <input type="checkbox"
                               checked={selectedIds.includes(copy.id)}
