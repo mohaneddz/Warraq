@@ -272,8 +272,10 @@ export async function updateBook(bookId: string, input: Partial<Book> & { author
 export async function deleteBook(bookId: string): Promise<void> {
   const db = await database();
   const now = timestamp();
+  const book = await db.select<{ title: string }[]>("SELECT title FROM books WHERE id = ?", [bookId]);
   await db.execute("UPDATE books SET archived_at = ?, updated_at = ? WHERE id = ?", [now, now, bookId]);
   await db.execute("UPDATE copies SET status = 'archived', updated_at = ? WHERE book_id = ?", [now, bookId]);
+  await audit(db, "archive_book", "book", bookId, null, JSON.stringify({ title: book[0]?.title }));
 }
 
 export async function getCopiesForBook(bookId: string): Promise<Copy[]> {
@@ -357,8 +359,12 @@ export async function addCopy(bookId: string, barcode: string, accessionNumber: 
   const finalAccession = await ensureUniqueAccession(db, accessionNumber);
   const finalBarcode = await ensureUniqueBarcode(db, barcode, finalAccession);
 
+  const copyId = id();
   await db.execute("INSERT INTO copies (id,book_id,accession_number,barcode,shelf_id,status,condition,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?)", 
-    [id(), bookId, finalAccession, finalBarcode, shelfId, "available", condition, now, now]);
+    [copyId, bookId, finalAccession, finalBarcode, shelfId, "available", condition, now, now]);
+
+  const book = await db.select<{ title: string }[]>("SELECT title FROM books WHERE id = ?", [bookId]);
+  await audit(db, "add_copy", "copy", copyId, null, JSON.stringify({ book_title: book[0]?.title, barcode: finalBarcode, accession: finalAccession, condition }));
 }
 
 export async function updateCopy(copyId: string, updates: Partial<Copy> & { shelf?: string | null }): Promise<void> {
@@ -398,13 +404,16 @@ export async function updateCopy(copyId: string, updates: Partial<Copy> & { shel
   
   params.push(copyId);
   await db.execute(`UPDATE copies SET ${fields.join(", ")} WHERE id = ?`, params);
+  await audit(db, "update_copy", "copy", copyId, null, JSON.stringify(updates));
 }
 
 
 export async function deleteCopy(copyId: string): Promise<void> {
   const db = await database();
   const now = timestamp();
+  const copy = await db.select<{ barcode: string; accession_number: string }[]>("SELECT barcode, accession_number FROM copies WHERE id = ?", [copyId]);
   await db.execute("UPDATE copies SET status = 'archived', updated_at = ? WHERE id = ?", [now, copyId]);
+  await audit(db, "delete_copy", "copy", copyId, null, JSON.stringify({ barcode: copy[0]?.barcode, accession: copy[0]?.accession_number }));
 }
 
 export async function members(query = ""): Promise<Member[]> {
@@ -413,18 +422,37 @@ export async function members(query = ""): Promise<Member[]> {
   return db.select<Member[]>("SELECT * FROM members WHERE archived_at IS NULL AND (?='' OR full_name LIKE ? OR member_number LIKE ? OR email LIKE ? OR department LIKE ?) ORDER BY full_name", [query.trim(), term, term, term, term]);
 }
 
-export async function saveMember(input: Omit<Member, "id" | "member_number" | "joined_at"> & { member_number?: string }): Promise<void> {
+export async function saveMember(input: Omit<Member, "id" | "member_number" | "joined_at"> & { member_number?: string }): Promise<Member> {
   const db = await database();
   const now = timestamp();
+  const newId = id();
   const memberNumber = input.member_number?.trim() 
-    ? cleanMemberNumber(input.member_number) 
+    ? cleanMemberNumber(input.member_number)
     : generateRandomMemberNumber(6);
   const fullName = cleanText(input.full_name);
   const email = input.email ? cleanText(input.email) : null;
   const phone = input.phone ? cleanPhone(input.phone) : null;
   const department = input.department ? cleanText(input.department) : null;
   const role = input.role ? cleanText(input.role) : null;
-  await db.execute("INSERT INTO members (id,member_number,full_name,email,phone,department,role,status,expiry_date,avatar_path,joined_at,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)", [id(), memberNumber, fullName, email, phone, department, role, input.status, input.expiry_date ?? null, input.avatar_path ?? null, today(), now, now]);
+  const joinedAt = today();
+
+  await db.execute("INSERT INTO members (id,member_number,full_name,email,phone,department,role,status,expiry_date,avatar_path,joined_at,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)", [newId, memberNumber, fullName, email, phone, department, role, input.status, input.expiry_date ?? null, input.avatar_path ?? null, joinedAt, now, now]);
+
+  await audit(db, "create_member", "member", newId, null, JSON.stringify({ full_name: fullName, member_number: memberNumber, role, department }));
+
+  return {
+    id: newId,
+    member_number: memberNumber,
+    full_name: fullName,
+    email,
+    phone,
+    department,
+    role,
+    status: input.status,
+    expiry_date: input.expiry_date ?? null,
+    avatar_path: input.avatar_path ?? null,
+    joined_at: joinedAt
+  };
 }
 
 export async function repopulateMembersDatabase(): Promise<void> {
@@ -476,18 +504,21 @@ export async function updateMember(memberId: string, updates: Partial<Member>): 
   
   params.push(memberId);
   await db.execute(`UPDATE members SET ${fields.join(", ")} WHERE id = ?`, params);
+  await audit(db, "update_member", "member", memberId, null, JSON.stringify(updates));
 }
 
 export async function deleteMember(memberId: string): Promise<void> {
   const db = await database();
   const now = timestamp();
+  const member = await db.select<{ full_name: string; member_number: string }[]>("SELECT full_name, member_number FROM members WHERE id = ?", [memberId]);
   await db.execute("UPDATE members SET archived_at = ?, status = 'archived', updated_at = ? WHERE id = ?", [now, now, memberId]);
+  await audit(db, "archive_member", "member", memberId, null, JSON.stringify({ full_name: member[0]?.full_name, member_number: member[0]?.member_number }));
 }
 
 export async function copies(query = ""): Promise<(Copy & { title: string; item_type?: string; metadata?: string | null; cover_path?: string | null; author?: string | null })[]> {
   const db = await database();
   const term = `%${query.trim()}%`;
-  return db.select<(Copy & { title: string; item_type?: string; metadata?: string | null; cover_path?: string | null; author?: string | null })[]>("SELECT c.*, b.title, b.item_type, b.metadata, b.cover_path, b.author, s.code as shelf FROM copies c JOIN books b ON b.id=c.book_id LEFT JOIN shelves s ON s.id=c.shelf_id WHERE (?='' OR c.barcode LIKE ? OR c.accession_number LIKE ? OR b.title LIKE ?) ORDER BY b.title", [query.trim(), term, term, term]);
+  return db.select<(Copy & { title: string; item_type?: string; metadata?: string | null; cover_path?: string | null; author?: string | null })[]>("SELECT c.*, b.title, b.item_type, b.metadata, b.cover_path, (SELECT GROUP_CONCAT(a.name, ', ') FROM book_authors ba JOIN authors a ON a.id=ba.author_id WHERE ba.book_id=b.id) AS author, s.code as shelf FROM copies c JOIN books b ON b.id=c.book_id LEFT JOIN shelves s ON s.id=c.shelf_id WHERE (?='' OR c.barcode LIKE ? OR c.accession_number LIKE ? OR b.title LIKE ?) ORDER BY b.title", [query.trim(), term, term, term]);
 }
 
 export async function loans(openOnly = false): Promise<Loan[]> {
@@ -556,22 +587,90 @@ export async function renewLoan(loanId: string, days: number): Promise<void> {
 export async function cancelReservation(reservationId: string): Promise<void> {
   const db = await database();
   await db.execute("UPDATE reservations SET status = 'cancelled' WHERE id = ?", [reservationId]);
+  await audit(db, "cancel_reservation", "reservation", reservationId, null, JSON.stringify({ status: "cancelled" }));
+}
+
+export async function deleteReservation(reservationId: string): Promise<void> {
+  const db = await database();
+  await db.execute("DELETE FROM reservations WHERE id = ?", [reservationId]);
+  await audit(db, "delete_reservation", "reservation", reservationId, null, JSON.stringify({ status: "deleted" }));
+}
+
+export async function markReservationReady(reservationId: string, days = 7): Promise<void> {
+  const db = await database();
+  const expiresAt = dueDate(days);
+  await db.execute("UPDATE reservations SET status = 'ready', expires_at = ? WHERE id = ?", [expiresAt, reservationId]);
+  await audit(db, "mark_ready_reservation", "reservation", reservationId, null, JSON.stringify({ status: "ready", expires_at: expiresAt }));
+}
+
+export async function extendReservation(reservationId: string, days = 7): Promise<void> {
+  const db = await database();
+  const res = await db.select<{ expires_at: string | null }[]>("SELECT expires_at FROM reservations WHERE id = ?", [reservationId]);
+  const current = res[0]?.expires_at ? new Date(res[0].expires_at) : new Date();
+  const baseDate = current > new Date() ? current : new Date();
+  baseDate.setDate(baseDate.getDate() + days);
+  const newExpires = baseDate.toISOString().split('T')[0];
+  await db.execute("UPDATE reservations SET expires_at = ? WHERE id = ?", [newExpires, reservationId]);
+  await audit(db, "extend_reservation", "reservation", reservationId, null, JSON.stringify({ extended_days: days, new_expires: newExpires }));
 }
 
 export async function reservations(): Promise<Reservation[]> {
   const db = await database();
-  return db.select<Reservation[]>("SELECT r.*,b.title,m.full_name member_name FROM reservations r JOIN books b ON b.id=r.book_id JOIN members m ON m.id=r.member_id ORDER BY r.status,r.position,r.reserved_at");
+  return db.select<Reservation[]>(`
+    SELECT r.*, 
+           COALESCE(b.title, 'Unknown Title') AS title, 
+           b.subtitle, b.arabic_title, 
+           (SELECT GROUP_CONCAT(a.name, ', ') FROM book_authors ba JOIN authors a ON a.id=ba.author_id WHERE ba.book_id=b.id) AS author,
+           cat.name AS category, 
+           b.item_type, 
+           COALESCE(b.cover_path, b.cover_url) AS cover_path, 
+           b.isbn13, b.call_number,
+           p.name AS publisher,
+           COALESCE(m.full_name, 'Visitor / Guest') AS member_name, 
+           m.member_number, m.email AS member_email, m.phone AS member_phone, m.department AS member_dept, m.role AS member_role, m.avatar_path AS member_avatar,
+           c.barcode AS copy_barcode, c.accession_number AS copy_accession, c.condition AS copy_condition, s.code AS copy_shelf
+    FROM reservations r 
+    LEFT JOIN books b ON b.id=r.book_id 
+    LEFT JOIN categories cat ON cat.id=b.category_id
+    LEFT JOIN publishers p ON p.id=b.publisher_id
+    LEFT JOIN members m ON m.id=r.member_id 
+    LEFT JOIN copies c ON c.id=r.copy_id
+    LEFT JOIN shelves s ON s.id=c.shelf_id
+    ORDER BY r.reserved_at DESC, r.status, r.position
+  `);
 }
 
-export async function addReservation(bookId: string, memberId: string): Promise<void> {
+export async function addReservation(bookId: string, memberId: string, expiresAt?: string | null, copyId?: string | null): Promise<void> {
   const db = await database();
   const rows = await db.select<{ next: number }[]>("SELECT COALESCE(MAX(position),0)+1 next FROM reservations WHERE book_id=? AND status='queued'", [bookId]);
-  await db.execute("INSERT INTO reservations (id,book_id,member_id,status,position,reserved_at) VALUES (?,?,?,?,?,?)", [id(), bookId, memberId, "queued", rows[0]?.next ?? 1, timestamp()]);
+  
+  let initialStatus = "queued";
+  if (copyId) {
+    const cp = await db.select<{ status: string }[]>("SELECT status FROM copies WHERE id=?", [copyId]);
+    if (cp[0]?.status === "available") {
+      initialStatus = "ready";
+    }
+  } else {
+    const avail = await db.select<{ count: number }[]>("SELECT COUNT(*) count FROM copies WHERE book_id=? AND status='available'", [bookId]);
+    if ((avail[0]?.count ?? 0) > 0) {
+      initialStatus = "ready";
+    }
+  }
+
+  const resId = id();
+  await db.execute("INSERT INTO reservations (id,book_id,member_id,copy_id,status,position,reserved_at,expires_at) VALUES (?,?,?,?,?,?,?,?)", [resId, bookId, memberId, copyId ?? null, initialStatus, rows[0]?.next ?? 1, timestamp(), expiresAt ?? null]);
+
+  const book = await db.select<{ title: string }[]>("SELECT title FROM books WHERE id = ?", [bookId]);
+  const member = await db.select<{ full_name: string }[]>("SELECT full_name FROM members WHERE id = ?", [memberId]);
+  await audit(db, "create_reservation", "reservation", resId, null, JSON.stringify({ book_title: book[0]?.title, member_name: member[0]?.full_name, status: initialStatus, expires_at: expiresAt }));
 }
 
-export async function auditLog() {
+export async function auditLog(limit?: any) {
+  const numLimit = typeof limit === "number" ? limit : 500;
   const db = await database();
-  return db.select<{ id: string; actor: string; action: string; entity_type: string; entity_id: string; created_at: string; after_json?: string }[]>("SELECT * FROM audit_logs ORDER BY created_at DESC LIMIT 250");
+  return db.select<{ id: string; actor: string; action: string; entity_type: string; entity_id: string; created_at: string; before_json?: string | null; after_json?: string | null }[]>(
+    "SELECT * FROM audit_logs ORDER BY created_at DESC LIMIT ?", [numLimit]
+  );
 }
 
 async function audit(db: Database, action: string, entityType: string, entityId: string, before: string | null, after: string | null) {
@@ -633,10 +732,14 @@ export async function getShelves(): Promise<any[]> {
 export async function createShelf(section: string, code: string, capacity: number, notes?: string | null, room?: string | null, floor?: string | null): Promise<void> {
   const db = await database();
   const now = timestamp();
+  const shelfId = id();
+  const cleanC = cleanText(code);
+  const cleanS = cleanText(section);
   await db.execute(
     "INSERT INTO shelves (id, code, section, capacity, notes, room, floor, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-    [id(), cleanText(code), cleanText(section), capacity, notes ? cleanText(notes) : null, room ? cleanText(room) : null, floor ? cleanText(floor) : null, now, now]
+    [shelfId, cleanC, cleanS, capacity, notes ? cleanText(notes) : null, room ? cleanText(room) : null, floor ? cleanText(floor) : null, now, now]
   );
+  await audit(db, "create_shelf", "shelf", shelfId, null, JSON.stringify({ code: cleanC, section: cleanS, capacity, room, floor }));
 }
 
 export async function updateShelf(shelfId: string, updates: { code?: string; section?: string; capacity?: number; notes?: string | null; room?: string | null; floor?: string | null }): Promise<void> {
@@ -659,6 +762,7 @@ export async function updateShelf(shelfId: string, updates: { code?: string; sec
   params.push(shelfId);
 
   await db.execute(`UPDATE shelves SET ${fields.join(", ")} WHERE id = ?`, params);
+  await audit(db, "update_shelf", "shelf", shelfId, null, JSON.stringify(updates));
 }
 
 export async function deleteShelf(shelfId: string): Promise<void> {
@@ -668,6 +772,7 @@ export async function deleteShelf(shelfId: string): Promise<void> {
     throw new Error("Cannot delete shelf because it contains copies of books. Relocate or archive the copies first.");
   }
   await db.execute("DELETE FROM shelves WHERE id = ?", [shelfId]);
+  await audit(db, "delete_shelf", "shelf", shelfId, null, JSON.stringify({ shelf_id: shelfId }));
 }
 
 // ─── Building / Floor management ─────────────────────────────────────────────
