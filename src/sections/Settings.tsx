@@ -7,15 +7,16 @@ import {
   Eye, EyeOff, Copy, Check, AlertTriangle, Clock, MapPin,
   FileText, Palette, Type, BookMarked,
   DollarSign, Server, Cpu, FolderOpen, ExternalLink, Wifi, WifiOff,
-  LayoutGrid, Save,
+  LayoutGrid, Save, Users as UsersIcon, Plus, ShieldCheck, Ban, KeyRound,
 } from "lucide-react";
 import { useUiStore } from "../store/uiStore";
 import { useAuthStore } from "../store/authStore";
-import { changeOwnPassword } from "../data/auth";
-import { ImageUpload } from "../components/ui/ImageUpload";
-import { Button } from "../components/ui/primitives";
+import { changeOwnPassword, listUsers, createUser, updateUser, resetPassword, deleteUser } from "../data/auth";
+import type { PublicUser, UserRole } from "../types";
+import { Button, Input, Modal } from "../components/ui/primitives";
 import { useTranslation } from "react-i18next";
 import { useContextMenu } from "../components/ui/ContextMenu";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 
@@ -23,7 +24,7 @@ import { toast } from "sonner";
 type Tab =
   | "General" | "Library Profile" | "Localization" | "Appearance"
   | "Rules" | "Fines & Fees" | "Notifications"
-  | "Backup & Restore" | "Database" | "Integrations & AI" | "Secrets & Keys"
+  | "Backup & Restore" | "Database" | "Integrations & AI" | "Secrets & Keys" | "Users"
   | "Desktop & Data" | "About";
 
 const tabIcons: Record<Tab, React.ComponentType<{ size?: number; className?: string }>> = {
@@ -38,6 +39,7 @@ const tabIcons: Record<Tab, React.ComponentType<{ size?: number; className?: str
   "Database": Database,
   "Integrations & AI": Zap,
   "Secrets & Keys": Shield,
+  "Users": UsersIcon,
   "Desktop & Data": Monitor,
   "About": Info,
 };
@@ -48,6 +50,7 @@ export function SettingsPage() {
   const [activeTab, setActiveTab] = useState<Tab>("General");
   const [search, setSearch] = useState("");
   const { preferences, updatePreferences } = useUiStore();
+  const isAdmin = useAuthStore((s) => s.user?.role === "admin");
   const location = useLocation();
 
   useEffect(() => {
@@ -67,7 +70,8 @@ export function SettingsPage() {
         integrations: "Integrations & AI",
         secrets: "Secrets & Keys",
         desktop: "Desktop & Data",
-        about: "About"
+        about: "About",
+        users: "Users"
       };
       const matched = tabMap[tabParam.toLowerCase()];
       if (matched) {
@@ -79,7 +83,7 @@ export function SettingsPage() {
   const allTabs: { group: string; items: Tab[] }[] = [
     { group: "General", items: ["General", "Library Profile", "Localization", "Appearance"] },
     { group: "Circulation", items: ["Rules", "Fines & Fees", "Notifications"] },
-    { group: "Data & Security", items: ["Backup & Restore", "Database", "Integrations & AI", "Secrets & Keys"] },
+    { group: "Data & Security", items: ["Backup & Restore", "Database", "Integrations & AI", "Secrets & Keys", ...(isAdmin ? (["Users"] as Tab[]) : [])] },
     { group: "System", items: ["Desktop & Data", "About"] },
   ];
 
@@ -182,6 +186,7 @@ export function SettingsPage() {
           {activeTab === "Database" && <DatabaseTab />}
           {activeTab === "Integrations & AI" && <IntegrationsTab prefs={preferences} update={updatePreferences} />}
           {activeTab === "Secrets & Keys" && <SecretsTab prefs={preferences} update={updatePreferences} />}
+          {activeTab === "Users" && isAdmin && <UsersTab />}
           {activeTab === "Desktop & Data" && <DesktopTab prefs={preferences} update={updatePreferences} />}
           {activeTab === "About" && <AboutTab />}
         </div>
@@ -1388,6 +1393,193 @@ function SecretsTab({ prefs, update }: TabProps) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// 11B. USERS TAB (admin only)
+// ═══════════════════════════════════════════════════════════════════════════════
+function UsersTab() {
+  const { t } = useTranslation();
+  const qc = useQueryClient();
+  const currentUser = useAuthStore((s) => s.user);
+  const { data: users, isLoading } = useQuery({ queryKey: ["users"], queryFn: listUsers });
+
+  const [showCreate, setShowCreate] = useState(false);
+  const [createdCredentials, setCreatedCredentials] = useState<{ username: string; password: string } | null>(null);
+  const [resetForUser, setResetForUser] = useState<PublicUser | null>(null);
+  const [resetPasswordValue, setResetPasswordValue] = useState("");
+  const [resetResultPassword, setResetResultPassword] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<PublicUser | null>(null);
+
+  const [newUsername, setNewUsername] = useState("");
+  const [newFullName, setNewFullName] = useState("");
+  const [newEmail, setNewEmail] = useState("");
+  const [newRole, setNewRole] = useState<UserRole>("staff");
+  const [newPassword, setNewPassword] = useState("");
+
+  const invalidate = () => qc.invalidateQueries({ queryKey: ["users"] });
+
+  const createMutation = useMutation({
+    mutationFn: () => createUser({ username: newUsername, fullName: newFullName, email: newEmail || null, role: newRole, password: newPassword }),
+    onSuccess: (user) => {
+      invalidate();
+      setCreatedCredentials({ username: user.username, password: newPassword });
+      setShowCreate(false);
+      setNewUsername(""); setNewFullName(""); setNewEmail(""); setNewRole("staff"); setNewPassword("");
+    },
+    onError: (err: any) => toast.error(err.message || String(err)),
+  });
+
+  const toggleStatusMutation = useMutation({
+    mutationFn: (u: PublicUser) => updateUser(u.id, { status: u.status === "active" ? "disabled" : "active" }),
+    onSuccess: () => { invalidate(); toast.success(t("settings.users.statusUpdated")); },
+    onError: (err: any) => toast.error(err.message || String(err)),
+  });
+
+  const toggleRoleMutation = useMutation({
+    mutationFn: (u: PublicUser) => updateUser(u.id, { role: u.role === "admin" ? "staff" : "admin" }),
+    onSuccess: () => { invalidate(); toast.success(t("settings.users.roleUpdated")); },
+    onError: (err: any) => toast.error(err.message || String(err)),
+  });
+
+  const resetMutation = useMutation({
+    mutationFn: () => resetPassword(resetForUser!.id, resetPasswordValue),
+    onSuccess: () => { invalidate(); setResetResultPassword(resetPasswordValue); setResetPasswordValue(""); },
+    onError: (err: any) => toast.error(err.message || String(err)),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: () => deleteUser(deleteTarget!.id),
+    onSuccess: () => { invalidate(); toast.success(t("settings.users.deleted")); setDeleteTarget(null); },
+    onError: (err: any) => { toast.error(err.message || String(err)); setDeleteTarget(null); },
+  });
+
+  return (
+    <div className="max-w-3xl">
+      <PageHeader title={t("settings.users.title")} desc={t("settings.users.desc")} />
+
+      <div className="flex justify-end mb-4">
+        <Button onClick={() => setShowCreate(true)} className="flex items-center gap-1.5">
+          <Plus size={15} /> {t("settings.users.addUser")}
+        </Button>
+      </div>
+
+      <Card title={t("settings.users.title")} icon={<UsersIcon size={16} className="text-[#1a4d40]" />}>
+        {isLoading ? (
+          <p className="text-[12px] text-[#122222]/50 dark:text-white/50">{t("settings.account.saving")}</p>
+        ) : (
+          <div className="space-y-2">
+            {(users ?? []).map((u) => (
+              <div key={u.id} className="flex items-center justify-between gap-3 py-2.5 border-b border-black/5 dark:border-white/5 last:border-0">
+                <div className="min-w-0 flex items-center gap-3">
+                  <div className={`h-9 w-9 rounded-full flex items-center justify-center text-[12px] font-bold shrink-0 ${u.status === "active" ? "bg-[#b96f3e] text-white" : "bg-black/10 dark:bg-white/10 text-[#122222]/40 dark:text-white/40"}`}>
+                    {u.full_name.substring(0, 2).toUpperCase()}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-bold text-[13px] text-[#122222] dark:text-white truncate">
+                      {u.full_name} {u.id === currentUser?.id && <span className="text-[10px] text-[#122222]/40 dark:text-white/40">({t("settings.users.you")})</span>}
+                    </p>
+                    <p className="text-[11px] text-[#122222]/50 dark:text-white/50 truncate">
+                      @{u.username} · {u.role === "admin" ? t("settings.account.roleAdmin") : t("settings.account.roleStaff")} · {u.status === "active" ? t("settings.users.active") : t("settings.users.disabled")}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  <button title={t("settings.users.toggleRole")} onClick={() => toggleRoleMutation.mutate(u)} className="p-1.5 rounded-lg text-[#122222]/50 dark:text-white/50 hover:bg-black/5 dark:hover:bg-white/5 hover:text-[#1a4d40] cursor-pointer">
+                    <ShieldCheck size={15} />
+                  </button>
+                  <button title={t("settings.users.resetPassword")} onClick={() => setResetForUser(u)} className="p-1.5 rounded-lg text-[#122222]/50 dark:text-white/50 hover:bg-black/5 dark:hover:bg-white/5 hover:text-[#1a4d40] cursor-pointer">
+                    <KeyRound size={15} />
+                  </button>
+                  <button title={t("settings.users.toggleStatus")} onClick={() => toggleStatusMutation.mutate(u)} className="p-1.5 rounded-lg text-[#122222]/50 dark:text-white/50 hover:bg-black/5 dark:hover:bg-white/5 hover:text-amber-600 cursor-pointer">
+                    <Ban size={15} />
+                  </button>
+                  {u.id !== currentUser?.id && (
+                    <button title={t("settings.users.deleteUser")} onClick={() => setDeleteTarget(u)} className="p-1.5 rounded-lg text-[#122222]/50 dark:text-white/50 hover:bg-red-500/10 hover:text-red-600 cursor-pointer">
+                      <Trash2 size={15} />
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
+
+      {/* Create user */}
+      <Modal isOpen={showCreate} onClose={() => setShowCreate(false)} title={t("settings.users.addUser")}>
+        <form
+          className="space-y-3"
+          onSubmit={(e) => { e.preventDefault(); createMutation.mutate(); }}
+        >
+          <Field label={t("settings.users.username")}>
+            <Input value={newUsername} onChange={(e) => setNewUsername(e.target.value)} required minLength={3} autoFocus />
+          </Field>
+          <Field label={t("members.firstName")}>
+            <Input value={newFullName} onChange={(e) => setNewFullName(e.target.value)} required />
+          </Field>
+          <Field label={t("members.email")}>
+            <Input type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} />
+          </Field>
+          <Field label={t("settings.users.role")}>
+            <select value={newRole} onChange={(e) => setNewRole(e.target.value as UserRole)} className="field-select text-[13px] py-2 px-3 font-semibold w-full">
+              <option value="staff">{t("settings.account.roleStaff")}</option>
+              <option value="admin">{t("settings.account.roleAdmin")}</option>
+            </select>
+          </Field>
+          <Field label={t("settings.users.initialPassword")}>
+            <Input type="text" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required minLength={8} />
+          </Field>
+          <div className="flex gap-2 pt-2">
+            <Button type="submit" disabled={createMutation.isPending}>{createMutation.isPending ? t("settings.account.saving") : t("settings.users.addUser")}</Button>
+            <Button type="button" variant="ghost" onClick={() => setShowCreate(false)}>{t("catalog.addModal.cancel")}</Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Just-created credentials */}
+      <Modal isOpen={!!createdCredentials} onClose={() => setCreatedCredentials(null)} title={t("settings.users.credentialsTitle")}>
+        <p className="text-[12px] text-[#122222]/60 dark:text-white/60 mb-3">{t("settings.users.credentialsHelp")}</p>
+        <div className="bg-black/5 dark:bg-white/5 rounded-lg p-3 font-mono text-[13px] space-y-1">
+          <p>{t("settings.users.username")}: <strong>{createdCredentials?.username}</strong></p>
+          <p>{t("settings.users.initialPassword")}: <strong>{createdCredentials?.password}</strong></p>
+        </div>
+        <Button className="mt-4 w-full" onClick={() => setCreatedCredentials(null)}>{t("catalog.addModal.cancel")}</Button>
+      </Modal>
+
+      {/* Reset password */}
+      <Modal isOpen={!!resetForUser} onClose={() => { setResetForUser(null); setResetResultPassword(null); }} title={t("settings.users.resetPassword")}>
+        {!resetResultPassword ? (
+          <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); resetMutation.mutate(); }}>
+            <p className="text-[12px] text-[#122222]/60 dark:text-white/60">{t("settings.users.resetPasswordHelp", { name: resetForUser?.full_name })}</p>
+            <Field label={t("settings.users.newPasswordFor")}>
+              <Input type="text" value={resetPasswordValue} onChange={(e) => setResetPasswordValue(e.target.value)} required minLength={8} autoFocus />
+            </Field>
+            <div className="flex gap-2 pt-2">
+              <Button type="submit" disabled={resetMutation.isPending}>{resetMutation.isPending ? t("settings.account.saving") : t("settings.account.savePassword")}</Button>
+              <Button type="button" variant="ghost" onClick={() => setResetForUser(null)}>{t("catalog.addModal.cancel")}</Button>
+            </div>
+          </form>
+        ) : (
+          <>
+            <div className="bg-black/5 dark:bg-white/5 rounded-lg p-3 font-mono text-[13px]">
+              {t("settings.account.newPassword")}: <strong>{resetResultPassword}</strong>
+            </div>
+            <Button className="mt-4 w-full" onClick={() => { setResetForUser(null); setResetResultPassword(null); }}>{t("catalog.addModal.cancel")}</Button>
+          </>
+        )}
+      </Modal>
+
+      {/* Delete confirmation */}
+      <Modal isOpen={!!deleteTarget} onClose={() => setDeleteTarget(null)} title={t("settings.users.deleteUser")} size="md">
+        <p className="text-[13px] text-[#122222] dark:text-white">{t("settings.users.confirmDelete", { name: deleteTarget?.full_name })}</p>
+        <div className="flex gap-2 pt-4">
+          <Button variant="danger" onClick={() => deleteMutation.mutate()} disabled={deleteMutation.isPending}>{t("delete")}</Button>
+          <Button variant="ghost" onClick={() => setDeleteTarget(null)}>{t("catalog.addModal.cancel")}</Button>
+        </div>
+      </Modal>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // 12. DESKTOP & DATA TAB
 // ═══════════════════════════════════════════════════════════════════════════════
 function DesktopTab({ prefs, update }: TabProps) {
@@ -1691,6 +1883,12 @@ function RightHelp({ tab }: { tab: Tab }) {
       icon: <Shield size={16} className="text-[#1a4d40]" />,
       body: "All API keys are stored in localStorage. Nothing is sent to Warraq servers.",
       tips: ["Mask keys before screen-sharing", "Delete keys when no longer needed", "Keys can be re-entered in Integrations"],
+    },
+    "Users": {
+      title: "Users & access",
+      icon: <UsersIcon size={16} className="text-[#1a4d40]" />,
+      body: "Administrators can create staff and admin accounts, reset passwords, and disable access without deleting history.",
+      tips: ["New accounts must change their password on first sign-in", "The last active administrator can't be demoted or disabled", "Disabling an account keeps its audit history intact"],
     },
     "Desktop & Data": {
       title: "Desktop & data",

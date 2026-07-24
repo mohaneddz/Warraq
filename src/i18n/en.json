@@ -997,6 +997,29 @@
       "hideBtn": "Hide credentials",
       "saveBtn": "Save credentials"
     },
+    "users": {
+      "title": "Users & Access",
+      "desc": "Create and manage the accounts allowed to sign in to Warraq.",
+      "addUser": "Add user",
+      "username": "Username",
+      "role": "Role",
+      "initialPassword": "Initial password",
+      "credentialsTitle": "Account created",
+      "credentialsHelp": "Share these credentials with the new user securely. This password cannot be shown again — reset it if it's lost.",
+      "statusUpdated": "User status updated.",
+      "roleUpdated": "User role updated.",
+      "deleted": "User deleted.",
+      "you": "you",
+      "active": "Active",
+      "disabled": "Disabled",
+      "toggleRole": "Toggle admin/staff role",
+      "resetPassword": "Reset password",
+      "toggleStatus": "Enable / disable account",
+      "deleteUser": "Delete user",
+      "resetPasswordHelp": "Set a new password for {{name}}. They will be required to change it on next sign-in.",
+      "newPasswordFor": "New password",
+      "confirmDelete": "Permanently delete {{name}}'s account? This cannot be undone."
+    },
     "desktop": {
       "title": "Desktop & Data",
       "desc": "Configure native system preferences and window behaviors.",
@@ -1033,6 +1056,7 @@
     }
   },
   "profileCard": {
+    "signOut": "Sign Out",
     "quickActions": "Quick Actions",
     "settings": "My Settings",
     "themeLight": "Light Theme",

@@ -997,6 +997,29 @@
       "hideBtn": "Masquer les identifiants",
       "saveBtn": "Enregistrer les clés"
     },
+    "users": {
+      "title": "Utilisateurs et accès",
+      "desc": "Créez et gérez les comptes autorisés à se connecter à Warraq.",
+      "addUser": "Ajouter un utilisateur",
+      "username": "Nom d'utilisateur",
+      "role": "Rôle",
+      "initialPassword": "Mot de passe initial",
+      "credentialsTitle": "Compte créé",
+      "credentialsHelp": "Partagez ces identifiants avec le nouvel utilisateur de façon sécurisée. Ce mot de passe ne pourra plus être affiché — réinitialisez-le s'il est perdu.",
+      "statusUpdated": "Statut de l'utilisateur mis à jour.",
+      "roleUpdated": "Rôle de l'utilisateur mis à jour.",
+      "deleted": "Utilisateur supprimé.",
+      "you": "vous",
+      "active": "Actif",
+      "disabled": "Désactivé",
+      "toggleRole": "Basculer le rôle admin/personnel",
+      "resetPassword": "Réinitialiser le mot de passe",
+      "toggleStatus": "Activer / désactiver le compte",
+      "deleteUser": "Supprimer l'utilisateur",
+      "resetPasswordHelp": "Définissez un nouveau mot de passe pour {{name}}. Il devra le changer à sa prochaine connexion.",
+      "newPasswordFor": "Nouveau mot de passe",
+      "confirmDelete": "Supprimer définitivement le compte de {{name}} ? Cette action est irréversible."
+    },
     "desktop": {
       "title": "Système & Bureau",
       "desc": "Configurez le comportement natif de l'application sur votre système.",
@@ -1033,6 +1056,7 @@
     }
   },
   "profileCard": {
+    "signOut": "Se déconnecter",
     "quickActions": "Actions Rapides",
     "settings": "Mes Paramètres",
     "themeLight": "Thème Clair",
