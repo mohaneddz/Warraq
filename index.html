@@ -2,9 +2,44 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <link rel="icon" type="image/png" href="/brand/warraq-symbol.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Tauri + React + Typescript</title>
+    <meta name="color-scheme" content="light dark" />
+    <title>Warraq — Library Management System</title>
+    <script>
+      // Applies theme/accent/font-size/direction from saved preferences before
+      // the first paint, so the app never flashes the light theme (or LTR
+      // layout) for a split second while React mounts and AppShell's effects run.
+      (function () {
+        try {
+          var raw = localStorage.getItem("warraq-preferences");
+          var prefs = raw ? JSON.parse(raw) : {};
+
+          var theme = prefs.theme || "light";
+          var isDark = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+          document.documentElement.classList.toggle("dark", isDark);
+
+          var accent = prefs.accentColor || "#1a4d40";
+          var darkAccents = {
+            "#1a4d40": "#1b9277",
+            "#b96f3e": "#c58a59",
+            "#3b5998": "#5b79b8",
+            "#7c3aed": "#9058f3",
+            "#dc2626": "#e35353",
+            "#0284c7": "#38a4db"
+          };
+          document.documentElement.style.setProperty("--color-accent", accent);
+          document.documentElement.style.setProperty("--color-accent-dark", darkAccents[accent] || accent);
+
+          var fontSize = prefs.fontSize === "small" ? "13px" : prefs.fontSize === "large" ? "17px" : "15px";
+          document.documentElement.style.setProperty("--font-size-base", fontSize);
+
+          var locale = prefs.locale || "en";
+          document.documentElement.lang = locale;
+          document.documentElement.dir = locale === "ar" ? "rtl" : "ltr";
+        } catch (e) {}
+      })();
+    </script>
   </head>
 
   <body>
