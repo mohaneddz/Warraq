@@ -11,10 +11,9 @@ import {
 } from "lucide-react";
 import { useContextMenu } from "../components/ui/ContextMenu";
 
-import { 
-  members, saveMember, updateMember, deleteMember, getLoansForMember, 
-  getReservationsForMember, renewLoan, returnCopies, cancelReservation,
-  repopulateMembersDatabase
+import {
+  members, saveMember, updateMember, deleteMember, getLoansForMember,
+  getReservationsForMember, renewLoan, returnCopies, cancelReservation
 } from "../data/repositories/library";
 import type { Member } from "../types";
 import { Modal, Input, Button } from "../components/ui/primitives";
@@ -130,15 +129,6 @@ export function MembersPage() {
       status: "active",
       avatar_path: null
     }
-  });
-
-  const repopulateMutation = useMutation({
-    mutationFn: () => repopulateMembersDatabase(),
-    onSuccess: () => {
-      invalidate();
-      toast.success(t("members.alerts.repopulated") || "Members database reset and repopulated.");
-    },
-    onError: (err: any) => toast.error(err.message)
   });
 
   const addMutation = useMutation({
@@ -369,18 +359,7 @@ export function MembersPage() {
             <p className="text-[13px] text-[#122222]/60 dark:text-white/60">{t("members.subtitle")}</p>
           </div>
           <div className="flex items-center gap-3">
-            <button 
-              onClick={() => {
-                if (confirm(t("members.alerts.confirmReset") || "Are you sure you want to clear and repopulate the members database with clean standardized data?")) {
-                  repopulateMutation.mutate();
-                }
-              }}
-              disabled={repopulateMutation.isPending}
-              className="flex items-center gap-2 bg-[#fcfbf8] dark:bg-[#111d1a] border border-black/10 dark:border-white/10 text-[13px] font-bold text-[#122222] dark:text-white px-3.5 py-2 rounded-lg hover:bg-black/5 transition-colors cursor-pointer"
-            >
-              <RefreshCw size={15} className={repopulateMutation.isPending ? "animate-spin" : ""} /> {t("members.repopulate", "Repopulate Database")}
-            </button>
-            <button 
+            <button
               onClick={() => {
                 addForm.setValue("member_number", generateRandomMemberNumber(6));
                 setAdding(true);

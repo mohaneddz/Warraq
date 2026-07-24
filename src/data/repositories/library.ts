@@ -1,4 +1,4 @@
-import { database } from "../database";
+import { database, runTransaction, type TxStatement } from "../database";
 import type Database from "@tauri-apps/plugin-sql";
 import { dueDate, today } from "../../utils/dates";
 import type { Book, Copy, DashboardMetrics, Loan, Member, Reservation } from "../../types";
@@ -145,22 +145,29 @@ export async function saveBook(input: Omit<Book, "id" | "created_at"> & { author
   const callNumber = input.call_number ? cleanText(input.call_number) : null;
 
   const metadata = input.metadata ? input.metadata : null;
+  const statements: TxStatement[] = [];
 
   let publisherId: string | null = null;
-  if (publisher) { const existing = await db.select<{ id: string }[]>("SELECT id FROM publishers WHERE name=?", [publisher]); publisherId = existing[0]?.id ?? id(); if (!existing[0]) await db.execute("INSERT INTO publishers (id,name,created_at,updated_at) VALUES (?,?,?,?)", [publisherId, publisher, now, now]); }
+  if (publisher) { const existing = await db.select<{ id: string }[]>("SELECT id FROM publishers WHERE name=?", [publisher]); publisherId = existing[0]?.id ?? id(); if (!existing[0]) statements.push({ sql: "INSERT INTO publishers (id,name,created_at,updated_at) VALUES (?,?,?,?)", values: [publisherId, publisher, now, now] }); }
   let categoryId: string | null = null;
-  if (category) { const existing = await db.select<{ id: string }[]>("SELECT id FROM categories WHERE name=?", [category]); categoryId = existing[0]?.id ?? id(); if (!existing[0]) await db.execute("INSERT INTO categories (id,name) VALUES (?,?)", [categoryId, category]); }
-  await db.execute("INSERT INTO books (id,item_type,isbn10,isbn13,title,subtitle,arabic_title,description,language,publisher_id,category_id,call_number,cover_path,source,metadata,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", [bookId, itemType, isbn10, isbn13, title, subtitle, arabicTitle, description, language, publisherId, categoryId, callNumber, input.cover_path ?? null, "manual", metadata, now, now]);;
-  if (author) { const normalized = author.toLocaleLowerCase(); const existing = await db.select<{ id: string }[]>("SELECT id FROM authors WHERE normalized_name=?", [normalized]); const authorId = existing[0]?.id ?? id(); if (!existing[0]) await db.execute("INSERT INTO authors (id,name,normalized_name,created_at,updated_at) VALUES (?,?,?,?,?)", [authorId, author, normalized, now, now]); await db.execute("INSERT INTO book_authors (book_id,author_id,author_order) VALUES (?,?,0)", [bookId, authorId]); }
+  if (category) { const existing = await db.select<{ id: string }[]>("SELECT id FROM categories WHERE name=?", [category]); categoryId = existing[0]?.id ?? id(); if (!existing[0]) statements.push({ sql: "INSERT INTO categories (id,name) VALUES (?,?)", values: [categoryId, category] }); }
+  statements.push({ sql: "INSERT INTO books (id,item_type,isbn10,isbn13,title,subtitle,arabic_title,description,language,publisher_id,category_id,call_number,cover_path,source,metadata,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", values: [bookId, itemType, isbn10, isbn13, title, subtitle, arabicTitle, description, language, publisherId, categoryId, callNumber, input.cover_path ?? null, "manual", metadata, now, now] });
+  if (author) {
+    const normalized = author.toLocaleLowerCase();
+    const existing = await db.select<{ id: string }[]>("SELECT id FROM authors WHERE normalized_name=?", [normalized]);
+    const authorId = existing[0]?.id ?? id();
+    if (!existing[0]) statements.push({ sql: "INSERT INTO authors (id,name,normalized_name,created_at,updated_at) VALUES (?,?,?,?,?)", values: [authorId, author, normalized, now, now] });
+    statements.push({ sql: "INSERT INTO book_authors (book_id,author_id,author_order) VALUES (?,?,0)", values: [bookId, authorId] });
+  }
   if (barcode || accession) {
     const finalAccession = await ensureUniqueAccession(db, accession);
     const finalBarcode = await ensureUniqueBarcode(db, barcode, finalAccession);
-    await db.execute("INSERT INTO copies (id,book_id,accession_number,barcode,status,condition,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?)", [id(), bookId, finalAccession, finalBarcode, "available", "good", now, now]);
+    statements.push({ sql: "INSERT INTO copies (id,book_id,accession_number,barcode,status,condition,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?)", values: [id(), bookId, finalAccession, finalBarcode, "available", "good", now, now] });
   }
-  
+
   // Save tags relation
   if (tags) {
-    const tagsList = tags.split(",").map(t => t.trim()).filter(Boolean);
+    const tagsList = [...new Set(tags.split(",").map(t => t.trim()).filter(Boolean))];
     for (const tagName of tagsList) {
       const existingTag = await db.select<{ id: string }[]>("SELECT id FROM tags WHERE name = ?", [tagName]);
       let tagId = existingTag[0]?.id;
@@ -168,18 +175,21 @@ export async function saveBook(input: Omit<Book, "id" | "created_at"> & { author
         tagId = id();
         const colors = ["#FEE2E2", "#FEF3C7", "#D1FAE5", "#DBEAFE", "#E0E7FF", "#F3E8FF", "#FCE7F3"];
         const randomColor = colors[Math.floor(Math.random() * colors.length)];
-        await db.execute("INSERT INTO tags (id, name, color) VALUES (?, ?, ?)", [tagId, tagName, randomColor]);
+        statements.push({ sql: "INSERT INTO tags (id, name, color) VALUES (?, ?, ?)", values: [tagId, tagName, randomColor] });
       }
-      await db.execute("INSERT OR IGNORE INTO book_tags (book_id, tag_id) VALUES (?, ?)", [bookId, tagId]);
+      statements.push({ sql: "INSERT OR IGNORE INTO book_tags (book_id, tag_id) VALUES (?, ?)", values: [bookId, tagId] });
     }
   }
 
-  await audit(db, "create", "book", bookId, null, JSON.stringify({ title }));
+  statements.push(auditStatement("create", "book", bookId, null, JSON.stringify({ title })));
+  await runTransaction(statements);
 }
 
 export async function updateBook(bookId: string, input: Partial<Book> & { author?: string }): Promise<void> {
   const db = await database();
   const now = timestamp();
+  const statements: TxStatement[] = [];
+
     let publisherId: string | null | undefined = undefined;
     if (input.publisher !== undefined) {
       if (input.publisher?.trim()) {
@@ -187,7 +197,7 @@ export async function updateBook(bookId: string, input: Partial<Book> & { author
         const existing = await db.select<{ id: string }[]>("SELECT id FROM publishers WHERE name=?", [cleanPub]);
         publisherId = existing[0]?.id ?? id();
         if (!existing[0]) {
-          await db.execute("INSERT INTO publishers (id,name,created_at,updated_at) VALUES (?,?,?,?)", [publisherId, cleanPub, now, now]);
+          statements.push({ sql: "INSERT INTO publishers (id,name,created_at,updated_at) VALUES (?,?,?,?)", values: [publisherId, cleanPub, now, now] });
         }
       } else {
         publisherId = null;
@@ -201,7 +211,7 @@ export async function updateBook(bookId: string, input: Partial<Book> & { author
         const existing = await db.select<{ id: string }[]>("SELECT id FROM categories WHERE name=?", [cleanCat]);
         categoryId = existing[0]?.id ?? id();
         if (!existing[0]) {
-          await db.execute("INSERT INTO categories (id,name) VALUES (?,?)", [categoryId, cleanCat]);
+          statements.push({ sql: "INSERT INTO categories (id,name) VALUES (?,?)", values: [categoryId, cleanCat] });
         }
       } else {
         categoryId = null;
@@ -224,34 +234,34 @@ export async function updateBook(bookId: string, input: Partial<Book> & { author
     if (input.metadata !== undefined) { fields.push("metadata = ?"); params.push(input.metadata); }
     if (publisherId !== undefined) { fields.push("publisher_id = ?"); params.push(publisherId); }
     if (categoryId !== undefined) { fields.push("category_id = ?"); params.push(categoryId); }
-    
+
     fields.push("updated_at = ?");
     params.push(now);
 
     if (fields.length > 0) {
       params.push(bookId);
-      await db.execute(`UPDATE books SET ${fields.join(", ")} WHERE id = ?`, params);
+      statements.push({ sql: `UPDATE books SET ${fields.join(", ")} WHERE id = ?`, values: params });
     }
 
     if (input.author !== undefined) {
-      await db.execute("DELETE FROM book_authors WHERE book_id = ?", [bookId]);
+      statements.push({ sql: "DELETE FROM book_authors WHERE book_id = ?", values: [bookId] });
       if (input.author.trim()) {
         const cleanAuth = cleanText(input.author);
         const normalized = cleanAuth.toLowerCase();
         const existing = await db.select<{ id: string }[]>("SELECT id FROM authors WHERE normalized_name=?", [normalized]);
         const authorId = existing[0]?.id ?? id();
         if (!existing[0]) {
-          await db.execute("INSERT INTO authors (id,name,normalized_name,created_at,updated_at) VALUES (?,?,?,?,?)", [authorId, cleanAuth, normalized, now, now]);
+          statements.push({ sql: "INSERT INTO authors (id,name,normalized_name,created_at,updated_at) VALUES (?,?,?,?,?)", values: [authorId, cleanAuth, normalized, now, now] });
         }
-        await db.execute("INSERT INTO book_authors (book_id,author_id,author_order) VALUES (?,?,0)", [bookId, authorId]);
+        statements.push({ sql: "INSERT INTO book_authors (book_id,author_id,author_order) VALUES (?,?,0)", values: [bookId, authorId] });
       }
     }
 
     if (input.tags !== undefined) {
-      await db.execute("DELETE FROM book_tags WHERE book_id = ?", [bookId]);
+      statements.push({ sql: "DELETE FROM book_tags WHERE book_id = ?", values: [bookId] });
       if (input.tags?.trim()) {
         const cleanT = cleanText(input.tags);
-        const tagsList = cleanT.split(",").map(t => t.trim()).filter(Boolean);
+        const tagsList = [...new Set(cleanT.split(",").map(t => t.trim()).filter(Boolean))];
         for (const tagName of tagsList) {
           const existingTag = await db.select<{ id: string }[]>("SELECT id FROM tags WHERE name = ?", [tagName]);
           let tagId = existingTag[0]?.id;
@@ -259,23 +269,34 @@ export async function updateBook(bookId: string, input: Partial<Book> & { author
             tagId = id();
             const colors = ["#FEE2E2", "#FEF3C7", "#D1FAE5", "#DBEAFE", "#E0E7FF", "#F3E8FF", "#FCE7F3"];
             const randomColor = colors[Math.floor(Math.random() * colors.length)];
-            await db.execute("INSERT INTO tags (id, name, color) VALUES (?, ?, ?)", [tagId, tagName, randomColor]);
+            statements.push({ sql: "INSERT INTO tags (id, name, color) VALUES (?, ?, ?)", values: [tagId, tagName, randomColor] });
           }
-          await db.execute("INSERT OR IGNORE INTO book_tags (book_id, tag_id) VALUES (?, ?)", [bookId, tagId]);
+          statements.push({ sql: "INSERT OR IGNORE INTO book_tags (book_id, tag_id) VALUES (?, ?)", values: [bookId, tagId] });
         }
       }
     }
 
-    await audit(db, "update", "book", bookId, null, JSON.stringify(input));
+    statements.push(auditStatement("update", "book", bookId, null, JSON.stringify(input)));
+    await runTransaction(statements);
 }
 
 export async function deleteBook(bookId: string): Promise<void> {
   const db = await database();
   const now = timestamp();
   const book = await db.select<{ title: string }[]>("SELECT title FROM books WHERE id = ?", [bookId]);
-  await db.execute("UPDATE books SET archived_at = ?, updated_at = ? WHERE id = ?", [now, now, bookId]);
-  await db.execute("UPDATE copies SET status = 'archived', updated_at = ? WHERE book_id = ?", [now, bookId]);
-  await audit(db, "archive_book", "book", bookId, null, JSON.stringify({ title: book[0]?.title }));
+  if (!book[0]) throw new Error("Book not found.");
+  const openLoan = await db.select<{ count: number }[]>(
+    "SELECT COUNT(*) count FROM loans l JOIN copies c ON c.id = l.copy_id WHERE c.book_id = ? AND l.returned_at IS NULL",
+    [bookId]
+  );
+  if ((openLoan[0]?.count ?? 0) > 0) {
+    throw new Error("This title has copies currently on loan. All copies must be returned before it can be archived.");
+  }
+  await runTransaction([
+    { sql: "UPDATE books SET archived_at = ?, updated_at = ? WHERE id = ?", values: [now, now, bookId] },
+    { sql: "UPDATE copies SET status = 'archived', updated_at = ? WHERE book_id = ? AND status != 'archived'", values: [now, bookId] },
+    auditStatement("archive_book", "book", bookId, null, JSON.stringify({ title: book[0]?.title })),
+  ]);
 }
 
 export async function getCopiesForBook(bookId: string): Promise<Copy[]> {
@@ -345,14 +366,15 @@ async function ensureUniqueAccession(db: Database, inputAccession?: string | nul
 export async function addCopy(bookId: string, barcode: string, accessionNumber: string, condition: string, shelfCode?: string | null): Promise<void> {
   const db = await database();
   const now = timestamp();
-  
+  const statements: TxStatement[] = [];
+
   let shelfId: string | null = null;
   if (shelfCode?.trim()) {
     const cleanShelf = cleanText(shelfCode);
     const existing = await db.select<{ id: string }[]>("SELECT id FROM shelves WHERE code = ?", [cleanShelf]);
     shelfId = existing[0]?.id ?? id();
     if (!existing[0]) {
-      await db.execute("INSERT INTO shelves (id, code, capacity, created_at, updated_at) VALUES (?, ?, 50, ?, ?)", [shelfId, cleanShelf, now, now]);
+      statements.push({ sql: "INSERT INTO shelves (id, code, capacity, created_at, updated_at) VALUES (?, ?, 50, ?, ?)", values: [shelfId, cleanShelf, now, now] });
     }
   }
 
@@ -360,11 +382,11 @@ export async function addCopy(bookId: string, barcode: string, accessionNumber: 
   const finalBarcode = await ensureUniqueBarcode(db, barcode, finalAccession);
 
   const copyId = id();
-  await db.execute("INSERT INTO copies (id,book_id,accession_number,barcode,shelf_id,status,condition,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?)", 
-    [copyId, bookId, finalAccession, finalBarcode, shelfId, "available", condition, now, now]);
+  statements.push({ sql: "INSERT INTO copies (id,book_id,accession_number,barcode,shelf_id,status,condition,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?)", values: [copyId, bookId, finalAccession, finalBarcode, shelfId, "available", condition, now, now] });
 
   const book = await db.select<{ title: string }[]>("SELECT title FROM books WHERE id = ?", [bookId]);
-  await audit(db, "add_copy", "copy", copyId, null, JSON.stringify({ book_title: book[0]?.title, barcode: finalBarcode, accession: finalAccession, condition }));
+  statements.push(auditStatement("add_copy", "copy", copyId, null, JSON.stringify({ book_title: book[0]?.title, barcode: finalBarcode, accession: finalAccession, condition })));
+  await runTransaction(statements);
 }
 
 export async function updateCopy(copyId: string, updates: Partial<Copy> & { shelf?: string | null }): Promise<void> {
@@ -372,7 +394,8 @@ export async function updateCopy(copyId: string, updates: Partial<Copy> & { shel
   const now = timestamp();
   const fields: string[] = [];
   const params: any[] = [];
-  
+  const statements: TxStatement[] = [];
+
   if (updates.status !== undefined) { fields.push("status = ?"); params.push(updates.status); }
   if (updates.condition !== undefined) { fields.push("condition = ?"); params.push(updates.condition); }
   if (updates.barcode !== undefined && updates.barcode) {
@@ -385,35 +408,42 @@ export async function updateCopy(copyId: string, updates: Partial<Copy> & { shel
     fields.push("accession_number = ?");
     params.push(finalAccession);
   }
-  
+
   if (updates.shelf !== undefined) {
     let shelfId: string | null = null;
     if (updates.shelf && updates.shelf.trim()) {
       const existing = await db.select<{ id: string }[]>("SELECT id FROM shelves WHERE code = ?", [updates.shelf.trim()]);
       shelfId = existing[0]?.id ?? id();
       if (!existing[0]) {
-        await db.execute("INSERT INTO shelves (id, code, capacity, created_at, updated_at) VALUES (?, ?, 50, ?, ?)", [shelfId, updates.shelf.trim(), now, now]);
+        statements.push({ sql: "INSERT INTO shelves (id, code, capacity, created_at, updated_at) VALUES (?, ?, 50, ?, ?)", values: [shelfId, updates.shelf.trim(), now, now] });
       }
     }
     fields.push("shelf_id = ?");
     params.push(shelfId);
   }
-  
+
   fields.push("updated_at = ?");
   params.push(now);
-  
-  params.push(copyId);
-  await db.execute(`UPDATE copies SET ${fields.join(", ")} WHERE id = ?`, params);
-  await audit(db, "update_copy", "copy", copyId, null, JSON.stringify(updates));
-}
 
+  params.push(copyId);
+  statements.push({ sql: `UPDATE copies SET ${fields.join(", ")} WHERE id = ?`, values: params });
+  statements.push(auditStatement("update_copy", "copy", copyId, null, JSON.stringify(updates)));
+  await runTransaction(statements);
+}
 
 export async function deleteCopy(copyId: string): Promise<void> {
   const db = await database();
   const now = timestamp();
   const copy = await db.select<{ barcode: string; accession_number: string }[]>("SELECT barcode, accession_number FROM copies WHERE id = ?", [copyId]);
-  await db.execute("UPDATE copies SET status = 'archived', updated_at = ? WHERE id = ?", [now, copyId]);
-  await audit(db, "delete_copy", "copy", copyId, null, JSON.stringify({ barcode: copy[0]?.barcode, accession: copy[0]?.accession_number }));
+  if (!copy[0]) throw new Error("Copy not found.");
+  const openLoan = await db.select<{ count: number }[]>("SELECT COUNT(*) count FROM loans WHERE copy_id = ? AND returned_at IS NULL", [copyId]);
+  if ((openLoan[0]?.count ?? 0) > 0) {
+    throw new Error("This copy is currently on loan. It must be returned before it can be archived.");
+  }
+  await runTransaction([
+    { sql: "UPDATE copies SET status = 'archived', updated_at = ? WHERE id = ?", values: [now, copyId] },
+    auditStatement("delete_copy", "copy", copyId, null, JSON.stringify({ barcode: copy[0]?.barcode, accession: copy[0]?.accession_number })),
+  ]);
 }
 
 export async function members(query = ""): Promise<Member[]> {
@@ -423,7 +453,6 @@ export async function members(query = ""): Promise<Member[]> {
 }
 
 export async function saveMember(input: Omit<Member, "id" | "member_number" | "joined_at"> & { member_number?: string }): Promise<Member> {
-  const db = await database();
   const now = timestamp();
   const newId = id();
   const memberNumber = input.member_number?.trim() 
@@ -436,9 +465,10 @@ export async function saveMember(input: Omit<Member, "id" | "member_number" | "j
   const role = input.role ? cleanText(input.role) : null;
   const joinedAt = today();
 
-  await db.execute("INSERT INTO members (id,member_number,full_name,email,phone,department,role,status,expiry_date,avatar_path,joined_at,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)", [newId, memberNumber, fullName, email, phone, department, role, input.status, input.expiry_date ?? null, input.avatar_path ?? null, joinedAt, now, now]);
-
-  await audit(db, "create_member", "member", newId, null, JSON.stringify({ full_name: fullName, member_number: memberNumber, role, department }));
+  await runTransaction([
+    { sql: "INSERT INTO members (id,member_number,full_name,email,phone,department,role,status,expiry_date,avatar_path,joined_at,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)", values: [newId, memberNumber, fullName, email, phone, department, role, input.status, input.expiry_date ?? null, input.avatar_path ?? null, joinedAt, now, now] },
+    auditStatement("create_member", "member", newId, null, JSON.stringify({ full_name: fullName, member_number: memberNumber, role, department })),
+  ]);
 
   return {
     id: newId,
@@ -455,41 +485,11 @@ export async function saveMember(input: Omit<Member, "id" | "member_number" | "j
   };
 }
 
-export async function repopulateMembersDatabase(): Promise<void> {
-  const db = await database();
-  const now = timestamp();
-  const todayStr = today();
-
-  // Clear existing members table
-  await db.execute("DELETE FROM members");
-
-  const cleanMembers = [
-    { name: "Mohaned MANAA", number: "104829", dpt: "Computer Science", role: "Student", email: "mohaned.manaa@university.dz", phone: "0550123456", status: "active" },
-    { name: "Fatima RAHMOUNI", number: "209381", dpt: "Radiology", role: "Researcher", email: "fatima.rahmouni@hospital.dz", phone: "0770123456", status: "active" },
-    { name: "Karim BENALI", number: "482019", dpt: "Surgery", role: "Doctor", email: "karim.benali@hospital.dz", phone: "0661987654", status: "active" },
-    { name: "Salima KADRI", number: "730192", dpt: "Pediatrics", role: "Faculty", email: "salima.kadri@university.dz", phone: "0552345678", status: "active" },
-    { name: "Yacine ZIANI", number: "582910", dpt: "Neurology", role: "Student", email: "yacine.ziani@university.dz", phone: "0771234567", status: "active" },
-    { name: "Meriem ZERROUKI", number: "391028", dpt: "Internal Medicine", role: "Faculty", email: "meriem.zerrouki@hospital.dz", phone: "0660123456", status: "active" },
-    { name: "Nassim KHALDI", number: "602918", dpt: "Emergency", role: "Staff", email: "nassim.khaldi@hospital.dz", phone: "0559876543", status: "active" },
-    { name: "Sofia BRAHIMI", number: "819203", dpt: "Pharmacy", role: "Researcher", email: "sofia.brahimi@university.dz", phone: "0775432109", status: "suspended" },
-    { name: "Oumar HASSANI", number: "194820", dpt: "Cardiology", role: "Visitor", email: "oumar.hassani@gmail.com", phone: "0664321098", status: "expired" },
-    { name: "Ines TOUATI", number: "940182", dpt: "Biology", role: "Student", email: "ines.touati@university.dz", phone: "0554321098", status: "active" }
-  ];
-
-  for (const m of cleanMembers) {
-    await db.execute(
-      "INSERT INTO members (id, member_number, full_name, email, phone, department, role, status, expiry_date, avatar_path, joined_at, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
-      [id(), m.number, m.name, m.email, m.phone, m.dpt, m.role, m.status, null, null, todayStr, now, now]
-    );
-  }
-}
-
 export async function updateMember(memberId: string, updates: Partial<Member>): Promise<void> {
-  const db = await database();
   const now = timestamp();
   const fields: string[] = [];
   const params: any[] = [];
-  
+
   if (updates.full_name !== undefined) { fields.push("full_name = ?"); params.push(cleanText(updates.full_name)); }
   if (updates.email !== undefined) { fields.push("email = ?"); params.push(updates.email ? cleanText(updates.email) : null); }
   if (updates.phone !== undefined) { fields.push("phone = ?"); params.push(updates.phone ? cleanPhone(updates.phone) : null); }
@@ -498,39 +498,56 @@ export async function updateMember(memberId: string, updates: Partial<Member>): 
   if (updates.status !== undefined) { fields.push("status = ?"); params.push(updates.status); }
   if (updates.expiry_date !== undefined) { fields.push("expiry_date = ?"); params.push(updates.expiry_date); }
   if (updates.avatar_path !== undefined) { fields.push("avatar_path = ?"); params.push(updates.avatar_path); }
-  
+
   fields.push("updated_at = ?");
   params.push(now);
-  
+
   params.push(memberId);
-  await db.execute(`UPDATE members SET ${fields.join(", ")} WHERE id = ?`, params);
-  await audit(db, "update_member", "member", memberId, null, JSON.stringify(updates));
+  await runTransaction([
+    { sql: `UPDATE members SET ${fields.join(", ")} WHERE id = ?`, values: params },
+    auditStatement("update_member", "member", memberId, null, JSON.stringify(updates)),
+  ]);
 }
 
 export async function deleteMember(memberId: string): Promise<void> {
   const db = await database();
   const now = timestamp();
   const member = await db.select<{ full_name: string; member_number: string }[]>("SELECT full_name, member_number FROM members WHERE id = ?", [memberId]);
-  
-  // Cascade cancel active/queued reservations for this member
-  await db.execute("UPDATE reservations SET status = 'cancelled', updated_at = ? WHERE member_id = ? AND status IN ('queued', 'ready')", [now, memberId]);
-  
-  // Archive member record
-  await db.execute("UPDATE members SET archived_at = ?, status = 'archived', updated_at = ? WHERE id = ?", [now, now, memberId]);
-  await audit(db, "archive_member", "member", memberId, null, JSON.stringify({ full_name: member[0]?.full_name, member_number: member[0]?.member_number }));
+  if (!member[0]) throw new Error("Member not found.");
+  const openLoan = await db.select<{ count: number }[]>("SELECT COUNT(*) count FROM loans WHERE member_id = ? AND returned_at IS NULL", [memberId]);
+  if ((openLoan[0]?.count ?? 0) > 0) {
+    throw new Error("This member has copies currently on loan. All copies must be returned before the member can be archived.");
+  }
+
+  await runTransaction([
+    // Cascade cancel active/queued reservations for this member
+    { sql: "UPDATE reservations SET status = 'cancelled', updated_at = ? WHERE member_id = ? AND status IN ('queued', 'ready')", values: [now, memberId] },
+    // Archive member record
+    { sql: "UPDATE members SET archived_at = ?, status = 'archived', updated_at = ? WHERE id = ?", values: [now, now, memberId] },
+    auditStatement("archive_member", "member", memberId, null, JSON.stringify({ full_name: member[0]?.full_name, member_number: member[0]?.member_number })),
+  ]);
 }
 
+/**
+ * Permanently deletes a member and wipes their loan/reservation history.
+ * Refuses to run if the member has ever borrowed anything, since that would
+ * destroy circulation history the library must be able to account for —
+ * use deleteMember() (archive) instead for members with any history.
+ */
 export async function hardDeleteMember(memberId: string): Promise<void> {
   const db = await database();
   const member = await db.select<{ full_name: string; member_number: string }[]>("SELECT full_name, member_number FROM members WHERE id = ?", [memberId]);
+  if (!member[0]) throw new Error("Member not found.");
+  const loanHistory = await db.select<{ count: number }[]>("SELECT COUNT(*) count FROM loans WHERE member_id = ?", [memberId]);
+  if ((loanHistory[0]?.count ?? 0) > 0) {
+    throw new Error("This member has borrowing history and cannot be permanently deleted. Archive the member instead.");
+  }
 
-  
-  // Cascade delete dependent loans and reservations
-  await db.execute("DELETE FROM reservations WHERE member_id = ?", [memberId]);
-  await db.execute("DELETE FROM loans WHERE member_id = ?", [memberId]);
-  await db.execute("DELETE FROM members WHERE id = ?", [memberId]);
-  
-  await audit(db, "delete_member_permanent", "member", memberId, null, JSON.stringify({ full_name: member[0]?.full_name, member_number: member[0]?.member_number }));
+  await runTransaction([
+    { sql: "DELETE FROM reservations WHERE member_id = ?", values: [memberId] },
+    { sql: "DELETE FROM members WHERE id = ?", values: [memberId] },
+    auditStatement("delete_member_permanent", "member", memberId, null, JSON.stringify({ full_name: member[0]?.full_name, member_number: member[0]?.member_number })),
+  ]);
 }
 
 
@@ -558,49 +575,84 @@ export async function getReservationsForMember(memberId: string): Promise<Reserv
 export async function checkout(memberId: string, copyIds: string[], limit: number, days: number): Promise<void> {
   const db = await database();
   const now = timestamp();
-    const member = await db.select<Member[]>("SELECT * FROM members WHERE id=?", [memberId]);
-    if (member[0]?.status !== "active") throw new Error("Only active members can borrow.");
-    const active = await db.select<{ count: number }[]>("SELECT COUNT(*) count FROM loans WHERE member_id=? AND returned_at IS NULL", [memberId]);
-    if ((active[0]?.count ?? 0) + copyIds.length > limit) throw new Error(`Loan limit of ${limit} would be exceeded.`);
-    for (const copyId of copyIds) {
-      const copy = await db.select<Copy[]>("SELECT * FROM copies WHERE id=?", [copyId]);
-      if (copy[0]?.status !== "available") throw new Error("Each selected copy must be available.");
-      await db.execute("INSERT INTO loans (id,copy_id,member_id,borrowed_at,due_at,renewed_count,issued_by) VALUES (?,?,?,?,?,?,?)", [id(), copyId, memberId, now, dueDate(days), 0, "local-operator"]);
-      await db.execute("UPDATE copies SET status='on-loan',updated_at=? WHERE id=?", [now, copyId]);
-    }
-    await audit(db, "checkout", "loan", memberId, null, JSON.stringify({ copyIds }));
+  if (copyIds.length === 0) return;
+
+  const member = await db.select<Member[]>("SELECT * FROM members WHERE id=?", [memberId]);
+  if (member[0]?.status !== "active") throw new Error("Only active members can borrow.");
+  const active = await db.select<{ count: number }[]>("SELECT COUNT(*) count FROM loans WHERE member_id=? AND returned_at IS NULL", [memberId]);
+  if ((active[0]?.count ?? 0) + copyIds.length > limit) throw new Error(`Loan limit of ${limit} would be exceeded.`);
+
+  // Validate every copy before writing anything, so a single ineligible copy
+  // cannot leave earlier copies in this batch checked out.
+  const statements: TxStatement[] = [];
+  const dueAt = dueDate(days);
+  for (const copyId of copyIds) {
+    const copy = await db.select<Copy[]>("SELECT * FROM copies WHERE id=?", [copyId]);
+    if (copy[0]?.status !== "available") throw new Error("Each selected copy must be available.");
+    statements.push({ sql: "INSERT INTO loans (id,copy_id,member_id,borrowed_at,due_at,renewed_count,issued_by) VALUES (?,?,?,?,?,?,?)", values: [id(), copyId, memberId, now, dueAt, 0, "local-operator"] });
+    statements.push({ sql: "UPDATE copies SET status='on-loan',updated_at=? WHERE id=?", values: [now, copyId] });
+  }
+  statements.push(auditStatement("checkout", "loan", memberId, null, JSON.stringify({ copyIds })));
+  await runTransaction(statements);
 }
 
 export async function returnCopies(copyIds: string[], holdDays = 3): Promise<void> {
   const db = await database();
   const now = timestamp();
-    for (const copyId of copyIds) {
-      const loan = await db.select<Loan[]>("SELECT * FROM loans WHERE copy_id=? AND returned_at IS NULL", [copyId]);
-      if (!loan[0]) throw new Error("No open loan was found for this copy.");
-      await db.execute("UPDATE loans SET returned_at=?,received_by=? WHERE id=?", [now, "local-operator", loan[0].id]);
-      const reserve = await db.select<Reservation[]>("SELECT * FROM reservations WHERE book_id=(SELECT book_id FROM copies WHERE id=?) AND status='queued' ORDER BY position,reserved_at LIMIT 1", [copyId]);
-      if (reserve[0]) {
-        await db.execute("UPDATE reservations SET status='ready',expires_at=? WHERE id=?", [dueDate(holdDays), reserve[0].id]);
-        await db.execute("UPDATE copies SET status='reserved',updated_at=? WHERE id=?", [now, copyId]);
-      } else {
-        await db.execute("UPDATE copies SET status='available',updated_at=? WHERE id=?", [now, copyId]);
-      }
+  if (copyIds.length === 0) return;
+
+  const statements: TxStatement[] = [];
+  const bookIdByCopy = new Map<string, string>();
+  const reservationQueueByBook = new Map<string, Reservation[]>();
+
+  for (const copyId of copyIds) {
+    const loan = await db.select<Loan[]>("SELECT * FROM loans WHERE copy_id=? AND returned_at IS NULL", [copyId]);
+    if (!loan[0]) throw new Error("No open loan was found for this copy.");
+    statements.push({ sql: "UPDATE loans SET returned_at=?,received_by=? WHERE id=?", values: [now, "local-operator", loan[0].id] });
+
+    const copyRow = await db.select<{ book_id: string }[]>("SELECT book_id FROM copies WHERE id=?", [copyId]);
+    const bookId = copyRow[0]?.book_id;
+    if (!bookId) throw new Error("Copy record is missing its book reference.");
+    bookIdByCopy.set(copyId, bookId);
+    if (!reservationQueueByBook.has(bookId)) {
+      const queue = await db.select<Reservation[]>("SELECT * FROM reservations WHERE book_id=? AND status='queued' ORDER BY position,reserved_at", [bookId]);
+      reservationQueueByBook.set(bookId, queue);
     }
-    await audit(db, "return", "loan", copyIds.join(","), null, JSON.stringify({ copyIds }));
+  }
+
+  // Second pass: assign at most one reservation per returning copy, drawing from
+  // each book's queue in order, so two copies of the same title returned together
+  // cannot both be handed to the same waiting reservation.
+  for (const copyId of copyIds) {
+    const bookId = bookIdByCopy.get(copyId)!;
+    const nextReservation = reservationQueueByBook.get(bookId)!.shift();
+    if (nextReservation) {
+      statements.push({ sql: "UPDATE reservations SET status='ready',expires_at=? WHERE id=?", values: [dueDate(holdDays), nextReservation.id] });
+      statements.push({ sql: "UPDATE copies SET status='reserved',updated_at=? WHERE id=?", values: [now, copyId] });
+    } else {
+      statements.push({ sql: "UPDATE copies SET status='available',updated_at=? WHERE id=?", values: [now, copyId] });
+    }
+  }
+
+  statements.push(auditStatement("return", "loan", copyIds.join(","), null, JSON.stringify({ copyIds })));
+  await runTransaction(statements);
 }
 
 export async function renewLoan(loanId: string, days: number): Promise<void> {
   const db = await database();
-    const loan = await db.select<Loan[]>("SELECT * FROM loans WHERE id = ?", [loanId]);
-    if (!loan[0]) throw new Error("Loan not found");
-    
-    const currentDueDate = new Date(loan[0].due_at);
-    const baseDate = currentDueDate > new Date() ? currentDueDate : new Date();
-    baseDate.setDate(baseDate.getDate() + days);
-    const newDueDate = baseDate.toISOString().split('T')[0];
-    
-    await db.execute("UPDATE loans SET due_at = ?, renewed_count = renewed_count + 1 WHERE id = ?", [newDueDate, loanId]);
-    await audit(db, "renew", "loan", loanId, null, JSON.stringify({ old_due: loan[0].due_at, new_due: newDueDate }));
+  const loan = await db.select<Loan[]>("SELECT * FROM loans WHERE id = ?", [loanId]);
+  if (!loan[0]) throw new Error("Loan not found");
+  if (loan[0].returned_at) throw new Error("This loan has already been returned.");
+
+  const currentDueDate = new Date(loan[0].due_at);
+  const baseDate = currentDueDate > new Date() ? currentDueDate : new Date();
+  baseDate.setDate(baseDate.getDate() + days);
+  const newDueDate = baseDate.toISOString().split('T')[0];
+
+  await runTransaction([
+    { sql: "UPDATE loans SET due_at = ?, renewed_count = renewed_count + 1 WHERE id = ?", values: [newDueDate, loanId] },
+    auditStatement("renew", "loan", loanId, null, JSON.stringify({ old_due: loan[0].due_at, new_due: newDueDate })),
+  ]);
 }
 
 export async function cancelReservation(reservationId: string): Promise<void> {
@@ -694,6 +746,14 @@ export async function auditLog(limit?: any) {
 
 async function audit(db: Database, action: string, entityType: string, entityId: string, before: string | null, after: string | null) {
   await db.execute("INSERT INTO audit_logs (id,actor,action,entity_type,entity_id,before_json,after_json,created_at) VALUES (?,?,?,?,?,?,?,?)", [id(), "local-operator", action, entityType, entityId, before, after, timestamp()]);
+}
+
+/** Same insert as audit(), but returned as a statement so it can be batched into a runTransaction() call. */
+function auditStatement(action: string, entityType: string, entityId: string, before: string | null, after: string | null): TxStatement {
+  return {
+    sql: "INSERT INTO audit_logs (id,actor,action,entity_type,entity_id,before_json,after_json,created_at) VALUES (?,?,?,?,?,?,?,?)",
+    values: [id(), "local-operator", action, entityType, entityId, before, after, timestamp()],
+  };
 }
 
 export async function importBooksFromDb(dbPath: string): Promise<{ importedCount: number }> {

@@ -1,7 +1,7 @@
 use tauri::{Emitter, Manager, WindowEvent};
 use tauri::menu::{MenuBuilder, MenuItemBuilder};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
-use tauri_plugin_sql::{Migration, MigrationKind};
+use tauri_plugin_sql::{DbInstances, DbPool, Migration, MigrationKind};
 use url::Url;
 use std::sync::atomic::{AtomicBool, Ordering};
 use tauri::State;
@@ -13,6 +13,7 @@ fn migrations() -> Vec<Migration> {
         Migration { version: 1, description: "initial_library_schema", sql: include_str!("../migrations/0001_initial.sql"), kind: MigrationKind::Up },
         Migration { version: 2, description: "library_indexes_and_fts", sql: include_str!("../migrations/0002_indexes.sql"), kind: MigrationKind::Up },
         Migration { version: 3, description: "add_arabic_title_and_tags", sql: include_str!("../migrations/0003_add_arabic_title.sql"), kind: MigrationKind::Up },
+        Migration { version: 4, description: "schema_integrity_indexes", sql: include_str!("../migrations/0004_schema_integrity.sql"), kind: MigrationKind::Up },
     ]
 }
 
@@ -37,6 +38,54 @@ fn application_diagnostics() -> serde_json::Value {
 #[tauri::command]
 fn set_close_to_tray(config: State<'_, TrayConfig>, enabled: bool) {
     config.0.store(enabled, Ordering::Relaxed);
+}
+
+#[derive(serde::Deserialize)]
+struct TxStatement {
+    sql: String,
+    #[serde(default)]
+    values: Vec<serde_json::Value>,
+}
+
+/// Executes a batch of parameterized statements inside a single SQLite transaction,
+/// rolling back entirely if any statement fails. tauri-plugin-sql's `execute`/`select`
+/// commands each borrow a connection from the pool independently, so sequential
+/// `BEGIN`/`COMMIT` calls from the frontend cannot be relied on to share one connection.
+#[tauri::command]
+async fn run_transaction(
+    db_instances: State<'_, DbInstances>,
+    db: String,
+    statements: Vec<TxStatement>,
+) -> Result<(), String> {
+    let instances = db_instances.0.read().await;
+    let pool = instances
+        .get(&db)
+        .ok_or_else(|| format!("Database '{db}' is not loaded."))?;
+    #[allow(irrefutable_let_patterns)]
+    let DbPool::Sqlite(pool) = pool else {
+        return Err("Transactions are only supported for the SQLite driver.".into());
+    };
+
+    let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
+    for statement in statements {
+        let mut query = sqlx::query(&statement.sql);
+        for value in statement.values {
+            query = if value.is_null() {
+                query.bind(None::<serde_json::Value>)
+            } else if value.is_string() {
+                query.bind(value.as_str().unwrap().to_owned())
+            } else if let Some(number) = value.as_number() {
+                query.bind(number.as_f64().unwrap_or_default())
+            } else {
+                query.bind(value)
+            };
+        }
+        if let Err(err) = query.execute(&mut *tx).await {
+            let _ = tx.rollback().await;
+            return Err(err.to_string());
+        }
+    }
+    tx.commit().await.map_err(|e| e.to_string())
 }
 
 fn focus_main_window(app: &tauri::AppHandle) {
@@ -116,7 +165,7 @@ pub fn run() {
                 }
             }
         })
-        .invoke_handler(tauri::generate_handler![validate_provider_url, application_diagnostics, set_close_to_tray])
+        .invoke_handler(tauri::generate_handler![validate_provider_url, application_diagnostics, set_close_to_tray, run_transaction])
         .run(tauri::generate_context!())
         .expect("error while running Warraq");
 }
