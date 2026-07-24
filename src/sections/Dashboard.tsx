@@ -5,7 +5,7 @@ import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "rec
 import { 
   ArrowRight, BookOpen, Clock3, AlertTriangle, Bookmark, 
   ScanLine, BookCopy, UsersRound, Warehouse, CalendarClock, RotateCcw,
-  RefreshCw, Plus
+  RefreshCw, Plus, UserPlus
 } from "lucide-react";
 import { dashboard, reservations } from "../data/repositories/library";
 import { daysLate, formatDisplayDate } from "../utils/dates";
@@ -387,10 +387,10 @@ export function DashboardPage() {
           <div className="flex-1 bg-white dark:bg-[#1d2926] rounded-2xl p-5 shadow-card border border-black/5 dark:border-white/5 flex flex-col">
             <h3 className="font-bold text-[14px] text-[#122222] dark:text-white mb-4">{t("dashboard.quickActions")}</h3>
             <div className="grid grid-cols-2 gap-3 flex-1">
-              <ActionCard icon={<ScanLine size={20}/>} title={t("dashboard.scanIsbn") || "Scan ISBN"} subtitle={t("dashboard.addBook") || "Add new book"} onClick={() => navigate("/catalog")} />
-              <ActionCard icon={<UsersRound size={20}/>} title="Add Member" subtitle="Create library profile" onClick={() => navigate("/members")} />
-              <ActionCard icon={<Warehouse size={20}/>} title="Inventory" subtitle="Manage shelf layout" onClick={() => navigate("/inventory")} />
-              <ActionCard icon={<CalendarClock size={20}/>} title="Reservations" subtitle="Check book queue" onClick={() => navigate("/reservations")} />
+              <ActionCard icon={<ScanLine size={20}/>} title={t("dashboard.scanIsbn") || "Scan ISBN"} subtitle={t("dashboard.addBook") || "Add new book"} onClick={() => navigate("/catalog?action=add-book")} />
+              <ActionCard icon={<UsersRound size={20}/>} title={t("dashboard.addMember") || "Add Member"} subtitle={t("dashboard.addMemberSub") || "Create member profile"} onClick={() => navigate("/members?action=add-member")} />
+              <ActionCard icon={<CalendarClock size={20}/>} title={t("dashboard.newReservation") || "New Reservation"} subtitle={t("dashboard.newReservationSub") || "Reserve item for member"} onClick={() => navigate("/reservations?action=new-reservation")} />
+              <ActionCard icon={<UserPlus size={20}/>} title={t("dashboard.addUser") || "Add Staff User"} subtitle={t("dashboard.addUserSub") || "Create user credentials"} onClick={() => navigate("/settings?tab=users&action=add-user")} />
             </div>
       </div>
     </div>

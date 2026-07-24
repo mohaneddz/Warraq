@@ -7,12 +7,12 @@ import {
   Eye, EyeOff, Copy, Check, AlertTriangle, Clock, MapPin,
   FileText, Palette, Type, BookMarked,
   DollarSign, Server, Cpu, FolderOpen, ExternalLink, Wifi, WifiOff,
-  LayoutGrid, Save, Users as UsersIcon, Plus, ShieldCheck, Ban, KeyRound,
+  LayoutGrid, Save, Users as UsersIcon, Plus, ShieldCheck, Ban, KeyRound, Pencil
 } from "lucide-react";
 import { useUiStore } from "../store/uiStore";
 import { useAuthStore } from "../store/authStore";
 import { changeOwnPassword, listUsers, createUser, updateUser, resetPassword, deleteUser } from "../data/auth";
-import type { PublicUser, UserRole } from "../types";
+import type { PublicUser, UserRole, UserStatus } from "../types";
 import { Button, Input, Modal } from "../components/ui/primitives";
 import { useTranslation } from "react-i18next";
 import { useContextMenu } from "../components/ui/ContextMenu";
@@ -1402,11 +1402,28 @@ function UsersTab() {
   const { data: users, isLoading } = useQuery({ queryKey: ["users"], queryFn: listUsers });
 
   const [showCreate, setShowCreate] = useState(false);
+  const location = useLocation();
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get("action") === "add-user") {
+      setShowCreate(true);
+      const cleanUrl = window.location.hash ? window.location.hash.split("?")[0] + "?tab=users" : window.location.pathname + "?tab=users";
+      window.history.replaceState({}, document.title, cleanUrl);
+    }
+  }, [location.search]);
+
   const [createdCredentials, setCreatedCredentials] = useState<{ username: string; password: string } | null>(null);
   const [resetForUser, setResetForUser] = useState<PublicUser | null>(null);
   const [resetPasswordValue, setResetPasswordValue] = useState("");
   const [resetResultPassword, setResetResultPassword] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<PublicUser | null>(null);
+
+  const [editTarget, setEditTarget] = useState<PublicUser | null>(null);
+  const [editFullName, setEditFullName] = useState("");
+  const [editEmail, setEditEmail] = useState("");
+  const [editRole, setEditRole] = useState<UserRole>("staff");
+  const [editStatus, setEditStatus] = useState<UserStatus>("active");
 
   const [newUsername, setNewUsername] = useState("");
   const [newFullName, setNewFullName] = useState("");
@@ -1423,6 +1440,16 @@ function UsersTab() {
       setCreatedCredentials({ username: user.username, password: newPassword });
       setShowCreate(false);
       setNewUsername(""); setNewFullName(""); setNewEmail(""); setNewRole("staff"); setNewPassword("");
+    },
+    onError: (err: any) => toast.error(err.message || String(err)),
+  });
+
+  const updateDetailsMutation = useMutation({
+    mutationFn: () => updateUser(editTarget!.id, { fullName: editFullName, email: editEmail || null, role: editRole, status: editStatus }),
+    onSuccess: () => {
+      invalidate();
+      toast.success(t("settings.users.userUpdated") || "User details updated successfully.");
+      setEditTarget(null);
     },
     onError: (err: any) => toast.error(err.message || String(err)),
   });
@@ -1451,6 +1478,14 @@ function UsersTab() {
     onError: (err: any) => { toast.error(err.message || String(err)); setDeleteTarget(null); },
   });
 
+  const openEdit = (u: PublicUser) => {
+    setEditTarget(u);
+    setEditFullName(u.full_name || "");
+    setEditEmail(u.email || "");
+    setEditRole(u.role);
+    setEditStatus(u.status);
+  };
+
   return (
     <div className="max-w-3xl">
       <PageHeader title={t("settings.users.title")} desc={t("settings.users.desc")} />
@@ -1470,18 +1505,21 @@ function UsersTab() {
               <div key={u.id} className="flex items-center justify-between gap-3 py-2.5 border-b border-black/5 dark:border-white/5 last:border-0">
                 <div className="min-w-0 flex items-center gap-3">
                   <div className={`h-9 w-9 rounded-full flex items-center justify-center text-[12px] font-bold shrink-0 ${u.status === "active" ? "bg-[#b96f3e] text-white" : "bg-black/10 dark:bg-white/10 text-[#122222]/40 dark:text-white/40"}`}>
-                    {u.full_name.substring(0, 2).toUpperCase()}
+                    {Array.from(u.full_name || u.username).slice(0, 2).join("").toUpperCase()}
                   </div>
                   <div className="min-w-0">
                     <p className="font-bold text-[13px] text-[#122222] dark:text-white truncate">
                       {u.full_name} {u.id === currentUser?.id && <span className="text-[10px] text-[#122222]/40 dark:text-white/40">({t("settings.users.you")})</span>}
                     </p>
                     <p className="text-[11px] text-[#122222]/50 dark:text-white/50 truncate">
-                      @{u.username} · {u.role === "admin" ? t("settings.account.roleAdmin") : t("settings.account.roleStaff")} · {u.status === "active" ? t("settings.users.active") : t("settings.users.disabled")}
+                      @{u.username} {u.email ? `· ${u.email} ` : ""}· {u.role === "admin" ? t("settings.account.roleAdmin") : t("settings.account.roleStaff")} · {u.status === "active" ? t("settings.users.active") : t("settings.users.disabled")}
                     </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
+                  <button title={t("settings.users.editUser") || "Edit User"} onClick={() => openEdit(u)} className="p-1.5 rounded-lg text-[#122222]/50 dark:text-white/50 hover:bg-black/5 dark:hover:bg-white/5 hover:text-[#1a4d40] cursor-pointer">
+                    <Pencil size={15} />
+                  </button>
                   <button title={t("settings.users.toggleRole")} onClick={() => toggleRoleMutation.mutate(u)} className="p-1.5 rounded-lg text-[#122222]/50 dark:text-white/50 hover:bg-black/5 dark:hover:bg-white/5 hover:text-[#1a4d40] cursor-pointer">
                     <ShieldCheck size={15} />
                   </button>
@@ -1503,6 +1541,37 @@ function UsersTab() {
         )}
       </Card>
 
+      {/* Edit User Modal */}
+      <Modal isOpen={!!editTarget} onClose={() => setEditTarget(null)} title={t("settings.users.editUser") || "Edit User Details"}>
+        <form
+          className="space-y-3"
+          onSubmit={(e) => { e.preventDefault(); updateDetailsMutation.mutate(); }}
+        >
+          <Field label={t("settings.users.fullName") || "Full Name"}>
+            <Input value={editFullName} onChange={(e) => setEditFullName(e.target.value)} required />
+          </Field>
+          <Field label={t("settings.users.email") || "Email Address"}>
+            <Input type="email" value={editEmail} onChange={(e) => setEditEmail(e.target.value)} placeholder="user@library.dz" />
+          </Field>
+          <Field label={t("settings.users.role") || "Role"}>
+            <select value={editRole} onChange={(e) => setEditRole(e.target.value as UserRole)} className="field-select text-[13px] py-2 px-3 font-semibold w-full">
+              <option value="staff">{t("settings.account.roleStaff")}</option>
+              <option value="admin">{t("settings.account.roleAdmin")}</option>
+            </select>
+          </Field>
+          <Field label={t("status") || "Status"}>
+            <select value={editStatus} onChange={(e) => setEditStatus(e.target.value as UserStatus)} className="field-select text-[13px] py-2 px-3 font-semibold w-full">
+              <option value="active">{t("settings.users.active")}</option>
+              <option value="disabled">{t("settings.users.disabled")}</option>
+            </select>
+          </Field>
+          <div className="flex gap-2 pt-2">
+            <Button type="submit" disabled={updateDetailsMutation.isPending}>{updateDetailsMutation.isPending ? t("settings.account.saving") : t("save")}</Button>
+            <Button type="button" variant="ghost" onClick={() => setEditTarget(null)}>{t("catalog.addModal.cancel")}</Button>
+          </div>
+        </form>
+      </Modal>
+
       {/* Create user */}
       <Modal isOpen={showCreate} onClose={() => setShowCreate(false)} title={t("settings.users.addUser")}>
         <form
@@ -1512,11 +1581,11 @@ function UsersTab() {
           <Field label={t("settings.users.username")}>
             <Input value={newUsername} onChange={(e) => setNewUsername(e.target.value)} required minLength={3} autoFocus />
           </Field>
-          <Field label={t("members.firstName")}>
-            <Input value={newFullName} onChange={(e) => setNewFullName(e.target.value)} required />
+          <Field label={t("settings.users.fullName") || "Full Name"}>
+            <Input value={newFullName} onChange={(e) => setNewFullName(e.target.value)} required placeholder="e.g. عبد القادر الجزائري" />
           </Field>
-          <Field label={t("members.email")}>
-            <Input type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} />
+          <Field label={t("settings.users.email") || "Email Address"}>
+            <Input type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} placeholder="user@library.dz" />
           </Field>
           <Field label={t("settings.users.role")}>
             <select value={newRole} onChange={(e) => setNewRole(e.target.value as UserRole)} className="field-select text-[13px] py-2 px-3 font-semibold w-full">
@@ -1817,123 +1886,69 @@ function AboutTab() {
 // DYNAMIC RIGHT HELP PANEL
 // ═══════════════════════════════════════════════════════════════════════════════
 function RightHelp({ tab }: { tab: Tab }) {
-  const helpData: Record<Tab, { title: string; icon: React.ReactNode; body: string; tips: string[] }> = {
-    "General": {
-      title: "General settings",
-      icon: <SettingsIcon size={16} className="text-[#b96f3e]" />,
-      body: "Defines your library's core identity and operator preferences used throughout the system.",
-      tips: ["Set an official library name and logo", "Configure the operator profile for reports", "Autosave keeps changes safe"],
-    },
-    "Library Profile": {
-      title: "Library profile",
-      icon: <MapPin size={16} className="text-[#1a4d40]" />,
-      body: "Contact details and description used in printed receipts and public-facing documents.",
-      tips: ["Add an address for printed receipts", "Opening hours appear on member cards", "Website used in email footers"],
-    },
-    "Localization": {
-      title: "Localization",
-      icon: <Globe size={16} className="text-[#b96f3e]" />,
-      body: "Controls the language, timezone, and number formats used across the interface.",
-      tips: ["Arabic enables RTL layout", "Date format affects all date displays", "Currency is used in fine reports"],
-    },
-    "Appearance": {
-      title: "Appearance",
-      icon: <Palette size={16} className="text-[#b96f3e]" />,
-      body: "Personalize the visual experience with themes, colors, and text sizes.",
-      tips: ["System theme follows your OS setting", "Accent color applies to buttons and highlights", "Large text improves accessibility"],
-    },
-    "Rules": {
-      title: "Circulation rules",
-      icon: <BookMarked size={16} className="text-[#1a4d40]" />,
-      body: "Rules define how items are lent, how long they can be kept, and how renewals work.",
-      tips: ["Default loan period applies to new loans", "Reservation hold prevents items going back to shelf", "Grace period delays fine accrual"],
-    },
-    "Fines & Fees": {
-      title: "Fines & fees",
-      icon: <DollarSign size={16} className="text-[#b96f3e]" />,
-      body: "Configure automatic fine calculation for overdue materials.",
-      tips: ["Set a max fine to cap charges", "Grace period (in Rules) delays fine start", "Fines appear in member records"],
-    },
-    "Notifications": {
-      title: "Notifications",
-      icon: <Bell size={16} className="text-[#1a4d40]" />,
-      body: "Control which system events trigger alerts in the Activity panel.",
-      tips: ["Due-soon reminders reduce overdue rates", "Reservation alerts help members collect on time", "Overdue alerts appear on the dashboard"],
-    },
-    "Backup & Restore": {
-      title: "Backup & restore",
-      icon: <HardDrive size={16} className="text-[#b96f3e]" />,
-      body: "Protect your library data with regular backups.",
-      tips: ["Export after major cataloging sessions", "Keep backups on a separate drive", "Never restore without a fresh export first"],
-    },
-    "Database": {
-      title: "Database",
-      icon: <Database size={16} className="text-[#1a4d40]" />,
-      body: "Inspect the underlying SQLite database and perform maintenance.",
-      tips: ["VACUUM reclaims deleted record space", "Run monthly for best performance", "Factory reset requires a relaunch"],
-    },
-    "Integrations & AI": {
-      title: "Integrations & AI",
-      icon: <Zap size={16} className="text-[#b96f3e]" />,
-      body: "Connect third-party services to enrich your catalog and enable AI features.",
-      tips: ["Google Books provides cover images", "OpenAI powers smart descriptions", "All keys stay on your device"],
-    },
-    "Secrets & Keys": {
-      title: "Secrets & keys",
-      icon: <Shield size={16} className="text-[#1a4d40]" />,
-      body: "All API keys are stored in localStorage. Nothing is sent to Warraq servers.",
-      tips: ["Mask keys before screen-sharing", "Delete keys when no longer needed", "Keys can be re-entered in Integrations"],
-    },
-    "Users": {
-      title: "Users & access",
-      icon: <UsersIcon size={16} className="text-[#1a4d40]" />,
-      body: "Administrators can create staff and admin accounts, reset passwords, and disable access without deleting history.",
-      tips: ["New accounts must change their password on first sign-in", "The last active administrator can't be demoted or disabled", "Disabling an account keeps its audit history intact"],
-    },
-    "Desktop & Data": {
-      title: "Desktop & data",
-      icon: <Monitor size={16} className="text-[#b96f3e]" />,
-      body: "Tauri desktop behavior and data storage location.",
-      tips: ["Tray mode keeps the app running quietly", "Open the data folder to locate backups", "Check for updates regularly"],
-    },
-    "About": {
-      title: "About Warraq",
-      icon: <Info size={16} className="text-[#1a4d40]" />,
-      body: "Warraq — وراق — means 'the scribe' or 'paper seller' in classical Arabic.",
-      tips: ["v1.0.0 is the initial release", "Built with Tauri 2 + React", "Open source licenses are listed below"],
-    },
+  const { t } = useTranslation();
+  const tabKey = tab.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+  const iconMap: Record<Tab, React.ReactNode> = {
+    "General": <SettingsIcon size={16} className="text-[#b96f3e]" />,
+    "Library Profile": <MapPin size={16} className="text-[#1a4d40]" />,
+    "Localization": <Globe size={16} className="text-[#b96f3e]" />,
+    "Appearance": <Palette size={16} className="text-[#b96f3e]" />,
+    "Rules": <BookMarked size={16} className="text-[#1a4d40]" />,
+    "Fines & Fees": <DollarSign size={16} className="text-[#b96f3e]" />,
+    "Notifications": <Bell size={16} className="text-[#1a4d40]" />,
+    "Backup & Restore": <HardDrive size={16} className="text-[#b96f3e]" />,
+    "Database": <Database size={16} className="text-[#1a4d40]" />,
+    "Integrations & AI": <Zap size={16} className="text-[#b96f3e]" />,
+    "Secrets & Keys": <Shield size={16} className="text-[#1a4d40]" />,
+    "Users": <UsersIcon size={16} className="text-[#1a4d40]" />,
+    "Desktop & Data": <Monitor size={16} className="text-[#b96f3e]" />,
+    "About": <Info size={16} className="text-[#1a4d40]" />,
   };
 
-  const help = helpData[tab];
+  const title = t(`settings.help.${tabKey}.title`) || tab;
+  const body = t(`settings.help.${tabKey}.body`) || "";
+  const tipsRaw = t(`settings.help.${tabKey}.tips`, { returnObjects: true });
+  const tips: string[] = Array.isArray(tipsRaw) ? tipsRaw : [];
+
+  const quickNavLabels: Record<string, string> = {
+    "General": t("settings.tabs.general") || "General",
+    "Appearance": t("settings.tabs.appearance") || "Appearance",
+    "Backup": t("settings.tabs.backuprestore") || "Backup",
+  };
 
   return (
     <>
       <div className="bg-[#fcfbf8] dark:bg-[#1a2522] rounded-2xl border border-black/5 dark:border-white/5 p-5 shadow-card">
         <div className="w-10 h-10 bg-white dark:bg-[#1d2926] border border-black/5 dark:border-white/5 rounded-full flex items-center justify-center mb-4">
-          {help.icon}
+          {iconMap[tab] || <SettingsIcon size={16} className="text-[#b96f3e]" />}
         </div>
-        <h3 className="font-bold text-[14px] text-[#122222] dark:text-white mb-2">{help.title}</h3>
-        <p className="text-[12px] text-[#122222]/70 dark:text-white/70 mb-4">{help.body}</p>
-        <div className="text-[12px] font-bold text-[#122222] dark:text-white mb-2">Tips</div>
-        <ul className="space-y-2">
-          {help.tips.map(tip => (
-            <li key={tip} className="flex gap-2 text-[12px] text-[#122222]/70 dark:text-white/70">
-              <CheckCircle2 size={14} className="text-[#1a4d40] dark:text-[#1b9277] shrink-0 mt-0.5" />
-              {tip}
-            </li>
-          ))}
-        </ul>
+        <h3 className="font-bold text-[14px] text-[#122222] dark:text-white mb-2">{title}</h3>
+        {body && <p className="text-[12px] text-[#122222]/70 dark:text-white/70 mb-4">{body}</p>}
+        {tips.length > 0 && (
+          <>
+            <div className="text-[12px] font-bold text-[#122222] dark:text-white mb-2">{t("settings.help.tipsTitle") || "Tips"}</div>
+            <ul className="space-y-2">
+              {tips.map((tip, idx) => (
+                <li key={idx} className="flex gap-2 text-[12px] text-[#122222]/70 dark:text-white/70">
+                  <CheckCircle2 size={14} className="text-[#1a4d40] dark:text-[#1b9277] shrink-0 mt-0.5" />
+                  {tip}
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
       </div>
 
       <div className="bg-[#fcfbf8] dark:bg-[#1a2522] rounded-2xl border border-black/5 dark:border-white/5 p-5 shadow-card">
         <div className="w-10 h-10 bg-white dark:bg-[#1d2926] border border-black/5 dark:border-white/5 rounded-full flex items-center justify-center mb-4">
           <BookOpen size={16} className="text-[#b96f3e]" />
         </div>
-        <h3 className="font-bold text-[14px] text-[#122222] dark:text-white mb-2">Quick navigation</h3>
+        <h3 className="font-bold text-[14px] text-[#122222] dark:text-white mb-2">{t("settings.help.quickNavTitle") || "Quick navigation"}</h3>
         <div className="space-y-1.5">
-          {[["General", "⌘ ,"], ["Appearance", "—"], ["Backup", "—"]].map(([label, shortcut]) => (
-            <div key={label} className="flex items-center justify-between text-[12px]">
-              <span className="text-[#122222]/70 dark:text-white/70">{label}</span>
+          {[["General", "⌘ ,"], ["Appearance", "—"], ["Backup", "—"]].map(([key, shortcut]) => (
+            <div key={key} className="flex items-center justify-between text-[12px]">
+              <span className="text-[#122222]/70 dark:text-white/70">{quickNavLabels[key] || key}</span>
               <span className="font-mono text-[10px] bg-black/5 dark:bg-white/5 px-2 py-0.5 rounded">{shortcut}</span>
             </div>
           ))}

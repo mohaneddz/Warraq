@@ -1,4 +1,5 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import {
   Search, Bookmark, Clock, Trash2, Plus,
@@ -23,11 +24,22 @@ const invalidate = () => queryClient.invalidateQueries();
 
 export function ReservationsPage() {
   const { t } = useTranslation();
+  const location = useLocation();
   const [term, setTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [selectedReservationDetails, setSelectedReservationDetails] = useState<Reservation | null>(null);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const action = params.get("action");
+    if (action === "new-reservation" || action === "add-reservation") {
+      setIsAddModalOpen(true);
+      const cleanUrl = window.location.hash ? window.location.hash.split("?")[0] : window.location.pathname;
+      window.history.replaceState({}, document.title, cleanUrl);
+    }
+  }, [location.search]);
   
   // Queries
   const result = useQuery({ queryKey: ["reservations"], queryFn: reservations }); 

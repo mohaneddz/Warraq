@@ -200,6 +200,33 @@ export function ReportsPage() {
     toast.success(t("reports.csvExported") || "CSV Report exported successfully");
   };
 
+  // Helper for localized status/condition/role names in charts
+  const translateLabel = (st: string) => {
+    const map: Record<string, string> = {
+      available: t("status.available") || "Available",
+      "on-loan": t("status.onloan") || "On Loan",
+      repair: t("status.repair") || "In Maintenance",
+      lost: t("status.lost") || "Lost",
+      Returned: t("status.returned") || "Returned",
+      "Open Active": t("status.openActive") || "Active Loan",
+      Overdue: t("status.overdue") || "Overdue",
+      good: t("catalog.condition.good") || "Good",
+      fair: t("catalog.condition.fair") || "Fair",
+      worn: t("catalog.condition.worn") || "Worn",
+      damaged: t("catalog.condition.damaged") || "Damaged",
+      Student: t("members.roles.student") || "Student",
+      Faculty: t("members.roles.faculty") || "Faculty",
+      Researcher: t("members.roles.researcher") || "Researcher",
+      Doctor: t("members.roles.doctor") || "Doctor",
+      Staff: t("members.roles.staff") || "Staff",
+      book: t("itemTypes.book") || "Book",
+      journal: t("itemTypes.journal") || "Journal",
+      magazine: t("itemTypes.magazine") || "Magazine",
+      disc: t("itemTypes.disc") || "Disc / Media",
+    };
+    return map[st] || st;
+  };
+
   return (
     <div onContextMenu={handleReportsContextMenu} className="flex flex-col h-full w-full text-[13px] font-sans pb-10">
 
@@ -237,16 +264,16 @@ export function ReportsPage() {
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1.5 text-xs font-semibold text-[#122222]/60 dark:text-white/60 bg-white dark:bg-[#1d2926] border border-black/10 dark:border-white/10 px-3 py-1.5 rounded-xl shadow-sm">
             <Filter size={13} className="text-[#1a4d40] dark:text-[#1b9277]" />
-            <span>Range:</span>
+            <span>{t("reports.range") || "Range:"}</span>
             <select 
               value={timeRange} 
               onChange={(e) => setTimeRange(e.target.value as any)}
               className="bg-transparent border-none outline-none font-bold text-[#122222] dark:text-white cursor-pointer ml-1"
             >
-              <option value="7d" className="dark:bg-[#1d2926]">Last 7 Days</option>
-              <option value="30d" className="dark:bg-[#1d2926]">Last 30 Days</option>
-              <option value="1y" className="dark:bg-[#1d2926]">This Year</option>
-              <option value="all" className="dark:bg-[#1d2926]">All Time</option>
+              <option value="7d" className="dark:bg-[#1d2926]">{t("reports.ranges.7d") || "Last 7 Days"}</option>
+              <option value="30d" className="dark:bg-[#1d2926]">{t("reports.ranges.30d") || "Last 30 Days"}</option>
+              <option value="1y" className="dark:bg-[#1d2926]">{t("reports.ranges.1y") || "This Year"}</option>
+              <option value="all" className="dark:bg-[#1d2926]">{t("reports.ranges.all") || "All Time"}</option>
             </select>
           </div>
         </div>
@@ -254,17 +281,17 @@ export function ReportsPage() {
 
       {/* Metric Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <MetricCard title="Total Checkouts" value={stats.totalLoans.toLocaleString(prefs.locale)} label="All-time loan transactions" icon={TrendingUp} />
-        <MetricCard title="Active Borrowers" value={stats.activeMembers.toLocaleString(prefs.locale)} label="Registered active members" icon={Users} />
-        <MetricCard title="Overdue Rate" value={stats.overdueRate} label={`${stats.overdueLoansCount} overdue out of ${stats.openLoansCount} open`} icon={AlertTriangle} />
-        <MetricCard title="Physical Holdings" value={stats.totalCopies.toLocaleString(prefs.locale)} label={`Across ${stats.totalTitles} catalog titles`} icon={BookOpen} />
+        <MetricCard title={t("reports.metrics.totalCheckouts") || "Total Checkouts"} value={stats.totalLoans.toLocaleString(prefs.locale)} label={t("reports.metrics.totalCheckoutsSub") || "All-time loan transactions"} icon={TrendingUp} />
+        <MetricCard title={t("reports.metrics.activeBorrowers") || "Active Borrowers"} value={stats.activeMembers.toLocaleString(prefs.locale)} label={t("reports.metrics.activeBorrowersSub") || "Registered active members"} icon={Users} />
+        <MetricCard title={t("reports.metrics.overdueRate") || "Overdue Rate"} value={stats.overdueRate} label={t("reports.metrics.overdueRateSub", { overdue: stats.overdueLoansCount, open: stats.openLoansCount }) || `${stats.overdueLoansCount} overdue out of ${stats.openLoansCount} open`} icon={AlertTriangle} />
+        <MetricCard title={t("reports.metrics.physicalHoldings") || "Physical Holdings"} value={stats.totalCopies.toLocaleString(prefs.locale)} label={t("reports.metrics.physicalHoldingsSub", { titles: stats.totalTitles }) || `Across ${stats.totalTitles} catalog titles`} icon={BookOpen} />
       </div>
 
       {/* Tab Panels */}
       {activeTab === "Overview" && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 flex-1">
           {/* Chart 1: Circulation Activity Trend */}
-          <ChartWidget title="Circulation Activity Trend" icon={TrendingUp} badge="+14% vs last period">
+          <ChartWidget title={t("reports.charts.circulationTrend") || "Circulation Activity Trend"} icon={TrendingUp} badge={t("reports.charts.vsLastPeriod") || "+14% vs last period"}>
             <ResponsiveContainer width="100%" height={220}>
               <AreaChart data={trendData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
                 <defs>
@@ -282,7 +309,7 @@ export function ReportsPage() {
           </ChartWidget>
 
           {/* Chart 2: Top Borrowed Categories */}
-          <ChartWidget title="Top Borrowed Categories" icon={BarChart2}>
+          <ChartWidget title={t("reports.charts.topCategories") || "Top Borrowed Categories"} icon={BarChart2}>
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={categoriesList} layout="vertical" margin={{ top: 5, right: 20, left: 20, bottom: 5 }}>
                 <XAxis type="number" hide />
@@ -294,14 +321,14 @@ export function ReportsPage() {
           </ChartWidget>
 
           {/* Chart 3: Holdings Distribution */}
-          <ChartWidget title="Holding Status Distribution" icon={Layers}>
+          <ChartWidget title={t("reports.charts.statusDistribution") || "Holding Status Distribution"} icon={Layers}>
             <ResponsiveContainer width="100%" height={200}>
-              <BarChart data={copyStatusQuery.data || [
+              <BarChart data={(copyStatusQuery.data || [
                 { status: 'available', count: Math.max(stats.totalCopies - stats.openLoansCount, 0) },
                 { status: 'on-loan', count: stats.openLoansCount },
                 { status: 'repair', count: 3 },
                 { status: 'lost', count: 1 }
-              ]} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
+              ]).map(d => ({ ...d, status: translateLabel(d.status) }))} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
                 <XAxis dataKey="status" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: 'currentColor' }} />
                 <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: 'currentColor' }} />
                 <Tooltip contentStyle={{ borderRadius: '12px', background: '#122222', color: '#fff', fontSize: '12px' }} />
@@ -311,7 +338,7 @@ export function ReportsPage() {
           </ChartWidget>
 
           {/* Chart 4: Hourly Checkout Rhythm */}
-          <ChartWidget title="Circulation Hourly Rhythm" icon={Clock} secondaryBadge="Checkouts vs Returns">
+          <ChartWidget title={t("reports.charts.hourlyRhythm") || "Circulation Hourly Rhythm"} icon={Clock} secondaryBadge={t("reports.charts.checkoutsVsReturns") || "Checkouts vs Returns"}>
             <ResponsiveContainer width="100%" height={200}>
               <BarChart data={dashQuery.data?.circulationRhythm || [
                 { time: '8 AM', checkouts: 4, returns: 2 },
@@ -334,7 +361,7 @@ export function ReportsPage() {
       {activeTab === "Circulation" && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 flex-1">
           {/* Chart 1: Hourly Rhythm */}
-          <ChartWidget title="Peak Circulation Hours" icon={Clock}>
+          <ChartWidget title={t("reports.charts.peakHours") || "Peak Circulation Hours"} icon={Clock}>
             <ResponsiveContainer width="100%" height={230}>
               <BarChart data={dashQuery.data?.circulationRhythm || [
                 { time: '8 AM', checkouts: 4, returns: 2 },
@@ -353,14 +380,14 @@ export function ReportsPage() {
           </ChartWidget>
 
           {/* Chart 2: Items by Type */}
-          <ChartWidget title="Collection Media Type Distribution" icon={Bookmark}>
+          <ChartWidget title={t("reports.charts.mediaTypeDist") || "Collection Media Type Distribution"} icon={Bookmark}>
             <ResponsiveContainer width="100%" height={230}>
-              <BarChart data={itemTypesQuery.data || [
+              <BarChart data={(itemTypesQuery.data || [
                 { item_type: 'book', count: 48 },
                 { item_type: 'journal', count: 14 },
                 { item_type: 'magazine', count: 9 },
                 { item_type: 'disc', count: 5 }
-              ]} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
+              ]).map(d => ({ ...d, item_type: translateLabel(d.item_type) }))} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
                 <XAxis dataKey="item_type" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: 'currentColor' }} />
                 <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: 'currentColor' }} />
                 <Tooltip contentStyle={{ borderRadius: '12px', background: '#122222', color: '#fff' }} />
@@ -370,12 +397,12 @@ export function ReportsPage() {
           </ChartWidget>
 
           {/* Chart 3: Loan Status Breakdown */}
-          <ChartWidget title="Loan Fulfillment Status" icon={CheckCircle2}>
+          <ChartWidget title={t("reports.charts.fulfillmentStatus") || "Loan Fulfillment Status"} icon={CheckCircle2}>
             <ResponsiveContainer width="100%" height={200}>
               <BarChart data={[
-                { status: 'Returned', count: stats.returnedLoans },
-                { status: 'Open Active', count: stats.openLoansCount },
-                { status: 'Overdue', count: stats.overdueLoansCount }
+                { status: translateLabel('Returned'), count: stats.returnedLoans },
+                { status: translateLabel('Open Active'), count: stats.openLoansCount },
+                { status: translateLabel('Overdue'), count: stats.overdueLoansCount }
               ]} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
                 <XAxis dataKey="status" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: 'currentColor' }} />
                 <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: 'currentColor' }} />
@@ -386,7 +413,7 @@ export function ReportsPage() {
           </ChartWidget>
 
           {/* Chart 4: Daily Loans Flow */}
-          <ChartWidget title="Daily Checkouts Pace" icon={TrendingUp}>
+          <ChartWidget title={t("reports.charts.dailyPace") || "Daily Checkouts Pace"} icon={TrendingUp}>
             <ResponsiveContainer width="100%" height={200}>
               <AreaChart data={trendData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
                 <defs>
@@ -408,14 +435,14 @@ export function ReportsPage() {
       {activeTab === "Inventory" && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 flex-1">
           {/* Chart 1: Holding Status */}
-          <ChartWidget title="Copy Status Distribution" icon={Layers}>
+          <ChartWidget title={t("reports.charts.copyStatusDist") || "Copy Status Distribution"} icon={Layers}>
             <ResponsiveContainer width="100%" height={220}>
-              <BarChart data={copyStatusQuery.data || [
+              <BarChart data={(copyStatusQuery.data || [
                 { status: 'available', count: Math.max(stats.totalCopies - stats.openLoansCount, 0) },
                 { status: 'on-loan', count: stats.openLoansCount },
                 { status: 'repair', count: 3 },
                 { status: 'lost', count: 1 }
-              ]} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
+              ]).map(d => ({ ...d, status: translateLabel(d.status) }))} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
                 <XAxis dataKey="status" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: 'currentColor' }} />
                 <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: 'currentColor' }} />
                 <Tooltip contentStyle={{ borderRadius: '12px', background: '#122222', color: '#fff' }} />
@@ -425,14 +452,14 @@ export function ReportsPage() {
           </ChartWidget>
 
           {/* Chart 2: Item Condition */}
-          <ChartWidget title="Physical Item Condition Health" icon={CheckCircle2}>
+          <ChartWidget title={t("reports.charts.conditionHealth") || "Physical Item Condition Health"} icon={CheckCircle2}>
             <ResponsiveContainer width="100%" height={220}>
-              <BarChart data={conditionQuery.data || [
+              <BarChart data={(conditionQuery.data || [
                 { condition: 'good', count: 85 },
                 { condition: 'fair', count: 12 },
                 { condition: 'worn', count: 5 },
                 { condition: 'damaged', count: 2 }
-              ]} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
+              ]).map(d => ({ ...d, condition: translateLabel(d.condition) }))} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
                 <XAxis dataKey="condition" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: 'currentColor' }} />
                 <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: 'currentColor' }} />
                 <Tooltip contentStyle={{ borderRadius: '12px', background: '#122222', color: '#fff' }} />
@@ -442,7 +469,7 @@ export function ReportsPage() {
           </ChartWidget>
 
           {/* Chart 3: Category Inventory Share */}
-          <ChartWidget title="Category Inventory Share" icon={BarChart2}>
+          <ChartWidget title={t("reports.charts.categoryShare") || "Category Inventory Share"} icon={BarChart2}>
             <ResponsiveContainer width="100%" height={200}>
               <BarChart data={categoriesList} layout="vertical" margin={{ top: 5, right: 20, left: 20, bottom: 5 }}>
                 <XAxis type="number" hide />
@@ -454,14 +481,14 @@ export function ReportsPage() {
           </ChartWidget>
 
           {/* Chart 4: Media Format Breakdown */}
-          <ChartWidget title="Format Holdings Count" icon={BookOpen}>
+          <ChartWidget title={t("reports.charts.formatHoldingsCount") || "Format Holdings Count"} icon={BookOpen}>
             <ResponsiveContainer width="100%" height={200}>
-              <BarChart data={itemTypesQuery.data || [
+              <BarChart data={(itemTypesQuery.data || [
                 { item_type: 'book', count: 48 },
                 { item_type: 'journal', count: 14 },
                 { item_type: 'magazine', count: 9 },
                 { item_type: 'disc', count: 5 }
-              ]} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
+              ]).map(d => ({ ...d, item_type: translateLabel(d.item_type) }))} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
                 <XAxis dataKey="item_type" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: 'currentColor' }} />
                 <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: 'currentColor' }} />
                 <Tooltip contentStyle={{ borderRadius: '12px', background: '#122222', color: '#fff' }} />
@@ -475,15 +502,15 @@ export function ReportsPage() {
       {activeTab === "Members" && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 flex-1">
           {/* Chart 1: Members by Academic Role */}
-          <ChartWidget title="Members by Academic Role" icon={Users}>
+          <ChartWidget title={t("reports.charts.membersByRole") || "Members by Academic Role"} icon={Users}>
             <ResponsiveContainer width="100%" height={220}>
-              <BarChart data={memberRolesQuery.data || [
+              <BarChart data={(memberRolesQuery.data || [
                 { role: 'Student', count: 42 },
                 { role: 'Faculty', count: 15 },
                 { role: 'Researcher', count: 12 },
                 { role: 'Doctor', count: 8 },
                 { role: 'Staff', count: 6 },
-              ]} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
+              ]).map(d => ({ ...d, role: translateLabel(d.role) }))} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
                 <XAxis dataKey="role" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: 'currentColor' }} />
                 <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: 'currentColor' }} />
                 <Tooltip contentStyle={{ borderRadius: '12px', background: '#122222', color: '#fff' }} />
@@ -493,7 +520,7 @@ export function ReportsPage() {
           </ChartWidget>
 
           {/* Chart 2: Most Active Departments */}
-          <ChartWidget title="Most Active Departments" icon={BarChart2}>
+          <ChartWidget title={t("reports.charts.activeDepts") || "Most Active Departments"} icon={BarChart2}>
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={dashQuery.data?.activeDepartments || [
                 { name: 'Computer Science', count: 28 },

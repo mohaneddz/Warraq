@@ -89,7 +89,8 @@ export function MembersPage() {
     const action = params.get("action");
     if (action === "add-member") {
       setAdding(true);
-      window.history.replaceState({}, document.title, window.location.pathname);
+      const cleanUrl = window.location.hash ? window.location.hash.split("?")[0] : window.location.pathname;
+      window.history.replaceState({}, document.title, cleanUrl);
     }
 
     const focus = params.get("focus");
@@ -97,7 +98,8 @@ export function MembersPage() {
       setTimeout(() => {
         document.getElementById("members-page-search")?.focus();
       }, 100);
-      window.history.replaceState({}, document.title, window.location.pathname);
+      const cleanUrl = window.location.hash ? window.location.hash.split("?")[0] : window.location.pathname;
+      window.history.replaceState({}, document.title, cleanUrl);
     }
   }, [location.search]);
 
