@@ -1,5 +1,15 @@
 {
   "app": "Warraq",
+  "auth": {
+    "signInTitle": "Connexion à Warraq",
+    "signInSubtitle": "Saisissez vos identifiants de bibliothèque pour continuer.",
+    "username": "Nom d'utilisateur",
+    "password": "Mot de passe",
+    "signIn": "Se connecter",
+    "signingIn": "Connexion en cours...",
+    "forcedChangeTitle": "Définir un nouveau mot de passe",
+    "forcedChangeSubtitle": "Bienvenue, {{name}}. Votre administrateur a créé ce compte — choisissez un nouveau mot de passe que vous seul connaissez avant de continuer."
+  },
   "save": "Enregistrer",
   "cancel": "Annuler",
   "delete": "Supprimer",
@@ -760,18 +770,25 @@
       "libName": "Nom de la bibliothèque",
       "shortName": "Nom court (facultatif)",
       "shortNamePlaceholder": "ex. Bibliothèque Bacha",
-      "operatorTitle": "Profil de l'opérateur",
-      "opName": "Nom de l'opérateur",
-      "opNamePlaceholder": "ex. Mohamed Benali",
-      "opEmail": "Email (facultatif)",
-      "opEmailPlaceholder": "librarian@hospital.dz",
-      "opPic": "Photo de profil",
-      "opPicHelp": "Recommandé: PNG, JPG ou WEBP carré. Taille max: 2 Mo",
       "autosaveTitle": "Sauvegarde automatique",
       "autosaveLabel": "Enregistrement automatique",
       "autosaveDesc": "Enregistrer périodiquement les modifications sans action manuelle.",
       "autosaveInterval": "Intervalle (secondes)",
       "saveBtn": "Enregistrer les paramètres généraux"
+    },
+    "account": {
+      "title": "Votre compte",
+      "roleAdmin": "Administrateur",
+      "roleStaff": "Personnel",
+      "changePassword": "Changer le mot de passe",
+      "currentPassword": "Mot de passe actuel",
+      "newPassword": "Nouveau mot de passe",
+      "confirmPassword": "Confirmer le nouveau mot de passe",
+      "savePassword": "Mettre à jour le mot de passe",
+      "saving": "Enregistrement...",
+      "passwordTooShort": "Le nouveau mot de passe doit contenir au moins 8 caractères.",
+      "passwordMismatch": "Le nouveau mot de passe et la confirmation ne correspondent pas.",
+      "passwordChanged": "Mot de passe mis à jour avec succès."
     },
     "profile": {
       "title": "Profil de la bibliothèque",

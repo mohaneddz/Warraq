@@ -5,6 +5,8 @@ import { useTranslation } from "react-i18next";
 import { initializeDatabase } from "../data/database";
 import { members } from "../data/repositories/library";
 import { seedDummyData, ensureMedicalBooksSeeded } from "../data/seed";
+import { bootstrapAdminIfNeeded, currentSession } from "../data/auth";
+import { useAuthStore } from "../store/authStore";
 import { Providers } from "./providers";
 import { useUiStore } from "../store/uiStore";
 import { AppShell } from "../components/layout/AppShell";
@@ -18,6 +20,7 @@ import { ReportsPage } from "../sections/Reports";
 import { SettingsPage } from "../sections/Settings";
 import { ReservationsPage } from "../sections/Reservations";
 import { OnboardingPage } from "../sections/Onboarding";
+import { LoginPage, ForcedPasswordChangePage } from "../sections/Login";
 
 import { listen } from "@tauri-apps/api/event";
 
@@ -88,6 +91,7 @@ function Boot() {
   const [error, setError] = useState<unknown>();
   const [loadingStep, setLoadingStep] = useState(0);
   const [progress, setProgress] = useState(0);
+  const user = useAuthStore((s) => s.user);
 
 
   useEffect(() => {
@@ -99,8 +103,11 @@ function Boot() {
         await new Promise(r => setTimeout(r, 450));
         
         await initializeDatabase();
+        await bootstrapAdminIfNeeded();
+        const session = await currentSession();
+        useAuthStore.getState().setUser(session);
         setProgress(45);
-        
+
         // Step 2: Checking rules and seeding if needed
         setLoadingStep(1);
         setProgress(65);
@@ -204,6 +211,9 @@ function Boot() {
       </main>
     );
   }
+
+  if (!user) return <LoginPage />;
+  if (user.must_change_password) return <ForcedPasswordChangePage />;
 
   return (
     <HashRouter>

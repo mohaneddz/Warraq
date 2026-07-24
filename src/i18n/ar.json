@@ -1,5 +1,15 @@
 {
   "app": "ورّاق",
+  "auth": {
+    "signInTitle": "تسجيل الدخول إلى ورّاق",
+    "signInSubtitle": "أدخل بيانات اعتماد المكتبة للمتابعة.",
+    "username": "اسم المستخدم",
+    "password": "كلمة المرور",
+    "signIn": "تسجيل الدخول",
+    "signingIn": "جارٍ تسجيل الدخول...",
+    "forcedChangeTitle": "تعيين كلمة مرور جديدة",
+    "forcedChangeSubtitle": "أهلاً بك، {{name}}. أنشأ المسؤول هذا الحساب — اختر كلمة مرور جديدة لا يعرفها سواك قبل المتابعة."
+  },
   "save": "حفظ",
   "cancel": "إلغاء",
   "delete": "حذف",
@@ -780,18 +790,25 @@
       "libName": "اسم المكتبة",
       "shortName": "الاسم المختصر (اختياري)",
       "shortNamePlaceholder": "مثال: مكتبة مستشفى مصطفى باشا",
-      "operatorTitle": "ملف تعريف المشغل",
-      "opName": "اسم المشغل",
-      "opNamePlaceholder": "مثال: محمد بن علي",
-      "opEmail": "البريد الإلكتروني (اختياري)",
-      "opEmailPlaceholder": "librarian@hospital.dz",
-      "opPic": "الصورة الشخصية",
-      "opPicHelp": "موصى به: صورة مربعة PNG أو JPG أو WEBP. الحجم الأقصى: 2 ميجابايت",
       "autosaveTitle": "الحفظ التلقائي",
       "autosaveLabel": "تفعيل الحفظ التلقائي",
       "autosaveDesc": "حفظ أي تغييرات دوريًا دون اتخاذ إجراء يدوي.",
       "autosaveInterval": "الفترة الزمنية (بالثواني)",
       "saveBtn": "حفظ الإعدادات العامة"
+    },
+    "account": {
+      "title": "حسابك",
+      "roleAdmin": "مسؤول",
+      "roleStaff": "موظف",
+      "changePassword": "تغيير كلمة المرور",
+      "currentPassword": "كلمة المرور الحالية",
+      "newPassword": "كلمة المرور الجديدة",
+      "confirmPassword": "تأكيد كلمة المرور الجديدة",
+      "savePassword": "تحديث كلمة المرور",
+      "saving": "جارٍ الحفظ...",
+      "passwordTooShort": "يجب ألا تقل كلمة المرور الجديدة عن 8 أحرف.",
+      "passwordMismatch": "كلمة المرور الجديدة والتأكيد غير متطابقين.",
+      "passwordChanged": "تم تحديث كلمة المرور بنجاح."
     },
     "profile": {
       "title": "ملف تعريف المكتبة",

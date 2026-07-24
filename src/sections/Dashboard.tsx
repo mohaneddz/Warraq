@@ -11,6 +11,7 @@ import { dashboard, reservations } from "../data/repositories/library";
 import { daysLate, formatDisplayDate } from "../utils/dates";
 import { useTranslation } from "react-i18next";
 import { useUiStore } from "../store/uiStore";
+import { useAuthStore } from "../store/authStore";
 import { formatDisplayCurrency } from "../utils/currency";
 import { useContextMenu } from "../components/ui/ContextMenu";
 import { queryClient } from "../app/providers";
@@ -21,6 +22,7 @@ export function DashboardPage() {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const prefs = useUiStore((state) => state.preferences);
+  const user = useAuthStore((state) => state.user);
 
   // Queries
   const { data } = useQuery({ queryKey: ["dashboard"], queryFn: dashboard });
@@ -151,7 +153,7 @@ export function DashboardPage() {
       <div className="flex flex-col md:flex-row gap-6 justify-between items-start md:items-center">
         <div>
           <h1 className="font-display text-[26px] font-bold text-[#122222] dark:text-white leading-tight">
-            {t("dashboard.welcome", { name: prefs.operatorName || "Librarian" })}
+            {t("dashboard.welcome", { name: user?.full_name || "Librarian" })}
           </h1>
           <p className="text-[14px] text-[#122222]/60 dark:text-white/60 mt-1">{t("dashboard.subtitle")}</p>
         </div>

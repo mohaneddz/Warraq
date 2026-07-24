@@ -11,7 +11,7 @@ import { formatDisplayDate } from "../../utils/dates";
 import { useTranslation } from "react-i18next";
 import { useContextMenu } from "../ui/ContextMenu";
 import { queryClient } from "../../app/providers";
-import { UserSelectionModal } from "../auth/UserSelectionModal";
+import { toast } from "sonner";
 
 
 
@@ -32,7 +32,7 @@ export function AppShell() {
   const user = useAuthStore((s) => s.user);
   const setUser = useAuthStore((s) => s.setUser);
   const navigate = useNavigate();
-  const [showUserModal, setShowUserModal] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
 
   const handleSignOut = async () => {
     try {
@@ -683,8 +683,6 @@ export function AppShell() {
           </div>
         </main>
       </div>
-
-      <UserSelectionModal isOpen={showUserModal} onClose={() => setShowUserModal(false)} />
     </div>
   );
 }
@@ -697,7 +695,8 @@ function ProfileCard({
   setPaletteOpen,
   navigate,
   t,
-  onSignOut
+  onSignOut,
+  onOpenUserModal
 }: {
   position: "topbar" | "sidebar";
   onClose: () => void;
@@ -707,6 +706,7 @@ function ProfileCard({
   navigate: any;
   t: any;
   onSignOut: () => void;
+  onOpenUserModal?: () => void;
 }) {
 
   const user = useAuthStore((s) => s.user);
@@ -772,6 +772,23 @@ function ProfileCard({
       <div className="mt-3 space-y-1">
         <h4 className={`text-[10px] font-bold text-[#122222]/40 dark:text-white/40 uppercase tracking-wider mb-1.5 px-1 ${isRtl ? "text-right" : "text-left"}`}>{t("profileCard.quickActions")}</h4>
         
+        {onOpenUserModal && (
+          <button
+            onClick={() => {
+              onClose();
+              onOpenUserModal();
+            }}
+            className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-[#122222]/80 dark:text-[#f0ebe1]/80 hover:bg-[#b96f3e]/10 hover:text-[#b96f3e] dark:hover:bg-white/5 dark:hover:text-white transition-all group ${isRtl ? "text-right flex-row-reverse" : "text-left"}`}
+          >
+            <div className={`flex items-center gap-2.5 ${isRtl ? "flex-row-reverse" : ""}`}>
+              <span className="w-6 h-6 rounded-lg bg-black/5 dark:bg-white/5 flex items-center justify-center text-[#122222]/60 dark:text-white/60 group-hover:bg-[#b96f3e]/20 group-hover:text-[#b96f3e] dark:group-hover:bg-[#b96f3e]/20 dark:group-hover:text-[#b96f3e] transition-colors">
+                <UserCheck size={14} />
+              </span>
+              <span className="font-semibold text-[13px]">{t("profileCard.switchOperator") || "Switch Operator"}</span>
+            </div>
+          </button>
+        )}
+
         {/* Sign Out */}
         <button
           onClick={() => {

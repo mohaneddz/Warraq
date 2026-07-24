@@ -1,5 +1,15 @@
 {
   "app": "Warraq",
+  "auth": {
+    "signInTitle": "Sign in to Warraq",
+    "signInSubtitle": "Enter your library credentials to continue.",
+    "username": "Username",
+    "password": "Password",
+    "signIn": "Sign in",
+    "signingIn": "Signing in...",
+    "forcedChangeTitle": "Set a new password",
+    "forcedChangeSubtitle": "Welcome, {{name}}. Your administrator created this account — choose a new password only you know before continuing."
+  },
   "save": "Save",
   "cancel": "Cancel",
   "delete": "Delete",
@@ -760,18 +770,25 @@
       "libName": "Library name",
       "shortName": "Short name (optional)",
       "shortNamePlaceholder": "e.g., MBH Library",
-      "operatorTitle": "Operator profile",
-      "opName": "Operator name",
-      "opNamePlaceholder": "e.g., Mohamed Benali",
-      "opEmail": "Email (optional)",
-      "opEmailPlaceholder": "librarian@hospital.dz",
-      "opPic": "Profile Picture",
-      "opPicHelp": "Recommended: Square PNG, JPG or WEBP. Max size: 2 MB",
       "autosaveTitle": "Autosave",
       "autosaveLabel": "Automatic saving",
       "autosaveDesc": "Periodically save any changes without manual action.",
       "autosaveInterval": "Interval (seconds)",
       "saveBtn": "Save general settings"
+    },
+    "account": {
+      "title": "Your account",
+      "roleAdmin": "Administrator",
+      "roleStaff": "Staff",
+      "changePassword": "Change password",
+      "currentPassword": "Current password",
+      "newPassword": "New password",
+      "confirmPassword": "Confirm new password",
+      "savePassword": "Update password",
+      "saving": "Saving...",
+      "passwordTooShort": "New password must be at least 8 characters long.",
+      "passwordMismatch": "New password and confirmation do not match.",
+      "passwordChanged": "Password updated successfully."
     },
     "profile": {
       "title": "Library Profile",
