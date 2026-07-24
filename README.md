@@ -81,10 +81,19 @@ src-tauri/
 
 ```bash
 pnpm install
+cp .env.example .env   # then set WARRAQ_ADMIN_USERNAME / WARRAQ_ADMIN_PASSWORD
 pnpm tauri dev
 ```
 
 For frontend-only work, run `pnpm dev`. Note that the full application requires the Tauri runtime to open its local database.
+
+---
+
+## Accounts and Sign-In
+
+Warraq requires signing in with a local account — there is no anonymous access. On first launch, if no accounts exist yet, the app reads `WARRAQ_ADMIN_USERNAME` and `WARRAQ_ADMIN_PASSWORD` (from `.env` or the real environment) and creates the one administrator account; the password is hashed with Argon2 before it ever touches the database and is never sent back to the frontend. If those variables aren't set yet, Warraq shows exactly what to add and waits — it never invents a password on its own.
+
+Once signed in, an administrator manages every other account from **Settings → Users & Access**: creating staff/admin accounts, resetting passwords, and enabling/disabling access without deleting anyone's borrowing or audit history. Accounts created by an admin must set their own password on first sign-in. The last active administrator can't be demoted, disabled, or deleted, so the library can never be locked out.
 
 ---
 
@@ -104,6 +113,7 @@ pnpm tauri dev    # Run the desktop app
 ## Data and Security
 
 - Application data is stored in `sqlite:warraq.db` in the Tauri app-data directory.
+- Account passwords are hashed with Argon2 in Rust; admin-only actions (user management) are enforced server-side against the signed-in session, not just hidden in the UI.
 - Preferences use Tauri Store; sensitive provider credentials belong in Tauri Stronghold.
 - Backup and export data must not include Stronghold secrets.
 - Provider URLs are validated by native code and require HTTPS except localhost during development.
