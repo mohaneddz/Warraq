@@ -7,6 +7,7 @@ interface ImageUploadProps {
   onChange: (value: string | null) => void;
   shape?: "circle" | "cover" | "rect";
   label?: string;
+  fallbackInitials?: string;
 }
 
 function uint8ArrayToBase64(bytes: Uint8Array): string {
@@ -20,7 +21,7 @@ function uint8ArrayToBase64(bytes: Uint8Array): string {
 
 
 
-export function ImageUpload({ value, onChange, shape = "cover", label }: ImageUploadProps) {
+export function ImageUpload({ value, onChange, shape = "cover", label, fallbackInitials }: ImageUploadProps) {
   const [isDragOver, setIsDragOver] = useState(false);
   const [loading, setLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -306,6 +307,17 @@ export function ImageUpload({ value, onChange, shape = "cover", label }: ImageUp
                 </button>
               </div>
             </>
+          ) : fallbackInitials ? (
+            <div className="relative w-full h-full flex flex-col items-center justify-center">
+              <div className="w-full h-full rounded-full bg-emerald text-white flex items-center justify-center text-[22px] font-bold shadow-inner">
+                {fallbackInitials}
+              </div>
+              <div className="absolute inset-0 rounded-full bg-black/40 opacity-0 hover:opacity-100 transition-opacity duration-200 flex items-center justify-center">
+                <div className="p-2 bg-white text-[#122222] rounded-full shadow-md">
+                  <Upload size={14} />
+                </div>
+              </div>
+            </div>
           ) : (
             <div className="flex flex-col items-center justify-center p-4 text-center space-y-2">
               {loading ? (

@@ -1,4 +1,5 @@
 import { database, runTransaction, type TxStatement } from "../database";
+import { currentActor } from "../../store/authStore";
 import type Database from "@tauri-apps/plugin-sql";
 import { dueDate, today } from "../../utils/dates";
 import type { Book, Copy, DashboardMetrics, Loan, Member, Reservation } from "../../types";
@@ -589,7 +590,7 @@ export async function checkout(memberId: string, copyIds: string[], limit: numbe
   for (const copyId of copyIds) {
     const copy = await db.select<Copy[]>("SELECT * FROM copies WHERE id=?", [copyId]);
     if (copy[0]?.status !== "available") throw new Error("Each selected copy must be available.");
-    statements.push({ sql: "INSERT INTO loans (id,copy_id,member_id,borrowed_at,due_at,renewed_count,issued_by) VALUES (?,?,?,?,?,?,?)", values: [id(), copyId, memberId, now, dueAt, 0, "local-operator"] });
+    statements.push({ sql: "INSERT INTO loans (id,copy_id,member_id,borrowed_at,due_at,renewed_count,issued_by) VALUES (?,?,?,?,?,?,?)", values: [id(), copyId, memberId, now, dueAt, 0, currentActor()] });
     statements.push({ sql: "UPDATE copies SET status='on-loan',updated_at=? WHERE id=?", values: [now, copyId] });
   }
   statements.push(auditStatement("checkout", "loan", memberId, null, JSON.stringify({ copyIds })));
@@ -608,7 +609,7 @@ export async function returnCopies(copyIds: string[], holdDays = 3): Promise<voi
   for (const copyId of copyIds) {
     const loan = await db.select<Loan[]>("SELECT * FROM loans WHERE copy_id=? AND returned_at IS NULL", [copyId]);
     if (!loan[0]) throw new Error("No open loan was found for this copy.");
-    statements.push({ sql: "UPDATE loans SET returned_at=?,received_by=? WHERE id=?", values: [now, "local-operator", loan[0].id] });
+    statements.push({ sql: "UPDATE loans SET returned_at=?,received_by=? WHERE id=?", values: [now, currentActor(), loan[0].id] });
 
     const copyRow = await db.select<{ book_id: string }[]>("SELECT book_id FROM copies WHERE id=?", [copyId]);
     const bookId = copyRow[0]?.book_id;
@@ -745,14 +746,14 @@ export async function auditLog(limit?: any) {
 }
 
 async function audit(db: Database, action: string, entityType: string, entityId: string, before: string | null, after: string | null) {
-  await db.execute("INSERT INTO audit_logs (id,actor,action,entity_type,entity_id,before_json,after_json,created_at) VALUES (?,?,?,?,?,?,?,?)", [id(), "local-operator", action, entityType, entityId, before, after, timestamp()]);
+  await db.execute("INSERT INTO audit_logs (id,actor,action,entity_type,entity_id,before_json,after_json,created_at) VALUES (?,?,?,?,?,?,?,?)", [id(), currentActor(), action, entityType, entityId, before, after, timestamp()]);
 }
 
 /** Same insert as audit(), but returned as a statement so it can be batched into a runTransaction() call. */
 function auditStatement(action: string, entityType: string, entityId: string, before: string | null, after: string | null): TxStatement {
   return {
     sql: "INSERT INTO audit_logs (id,actor,action,entity_type,entity_id,before_json,after_json,created_at) VALUES (?,?,?,?,?,?,?,?)",
-    values: [id(), "local-operator", action, entityType, entityId, before, after, timestamp()],
+    values: [id(), currentActor(), action, entityType, entityId, before, after, timestamp()],
   };
 }
 

@@ -1,15 +1,16 @@
-import { BookOpen, CalendarClock, ChartNoAxesCombined, ClipboardList, Cog, LayoutDashboard, Search, Bell, Minus, Square, Users, Warehouse, X, ChevronDown, Menu, Moon, Sun, HardDrive, Sparkles, RefreshCw, ArrowLeft, ArrowRight, Maximize, UserCheck } from "lucide-react";
+import { BookOpen, CalendarClock, ChartNoAxesCombined, ClipboardList, Cog, LayoutDashboard, Search, Bell, Minus, Square, Users, Warehouse, X, ChevronDown, Menu, Moon, Sun, HardDrive, Sparkles, RefreshCw, ArrowLeft, ArrowRight, Maximize, LogOut } from "lucide-react";
 import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useEffect, useState, useRef } from "react";
 
 import { useUiStore } from "../../store/uiStore";
+import { useAuthStore } from "../../store/authStore";
 import { useQuery } from "@tanstack/react-query";
 import { dashboard, reservations } from "../../data/repositories/library";
+import { logout as logoutRequest } from "../../data/auth";
 import { formatDisplayDate } from "../../utils/dates";
 import { useTranslation } from "react-i18next";
 import { useContextMenu } from "../ui/ContextMenu";
 import { queryClient } from "../../app/providers";
-import { toast } from "sonner";
 import { UserSelectionModal } from "../auth/UserSelectionModal";
 
 
@@ -28,9 +29,20 @@ const links = [
 
 export function AppShell() {
   const { sidebarOpen, toggleSidebar, setPaletteOpen, preferences, updatePreferences } = useUiStore();
-  const navigate = useNavigate(); 
-  const [showNotifications, setShowNotifications] = useState(false);
+  const user = useAuthStore((s) => s.user);
+  const setUser = useAuthStore((s) => s.setUser);
+  const navigate = useNavigate();
   const [showUserModal, setShowUserModal] = useState(false);
+
+  const handleSignOut = async () => {
+    try {
+      await logoutRequest();
+    } catch (err) {
+      console.error("Failed to clear server-side session", err);
+    } finally {
+      setUser(null);
+    }
+  };
 
   // Profile hover cards states
   const [showTopbarProfileCard, setShowTopbarProfileCard] = useState(false);
@@ -409,15 +421,15 @@ export function AppShell() {
                 >
                   <div className="flex items-center justify-between group cursor-pointer hover:bg-white/5 p-2 -mx-2 rounded-lg transition-colors" onClick={() => navigate("/settings")}>
                     <div className="flex items-center gap-3">
-                      {preferences.operatorAvatar ? (
-                        <img src={preferences.operatorAvatar} alt="" className="h-9 w-9 rounded-full object-cover shrink-0" />
+                      {user?.avatar_path ? (
+                        <img src={user?.avatar_path} alt="" className="h-9 w-9 rounded-full object-cover shrink-0" />
                       ) : (
                         <div className="h-9 w-9 rounded-full bg-[#b96f3e] text-white flex items-center justify-center text-[12px] font-bold shrink-0">
-                          {(preferences.operatorName || "Librarian").substring(0,2).toUpperCase()}
+                          {(user?.full_name || "Librarian").substring(0,2).toUpperCase()}
                         </div>
                       )}
                       <div className="flex flex-col min-w-0">
-                        <span className="text-[13px] font-semibold text-white truncate">{preferences.operatorName || "Librarian"}</span>
+                        <span className="text-[13px] font-semibold text-white truncate">{user?.full_name || "Librarian"}</span>
                         <span className="text-[11px] text-white/50 truncate">{t("nav.role")}</span>
                       </div>
                     </div>
@@ -425,14 +437,15 @@ export function AppShell() {
                   </div>
 
                   {showSidebarProfileCard && (
-                    <ProfileCard 
-                      position="sidebar" 
-                      onClose={() => setShowSidebarProfileCard(false)} 
+                    <ProfileCard
+                      position="sidebar"
+                      onClose={() => setShowSidebarProfileCard(false)}
                       preferences={preferences}
                       updatePreferences={updatePreferences}
                       setPaletteOpen={setPaletteOpen}
                       navigate={navigate}
                       t={t}
+                      onSignOut={handleSignOut}
                     />
                   )}
                 </div>
@@ -445,26 +458,27 @@ export function AppShell() {
                   <button 
                     onClick={() => navigate("/settings")}
                     className="w-10 h-10 rounded-full flex items-center justify-center hover:ring-2 hover:ring-[#b96f3e]/60 transition-all shrink-0"
-                    title={preferences.operatorName || "Librarian"}
+                    title={user?.full_name || "Librarian"}
                   >
-                    {preferences.operatorAvatar ? (
-                      <img src={preferences.operatorAvatar} alt="" className="h-9 w-9 rounded-full object-cover shrink-0" />
+                    {user?.avatar_path ? (
+                      <img src={user?.avatar_path} alt="" className="h-9 w-9 rounded-full object-cover shrink-0" />
                     ) : (
                       <div className="h-9 w-9 rounded-full bg-[#b96f3e] text-white flex items-center justify-center text-[12px] font-bold shrink-0">
-                        {(preferences.operatorName || "Librarian").substring(0,2).toUpperCase()}
+                        {(user?.full_name || "Librarian").substring(0,2).toUpperCase()}
                       </div>
                     )}
                   </button>
 
                   {showSidebarProfileCard && (
-                    <ProfileCard 
-                      position="sidebar" 
-                      onClose={() => setShowSidebarProfileCard(false)} 
+                    <ProfileCard
+                      position="sidebar"
+                      onClose={() => setShowSidebarProfileCard(false)}
                       preferences={preferences}
                       updatePreferences={updatePreferences}
                       setPaletteOpen={setPaletteOpen}
                       navigate={navigate}
                       t={t}
+                      onSignOut={handleSignOut}
                     />
                   )}
                 </div>
@@ -613,8 +627,8 @@ export function AppShell() {
                 onMouseLeave={handleTopbarMouseLeave}
               >
                 <div className="flex items-center gap-2 cursor-pointer p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition-colors" onClick={() => navigate("/settings")}>
-                  {preferences.operatorAvatar ? (
-                    <img src={preferences.operatorAvatar} alt="" className="h-8 w-8 rounded-full object-cover shrink-0" />
+                  {user?.avatar_path ? (
+                    <img src={user?.avatar_path} alt="" className="h-8 w-8 rounded-full object-cover shrink-0" />
                   ) : (
                     <div className="h-8 w-8 rounded-full bg-[#122222] dark:bg-white/10 text-white flex items-center justify-center text-[12px] font-bold shrink-0">
                       <Users size={14} />
@@ -622,24 +636,21 @@ export function AppShell() {
 
                   )}
                   <span className="text-[14px] font-semibold text-[#122222] dark:text-white hidden sm:block truncate max-w-[80px]">
-                    {preferences.operatorName || "Librarian"}
+                    {user?.full_name || "Librarian"}
                   </span>
                   <ChevronDown size={14} className="text-[#122222]/40 dark:text-white/40" />
                 </div>
 
                 {showTopbarProfileCard && (
-                  <ProfileCard 
-                    position="topbar" 
-                    onClose={() => setShowTopbarProfileCard(false)} 
+                  <ProfileCard
+                    position="topbar"
+                    onClose={() => setShowTopbarProfileCard(false)}
                     preferences={preferences}
                     updatePreferences={updatePreferences}
                     setPaletteOpen={setPaletteOpen}
                     navigate={navigate}
                     t={t}
-                    onOpenUserModal={() => {
-                      setShowTopbarProfileCard(false);
-                      setShowUserModal(true);
-                    }}
+                    onSignOut={handleSignOut}
                   />
                 )}
               </div>
@@ -678,26 +689,27 @@ export function AppShell() {
   );
 }
 
-function ProfileCard({ 
-  position, 
-  onClose, 
-  preferences, 
-  updatePreferences, 
-  setPaletteOpen, 
-  navigate, 
+function ProfileCard({
+  position,
+  onClose,
+  preferences,
+  updatePreferences,
+  setPaletteOpen,
+  navigate,
   t,
-  onOpenUserModal
-}: { 
-  position: "topbar" | "sidebar"; 
-  onClose: () => void; 
-  preferences: any; 
-  updatePreferences: any; 
-  setPaletteOpen: any; 
-  navigate: any; 
-  t: any; 
-  onOpenUserModal?: () => void;
+  onSignOut
+}: {
+  position: "topbar" | "sidebar";
+  onClose: () => void;
+  preferences: any;
+  updatePreferences: any;
+  setPaletteOpen: any;
+  navigate: any;
+  t: any;
+  onSignOut: () => void;
 }) {
 
+  const user = useAuthStore((s) => s.user);
   const [backingUp, setBackingUp] = useState(false);
   const isRtl = preferences.locale === "ar";
 
@@ -740,15 +752,15 @@ function ProfileCard({
     >
       {/* Header Profile Section */}
       <div className={`flex items-center gap-3 pb-3 border-b border-black/5 dark:border-white/5 ${isRtl ? "text-right" : "text-left"}`}>
-        {preferences.operatorAvatar ? (
-          <img src={preferences.operatorAvatar} alt="" className="h-11 w-11 rounded-full object-cover shrink-0 border border-black/5" />
+        {user?.avatar_path ? (
+          <img src={user?.avatar_path} alt="" className="h-11 w-11 rounded-full object-cover shrink-0 border border-black/5" />
         ) : (
           <div className="h-11 w-11 rounded-full bg-[#b96f3e] text-white flex items-center justify-center text-[13px] font-bold shrink-0 shadow-sm">
-            {(preferences.operatorName || "Librarian").substring(0, 2).toUpperCase()}
+            {(user?.full_name || "Librarian").substring(0, 2).toUpperCase()}
           </div>
         )}
         <div className="flex flex-col min-w-0">
-          <span className="font-bold text-[14px] leading-tight truncate">{preferences.operatorName || "Librarian"}</span>
+          <span className="font-bold text-[14px] leading-tight truncate">{user?.full_name || "Librarian"}</span>
           <span className="text-[11px] text-[#122222]/50 dark:text-white/50 leading-tight mt-0.5">{t("nav.role")}</span>
           <span className="text-[10px] text-[#b96f3e] dark:text-[#c58a59] font-bold tracking-wider uppercase mt-1 truncate">
             {preferences.libraryShortName || preferences.libraryName || "Warraq Library"}
@@ -760,19 +772,19 @@ function ProfileCard({
       <div className="mt-3 space-y-1">
         <h4 className={`text-[10px] font-bold text-[#122222]/40 dark:text-white/40 uppercase tracking-wider mb-1.5 px-1 ${isRtl ? "text-right" : "text-left"}`}>{t("profileCard.quickActions")}</h4>
         
-        {/* Switch / Create User */}
-        <button 
+        {/* Sign Out */}
+        <button
           onClick={() => {
             onClose();
-            if (onOpenUserModal) onOpenUserModal();
+            onSignOut();
           }}
-          className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-[#122222]/80 dark:text-[#f0ebe1]/80 hover:bg-[#b96f3e]/10 hover:text-[#b96f3e] dark:hover:bg-white/5 dark:hover:text-white transition-all group ${isRtl ? "text-right flex-row-reverse" : "text-left"}`}
+          className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-[#122222]/80 dark:text-[#f0ebe1]/80 hover:bg-red-500/10 hover:text-red-600 dark:hover:bg-white/5 dark:hover:text-red-400 transition-all group ${isRtl ? "text-right flex-row-reverse" : "text-left"}`}
         >
           <div className={`flex items-center gap-2.5 ${isRtl ? "flex-row-reverse" : ""}`}>
             <span className="w-6 h-6 rounded-lg bg-[#b96f3e]/10 text-[#b96f3e] flex items-center justify-center font-bold transition-colors">
-              <UserCheck size={14} />
+              <LogOut size={14} />
             </span>
-            <span className="font-semibold text-[13px]">{t("profileCard.switchUser") || "Switch / Create User"}</span>
+            <span className="font-semibold text-[13px]">{t("profileCard.signOut")}</span>
           </div>
         </button>
 

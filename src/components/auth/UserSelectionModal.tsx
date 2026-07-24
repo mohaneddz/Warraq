@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { Modal, Input, Button } from "../ui/primitives";
 import { useUiStore } from "../../store/uiStore";
-import { OperatorProfile } from "../../types";
 import { Trash2, CheckCircle2, UserPlus } from "lucide-react";
 
 import { ImageUpload } from "../ui/ImageUpload";
@@ -193,11 +192,11 @@ export function UserSelectionModal({ isOpen, onClose }: { isOpen: boolean; onClo
               onChange={(e) => setRole(e.target.value as any)}
               className="field-select text-[13px] py-2 px-3 mt-1 font-semibold w-full bg-white dark:bg-[#1d2926] border border-black/10 dark:border-white/10 rounded-lg outline-none"
             >
-              <option value="Head Librarian">Head Librarian</option>
-              <option value="Assistant Librarian">Assistant Librarian</option>
-              <option value="Administrator">Administrator</option>
-              <option value="Cataloger">Cataloger</option>
-              <option value="Staff">Staff</option>
+              <option value="Head Librarian">{t("roles.headLibrarian") || "Head Librarian"}</option>
+              <option value="Assistant Librarian">{t("roles.assistantLibrarian") || "Assistant Librarian"}</option>
+              <option value="Administrator">{t("roles.administrator") || "Administrator"}</option>
+              <option value="Cataloger">{t("roles.cataloger") || "Cataloger"}</option>
+              <option value="Staff">{t("members.roles.staff") || "Staff"}</option>
             </select>
           </label>
 
