@@ -61,9 +61,6 @@ export interface Preferences {
   onboardingComplete: boolean;
   libraryName: string;
   libraryShortName: string;
-  operatorName: string;
-  operatorEmail: string;
-  operatorAvatar?: string | null;
   // Library Profile
   libraryAddress: string;
   libraryCity: string;

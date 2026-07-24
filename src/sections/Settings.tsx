@@ -10,7 +10,10 @@ import {
   LayoutGrid, Save,
 } from "lucide-react";
 import { useUiStore } from "../store/uiStore";
+import { useAuthStore } from "../store/authStore";
+import { changeOwnPassword } from "../data/auth";
 import { ImageUpload } from "../components/ui/ImageUpload";
+import { Button } from "../components/ui/primitives";
 import { useTranslation } from "react-i18next";
 import { useContextMenu } from "../components/ui/ContextMenu";
 import { toast } from "sonner";
@@ -216,26 +219,7 @@ function GeneralTab({ prefs, update }: TabProps) {
         </div>
       </Card>
 
-      <Card title={t("settings.general.operatorTitle")} icon={<UserCircle size={16} className="text-[#b96f3e]" />}>
-        <div className="grid grid-cols-2 gap-4 mb-4">
-          <Field label={t("settings.general.opName")}>
-            <input type="text" defaultValue={prefs.operatorName} placeholder={t("settings.general.opNamePlaceholder")} onBlur={e => update({ operatorName: e.target.value })} className={inputCls} />
-          </Field>
-          <Field label={t("settings.general.opEmail")}>
-            <input type="email" defaultValue={prefs.operatorEmail} placeholder={t("settings.general.opEmailPlaceholder")} onBlur={e => update({ operatorEmail: e.target.value })} className={inputCls} />
-          </Field>
-        </div>
-        <Field label={t("settings.general.opPic")}>
-          <div className="flex items-center gap-4">
-            <ImageUpload
-              value={prefs.operatorAvatar}
-              onChange={val => update({ operatorAvatar: val })}
-              shape="circle"
-            />
-            <p className="text-[11px] text-[#122222]/40 dark:text-white/40">{t("settings.general.opPicHelp")}</p>
-          </div>
-        </Field>
-      </Card>
+      <AccountCard />
 
       <Card title={t("settings.general.autosaveTitle")} icon={<Save size={16} className="text-[#122222]/60 dark:text-white/60" />}>
         <div className="flex items-center justify-between">
@@ -256,6 +240,86 @@ function GeneralTab({ prefs, update }: TabProps) {
 
       <SaveButton label={t("settings.general.saveBtn")} />
     </div>
+  );
+}
+
+// ─── Signed-in account card (shown in General tab) ─────────────────────────────
+function AccountCard() {
+  const { t } = useTranslation();
+  const user = useAuthStore((s) => s.user);
+  const [changing, setChanging] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  const resetForm = () => {
+    setChanging(false);
+    setCurrentPassword("");
+    setNewPassword("");
+    setConfirmPassword("");
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newPassword.length < 8) {
+      toast.error(t("settings.account.passwordTooShort"));
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      toast.error(t("settings.account.passwordMismatch"));
+      return;
+    }
+    setSubmitting(true);
+    try {
+      await changeOwnPassword(currentPassword, newPassword);
+      toast.success(t("settings.account.passwordChanged"));
+      resetForm();
+    } catch (err: any) {
+      toast.error(err.message || String(err));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <Card title={t("settings.account.title")} icon={<UserCircle size={16} className="text-[#b96f3e]" />}>
+      <div className="flex items-center gap-4 mb-4">
+        {user?.avatar_path ? (
+          <img src={user.avatar_path} alt="" className="h-12 w-12 rounded-full object-cover shrink-0" />
+        ) : (
+          <div className="h-12 w-12 rounded-full bg-[#b96f3e] text-white flex items-center justify-center text-[14px] font-bold shrink-0">
+            {(user?.full_name || "?").substring(0, 2).toUpperCase()}
+          </div>
+        )}
+        <div className="min-w-0">
+          <p className="font-bold text-[14px] text-[#122222] dark:text-white truncate">{user?.full_name}</p>
+          <p className="text-[12px] text-[#122222]/60 dark:text-white/60 truncate">
+            @{user?.username} · {user?.role === "admin" ? t("settings.account.roleAdmin") : t("settings.account.roleStaff")}
+          </p>
+        </div>
+      </div>
+
+      {!changing ? (
+        <Button variant="secondary" onClick={() => setChanging(true)}>{t("settings.account.changePassword")}</Button>
+      ) : (
+        <form onSubmit={handleSubmit} className="space-y-3 pt-3 border-t border-black/5 dark:border-white/5">
+          <Field label={t("settings.account.currentPassword")}>
+            <input type="password" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} className={inputCls} required autoFocus />
+          </Field>
+          <Field label={t("settings.account.newPassword")}>
+            <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} className={inputCls} required minLength={8} />
+          </Field>
+          <Field label={t("settings.account.confirmPassword")}>
+            <input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} className={inputCls} required minLength={8} />
+          </Field>
+          <div className="flex gap-2 pt-1">
+            <Button type="submit" disabled={submitting}>{submitting ? t("settings.account.saving") : t("settings.account.savePassword")}</Button>
+            <Button type="button" variant="ghost" onClick={resetForm}>{t("catalog.addModal.cancel")}</Button>
+          </div>
+        </form>
+      )}
+    </Card>
   );
 }
 

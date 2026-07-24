@@ -10,7 +10,6 @@ export function OnboardingPage() {
   const { t, i18n } = useTranslation();
 
   const [libName, setLibName] = useState("Mustapha Bacha Hospital Library");
-  const [operator, setOperator] = useState("");
   const [locale, setLocale] = useState<"en" | "fr" | "ar">("en");
   const [theme, setTheme] = useState<"light" | "dark" | "system">("light");
   const [finesEnabled, setFinesEnabled] = useState(false);
@@ -19,7 +18,6 @@ export function OnboardingPage() {
     updatePreferences({
       onboardingComplete: true,
       libraryName: libName.trim(),
-      operatorName: operator.trim(),
       locale,
       theme,
       finesEnabled
@@ -57,30 +55,17 @@ export function OnboardingPage() {
         
         {/* Form fields */}
         <div className="space-y-5 flex-1">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <label className="text-[11px] font-bold text-[#122222]/60 dark:text-white/60 uppercase tracking-wider block font-semibold">
-              <span>{t("onboarding.libraryName")} <span className="text-red-500">*</span></span>
-              <input 
-                type="text" 
-                value={libName}
-                onChange={(e) => setLibName(e.target.value)}
-                placeholder={t("onboarding.placeholderLib")}
-                className="w-full bg-[#fcfbf8] dark:bg-[#111d1a] border border-black/10 dark:border-white/10 rounded-xl py-3 px-4 text-[13px] text-[#122222] dark:text-white outline-none focus:border-emerald mt-1.5 font-semibold"
-                required
-              />
-            </label>
-            <label className="text-[11px] font-bold text-[#122222]/60 dark:text-white/60 uppercase tracking-wider block font-semibold">
-              <span>{t("onboarding.operatorName")} <span className="text-red-500">*</span></span>
-              <input 
-                type="text" 
-                value={operator}
-                onChange={(e) => setOperator(e.target.value)}
-                placeholder={t("onboarding.placeholderOp")}
-                className="w-full bg-[#fcfbf8] dark:bg-[#111d1a] border border-black/10 dark:border-white/10 rounded-xl py-3 px-4 text-[13px] text-[#122222] dark:text-white outline-none focus:border-emerald mt-1.5 font-semibold"
-                required
-              />
-            </label>
-          </div>
+          <label className="text-[11px] font-bold text-[#122222]/60 dark:text-white/60 uppercase tracking-wider block font-semibold">
+            <span>{t("onboarding.libraryName")} <span className="text-red-500">*</span></span>
+            <input
+              type="text"
+              value={libName}
+              onChange={(e) => setLibName(e.target.value)}
+              placeholder={t("onboarding.placeholderLib")}
+              className="w-full bg-[#fcfbf8] dark:bg-[#111d1a] border border-black/10 dark:border-white/10 rounded-xl py-3 px-4 text-[13px] text-[#122222] dark:text-white outline-none focus:border-emerald mt-1.5 font-semibold"
+              required
+            />
+          </label>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <label className="text-[11px] font-bold text-[#122222]/60 dark:text-white/60 uppercase tracking-wider block font-semibold">
@@ -147,7 +132,7 @@ export function OnboardingPage() {
         <div className="mt-10 pt-6 border-t border-black/5 dark:border-white/5 flex flex-col gap-4">
           <button 
             onClick={handleComplete}
-            disabled={!libName.trim() || !operator.trim()}
+            disabled={!libName.trim()}
             className="bg-emerald text-white w-full py-4 rounded-xl font-bold text-[15px] hover:bg-emerald/90 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             {t("onboarding.start")} <span>{document.documentElement.dir === "rtl" ? "←" : "→"}</span>
