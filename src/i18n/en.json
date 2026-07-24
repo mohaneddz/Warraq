@@ -652,6 +652,13 @@
     "copiedSummary": "Stat summary copied to clipboard",
     "exportCSV": "Export CSV",
     "csvExported": "CSV report exported successfully",
+    "range": "Range:",
+    "ranges": {
+      "7d": "Last 7 Days",
+      "30d": "Last 30 Days",
+      "1y": "This Year",
+      "all": "All Time"
+    },
     "catalog": {
       "title": "Catalog Inventory",
       "desc": "Export all books and copies to Excel"
@@ -669,10 +676,32 @@
       "desc": "Export member status and contact details"
     },
     "metrics": {
-      "circulation": "Circulation",
-      "activeMembers": "Active Members",
+      "totalCheckouts": "Total Checkouts",
+      "totalCheckoutsSub": "All-time loan transactions",
+      "activeBorrowers": "Active Borrowers",
+      "activeBorrowersSub": "Registered active members",
       "overdueRate": "Overdue Rate",
-      "acquisitions": "Total Acquisitions"
+      "overdueRateSub": "{{overdue}} overdue out of {{open}} open",
+      "physicalHoldings": "Physical Holdings",
+      "physicalHoldingsSub": "Across {{titles}} catalog titles"
+    },
+    "charts": {
+      "circulationTrend": "Circulation Activity Trend",
+      "vsLastPeriod": "+14% vs last period",
+      "topCategories": "Top Borrowed Categories",
+      "statusDistribution": "Holding Status Distribution",
+      "hourlyRhythm": "Circulation Hourly Rhythm",
+      "checkoutsVsReturns": "Checkouts vs Returns",
+      "peakHours": "Peak Circulation Hours",
+      "mediaTypeDist": "Collection Media Type Distribution",
+      "fulfillmentStatus": "Loan Fulfillment Status",
+      "dailyPace": "Daily Checkouts Pace",
+      "copyStatusDist": "Copy Status Distribution",
+      "conditionHealth": "Physical Item Condition Health",
+      "categoryShare": "Category Inventory Share",
+      "formatHoldingsCount": "Format Holdings Count",
+      "membersByRole": "Members by Academic Role",
+      "activeDepts": "Most Active Departments"
     },
     "print": "Print",
     "thisMonth": "This Month",
@@ -760,6 +789,7 @@
       "database": "Database",
       "integrationsai": "Integrations & AI",
       "secretskeys": "Secrets & Keys",
+      "users": "Users & Access",
       "desktopdata": "Desktop & Data",
       "about": "About"
     },
@@ -1000,7 +1030,10 @@
     "users": {
       "title": "Users & Access",
       "desc": "Create and manage the accounts allowed to sign in to Warraq.",
-      "addUser": "Add user",
+      "addUser": "Add User",
+      "editUser": "Edit User",
+      "fullName": "Full Name",
+      "email": "Email Address",
       "username": "Username",
       "role": "Role",
       "initialPassword": "Initial password",
@@ -1008,6 +1041,7 @@
       "credentialsHelp": "Share these credentials with the new user securely. This password cannot be shown again — reset it if it's lost.",
       "statusUpdated": "User status updated.",
       "roleUpdated": "User role updated.",
+      "userUpdated": "User details updated successfully.",
       "deleted": "User deleted.",
       "you": "you",
       "active": "Active",
@@ -1018,7 +1052,7 @@
       "deleteUser": "Delete user",
       "resetPasswordHelp": "Set a new password for {{name}}. They will be required to change it on next sign-in.",
       "newPasswordFor": "New password",
-      "confirmDelete": "Permanently delete {{name}}'s account? This cannot be undone."
+      "confirmDelete": "Are you sure you want to permanently delete account {{name}}? This action cannot be undone."
     },
     "desktop": {
       "title": "Desktop & Data",
@@ -1053,6 +1087,136 @@
       "terms": "Terms of Service",
       "privacy": "Privacy Policy",
       "licenses": "Open Source Licenses"
+    },
+    "help": {
+      "tipsTitle": "Helpful Tips",
+      "quickNavTitle": "Quick Navigation",
+      "general": {
+        "title": "General Settings",
+        "body": "Defines your library's core identity and operator preferences used throughout the system.",
+        "tips": [
+          "Set an official library name and logo",
+          "Configure the operator profile for reports",
+          "Autosave keeps changes safe"
+        ]
+      },
+      "libraryprofile": {
+        "title": "Library Profile",
+        "body": "Contact details and description used in printed receipts and public documents.",
+        "tips": [
+          "Add an address for printed receipts",
+          "Opening hours appear on member cards",
+          "Website used in email footers"
+        ]
+      },
+      "localization": {
+        "title": "Localization",
+        "body": "Controls the language, timezone, and number formats used across the interface.",
+        "tips": [
+          "Arabic enables RTL layout automatically",
+          "Date format affects all date displays",
+          "Currency is used in fine reports"
+        ]
+      },
+      "appearance": {
+        "title": "Appearance",
+        "body": "Personalize the visual experience with themes, colors, and text sizes.",
+        "tips": [
+          "System theme follows your OS setting",
+          "Accent color applies to buttons and highlights",
+          "Large text improves accessibility"
+        ]
+      },
+      "rules": {
+        "title": "Circulation Rules",
+        "body": "Rules define how items are lent, how long they can be kept, and how renewals work.",
+        "tips": [
+          "Default loan period applies to new loans",
+          "Reservation hold prevents items going back to shelf",
+          "Grace period delays fine accrual"
+        ]
+      },
+      "finesfees": {
+        "title": "Fines & Fees",
+        "body": "Configure automatic fine calculation for overdue materials.",
+        "tips": [
+          "Set a max fine to cap charges",
+          "Grace period (in Rules) delays fine start",
+          "Fines appear in member records"
+        ]
+      },
+      "notifications": {
+        "title": "Notifications",
+        "body": "Control which system events trigger alerts in the Activity panel.",
+        "tips": [
+          "Due-soon reminders reduce overdue rates",
+          "Reservation alerts help members collect on time",
+          "Overdue alerts appear on the dashboard"
+        ]
+      },
+      "backuprestore": {
+        "title": "Backup & Restore",
+        "body": "Protect your library data with regular backups.",
+        "tips": [
+          "Export after major cataloging sessions",
+          "Keep backups on a separate drive",
+          "Never restore without a fresh export first"
+        ]
+      },
+      "database": {
+        "title": "Database",
+        "body": "Inspect the underlying SQLite database and perform maintenance.",
+        "tips": [
+          "VACUUM reclaims deleted record space",
+          "Run monthly for best performance",
+          "Factory reset requires a relaunch"
+        ]
+      },
+      "integrationsai": {
+        "title": "Integrations & AI",
+        "body": "Connect third-party services to enrich your catalog and enable AI features.",
+        "tips": [
+          "Google Books provides cover images",
+          "OpenAI powers smart descriptions",
+          "All keys stay on your device"
+        ]
+      },
+      "secretskeys": {
+        "title": "Secrets & Keys",
+        "body": "All API keys are stored in localStorage. Nothing is sent to Warraq servers.",
+        "tips": [
+          "Mask keys before screen-sharing",
+          "Delete keys when no longer needed",
+          "Keys can be re-entered in Integrations"
+        ]
+      },
+      "users": {
+        "title": "Users & Access",
+        "body": "Administrators can create staff and admin accounts, reset passwords, and disable access.",
+        "tips": [
+          "New accounts must change password on first sign-in",
+          "Last active administrator cannot be demoted",
+          "Disabling an account keeps its audit history intact"
+        ]
+      },
+      "desktopdata": {
+        "title": "Desktop & Data",
+        "body": "Tauri desktop behavior and data storage location.",
+        "tips": [
+          "Tray mode keeps the app running quietly",
+          "Open data folder to locate backups",
+          "Check for updates regularly"
+        ]
+      },
+      "about": {
+        "title": "About Warraq",
+        "body": "Warraq — وراق — means 'the scribe' or 'paper seller' in classical Arabic.",
+        "tips": [
+          "v1.0.0 is the initial release",
+          "Built with Tauri 2 + React",
+          "Open source licenses are listed below"
+        ]
+      }
     }
   },
   "profileCard": {

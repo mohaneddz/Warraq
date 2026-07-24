@@ -511,7 +511,8 @@ export function CatalogPage() {
     const action = params.get("action");
     if (action === "add-book") {
       setAdding(true);
-      window.history.replaceState({}, document.title, window.location.pathname);
+      const cleanUrl = window.location.hash ? window.location.hash.split("?")[0] : window.location.pathname;
+      window.history.replaceState({}, document.title, cleanUrl);
     }
 
     const focus = params.get("focus");
@@ -519,7 +520,8 @@ export function CatalogPage() {
       setTimeout(() => {
         document.getElementById("catalog-page-search")?.focus();
       }, 100);
-      window.history.replaceState({}, document.title, window.location.pathname);
+      const cleanUrl = window.location.hash ? window.location.hash.split("?")[0] : window.location.pathname;
+      window.history.replaceState({}, document.title, cleanUrl);
     }
   }, [location.search]);
 

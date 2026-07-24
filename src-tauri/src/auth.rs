@@ -145,7 +145,7 @@ pub async fn bootstrap_admin_if_needed(
     let id = Uuid::new_v4().to_string();
     let now = now_iso();
 
-    sqlx::query(
+    let insert = sqlx::query(
         "INSERT INTO users (id, username, full_name, email, role, password_hash, status, must_change_password, created_at, updated_at) VALUES (?, ?, 'Administrator', NULL, 'admin', ?, 'active', 0, ?, ?)"
     )
     .bind(&id)
@@ -154,10 +154,16 @@ pub async fn bootstrap_admin_if_needed(
     .bind(&now)
     .bind(&now)
     .execute(&pool)
-    .await
-    .map_err(|e| e.to_string())?;
+    .await;
 
-    Ok(true)
+    match insert {
+        Ok(_) => Ok(true),
+        // Two near-simultaneous bootstrap calls (e.g. React StrictMode double-invoking
+        // the boot effect in dev) can both see an empty table before either has
+        // inserted. Whichever loses the race just finds the admin already there.
+        Err(sqlx::Error::Database(db_err)) if db_err.is_unique_violation() => Ok(false),
+        Err(e) => Err(e.to_string()),
+    }
 }
 
 #[tauri::command]

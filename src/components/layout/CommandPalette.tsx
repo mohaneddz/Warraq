@@ -64,6 +64,8 @@ export function CommandPalette() {
     { label: t("commandPalette.actions.searchMember"), subtitle: t("commandPalette.actions.searchMemberSub"), route: "/members?focus=search", icon: Search },
     { label: t("commandPalette.actions.addBook"), subtitle: t("commandPalette.actions.addBookSub"), route: "/catalog?action=add-book", icon: Plus },
     { label: t("commandPalette.actions.addMember"), subtitle: t("commandPalette.actions.addMemberSub"), route: "/members?action=add-member", icon: Plus },
+    { label: t("dashboard.newReservation") || "New Reservation", subtitle: t("dashboard.newReservationSub") || "Reserve item for member", route: "/reservations?action=new-reservation", icon: Plus },
+    { label: t("dashboard.addUser") || "Add Staff User", subtitle: t("dashboard.addUserSub") || "Create user credentials", route: "/settings?tab=users&action=add-user", icon: Plus },
 
 
     // Native Actions

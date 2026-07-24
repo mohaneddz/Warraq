@@ -652,6 +652,13 @@
     "copiedSummary": "Résumé des statistiques copié dans le presse-papiers",
     "exportCSV": "Exporter en CSV",
     "csvExported": "Rapport CSV exporté avec succès",
+    "range": "Période :",
+    "ranges": {
+      "7d": "7 derniers jours",
+      "30d": "30 derniers jours",
+      "1y": "Cette année",
+      "all": "Tout le temps"
+    },
     "catalog": {
       "title": "Inventaire du catalogue",
       "desc": "Exporter tous les livres et exemplaires vers Excel"
@@ -669,10 +676,32 @@
       "desc": "Exporter le statut des membres et les coordonnées"
     },
     "metrics": {
-      "circulation": "Circulation",
-      "activeMembers": "Membres actifs",
+      "totalCheckouts": "Emprunts totaux",
+      "totalCheckoutsSub": "Transactions historiques de prêt",
+      "activeBorrowers": "Emprunteurs actifs",
+      "activeBorrowersSub": "Membres actifs enregistrés",
       "overdueRate": "Taux de retard",
-      "acquisitions": "Acquisitions totales"
+      "overdueRateSub": "{{overdue}} en retard sur {{open}} en cours",
+      "physicalHoldings": "Fonds physiques",
+      "physicalHoldingsSub": "Sur {{titles}} titres du catalogue"
+    },
+    "charts": {
+      "circulationTrend": "Tendance de l'activité de prêt",
+      "vsLastPeriod": "+14% par rapport à la période précédente",
+      "topCategories": "Catégories les plus empruntées",
+      "statusDistribution": "Distribution du statut des exemplaires",
+      "hourlyRhythm": "Rythme horaire des prêts",
+      "checkoutsVsReturns": "Prêts vs Retours",
+      "peakHours": "Heures de pointe des prêts",
+      "mediaTypeDist": "Distribution des types de médias",
+      "fulfillmentStatus": "Statut d'exécution des prêts",
+      "dailyPace": "Rythme quotidien des prêts",
+      "copyStatusDist": "Distribution des statuts de copies",
+      "conditionHealth": "État physique des exemplaires",
+      "categoryShare": "Part des catégories dans l'inventaire",
+      "formatHoldingsCount": "Nombre d'exemplaires par format",
+      "membersByRole": "Membres par rôle académique",
+      "activeDepts": "Départements les plus actifs"
     },
     "print": "Imprimer",
     "thisMonth": "Ce Mois",
@@ -760,6 +789,7 @@
       "database": "Base de données",
       "integrationsai": "Intégrations & IA",
       "secretskeys": "Clés & Secrets",
+      "users": "Utilisateurs & Accès",
       "desktopdata": "Données de bureau",
       "about": "À propos"
     },
@@ -998,9 +1028,12 @@
       "saveBtn": "Enregistrer les clés"
     },
     "users": {
-      "title": "Utilisateurs et accès",
+      "title": "Utilisateurs & Accès",
       "desc": "Créez et gérez les comptes autorisés à se connecter à Warraq.",
       "addUser": "Ajouter un utilisateur",
+      "editUser": "Modifier l'utilisateur",
+      "fullName": "Nom complet",
+      "email": "Adresse e-mail",
       "username": "Nom d'utilisateur",
       "role": "Rôle",
       "initialPassword": "Mot de passe initial",
@@ -1008,6 +1041,7 @@
       "credentialsHelp": "Partagez ces identifiants avec le nouvel utilisateur de façon sécurisée. Ce mot de passe ne pourra plus être affiché — réinitialisez-le s'il est perdu.",
       "statusUpdated": "Statut de l'utilisateur mis à jour.",
       "roleUpdated": "Rôle de l'utilisateur mis à jour.",
+      "userUpdated": "Détails utilisateur mis à jour.",
       "deleted": "Utilisateur supprimé.",
       "you": "vous",
       "active": "Actif",
@@ -1053,6 +1087,136 @@
       "terms": "Conditions d'utilisation",
       "privacy": "Politique de confidentialité",
       "licenses": "Licences open source"
+    },
+    "help": {
+      "tipsTitle": "Conseils utiles",
+      "quickNavTitle": "Navigation rapide",
+      "general": {
+        "title": "Paramètres généraux",
+        "body": "Définit l'identité principale de votre bibliothèque et les préférences de l'opérateur.",
+        "tips": [
+          "Définir le nom officiel et le logo",
+          "Configurer le profil de l'opérateur pour les rapports",
+          "La sauvegarde automatique protège vos modifications"
+        ]
+      },
+      "libraryprofile": {
+        "title": "Profil de la bibliothèque",
+        "body": "Coordonnées et description utilisées sur les reçus imprimés et les documents officiels.",
+        "tips": [
+          "Ajouter une adresse pour les reçus imprimés",
+          "Les heures d'ouverture apparaissent sur les cartes",
+          "Le site web est utilisé dans les pieds de page"
+        ]
+      },
+      "localization": {
+        "title": "Localisation",
+        "body": "Contrôle la langue, le fuseau horaire et les formats de date de l'interface.",
+        "tips": [
+          "L'arabe active automatiquement la disposition RTL",
+          "Le format de date affecte tous les affichages",
+          "La devise est utilisée dans les rapports d'amendes"
+        ]
+      },
+      "appearance": {
+        "title": "Apparence",
+        "body": "Personnalisez l'expérience visuelle avec des thèmes, couleurs et tailles de texte.",
+        "tips": [
+          "Le thème du système suit les réglages de votre OS",
+          "La couleur d'accent s'applique aux boutons",
+          "Le texte grand format améliore l'accessibilité"
+        ]
+      },
+      "rules": {
+        "title": "Règles de circulation",
+        "body": "Définit la durée des prêts, le nombre d'emprunts et le fonctionnement des renouvellements.",
+        "tips": [
+          "La durée par défaut s'applique aux nouveaux prêts",
+          "La retenue de réservation évite le retour direct en rayon",
+          "La période de grâce retarde le calcul des amendes"
+        ]
+      },
+      "finesfees": {
+        "title": "Amendes & Frais",
+        "body": "Configure le calcul automatique des amendes pour les documents en retard.",
+        "tips": [
+          "Définir une amende maximale pour plafonner les frais",
+          "La période de grâce (dans Règles) décale le début de l'amende",
+          "Les amendes apparaissent dans le dossier membre"
+        ]
+      },
+      "notifications": {
+        "title": "Notifications",
+        "body": "Gère les événements système déclenchant des alertes.",
+        "tips": [
+          "Les rappels de retour imminents réduisent les retards",
+          "Les alertes de réservation aident au retrait à temps",
+          "Les alertes de retard s'affichent sur le tableau de bord"
+        ]
+      },
+      "backuprestore": {
+        "title": "Sauvegarde & Restauration",
+        "body": "Protégez les données de votre bibliothèque avec des sauvegardes régulières.",
+        "tips": [
+          "Exporter après de grandes sessions de catalogage",
+          "Conserver les sauvegardes sur un disque séparé",
+          "Ne jamais restaurer sans exporter d'abord"
+        ]
+      },
+      "database": {
+        "title": "Base de données",
+        "body": "Inspectez la base SQLite sous-jacente et effectuez la maintenance.",
+        "tips": [
+          "L'action VACUUM récupère l'espace disque inutilisé",
+          "Exécuter une fois par mois pour des performances optimales",
+          "La réinitialisation d'usine nécessite un redémarrage"
+        ]
+      },
+      "integrationsai": {
+        "title": "Intégrations & IA",
+        "body": "Connectez des services tiers pour enrichir votre catalogue et activer l'IA.",
+        "tips": [
+          "Google Books fournit les couvertures automatiquement",
+          "OpenAI génère des descriptions et sujets intelligents",
+          "Toutes les clés restent stockées sur votre appareil"
+        ]
+      },
+      "secretskeys": {
+        "title": "Clés & Secrets",
+        "body": "Les clés d'API sont stockées localement. Rien n'est envoyé à des serveurs externes.",
+        "tips": [
+          "Masquer les clés lors du partage d'écran",
+          "Supprimer les clés inutilement conservées",
+          "Les clés peuvent être réintroduites dans Intégrations"
+        ]
+      },
+      "users": {
+        "title": "Utilisateurs & Accès",
+        "body": "Les administrateurs peuvent créer des comptes, réinitialiser des mots de passe et désactiver l'accès.",
+        "tips": [
+          "Les nouveaux comptes doivent changer leur mot de passe à la 1ère connexion",
+          "Le dernier administrateur actif ne peut pas être rétrogradé",
+          "Désactiver un compte conserve son historique d'audit"
+        ]
+      },
+      "desktopdata": {
+        "title": "Données & Bureau",
+        "body": "Comportement de l'application Tauri et emplacement des données.",
+        "tips": [
+          "Le mode réduis dans la barre d'état garde l'application active",
+          "Ouvrir le dossier de données pour accéder aux sauvegardes",
+          "Vérifier régulièrement les mises à jour"
+        ]
+      },
+      "about": {
+        "title": "À propos de Warraq",
+        "body": "Warraq — وراق — signifie 'le copiste' ou 'le libraire' en arabe classique.",
+        "tips": [
+          "v1.0.0 est la version initiale",
+          "Conçu avec Tauri 2 et React",
+          "Les licences open source sont énumérées ci-dessous"
+        ]
+      }
     }
   },
   "profileCard": {
