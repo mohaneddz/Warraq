@@ -5,7 +5,6 @@ const defaults: Preferences = {
   onboardingComplete: false,
   libraryName: "Mustapha Bacha Hospital Library",
   libraryShortName: "",
-  libraryLogo: null,
   operatorName: "",
   operatorEmail: "",
   operatorAvatar: null,

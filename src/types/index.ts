@@ -2,13 +2,20 @@ export type CopyStatus = "available" | "on-loan" | "reserved" | "repair" | "lost
 export type MemberStatus = "active" | "suspended" | "expired" | "archived";
 export type ItemType = "book" | "magazine" | "notebook" | "journal" | "newspaper" | "disc" | "discs" | "other";
 
-export interface OperatorProfile {
+export type UserRole = "admin" | "staff";
+export type UserStatus = "active" | "disabled";
+
+export interface PublicUser {
   id: string;
-  name: string;
-  role: "Head Librarian" | "Assistant Librarian" | "Administrator" | "Cataloger" | "Staff";
+  username: string;
+  full_name: string;
   email?: string | null;
+  role: UserRole;
+  status: UserStatus;
   avatar_path?: string | null;
+  must_change_password: boolean;
   created_at: string;
+  last_login_at?: string | null;
 }
 
 
@@ -54,7 +61,6 @@ export interface Preferences {
   onboardingComplete: boolean;
   libraryName: string;
   libraryShortName: string;
-  libraryLogo?: string | null;
   operatorName: string;
   operatorEmail: string;
   operatorAvatar?: string | null;
