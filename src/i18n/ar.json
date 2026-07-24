@@ -9,8 +9,24 @@
   "actions": "إجراءات",
   "status": "الحالة",
   "status.active": "نشط",
+  "status.overdue": "متأخر",
+  "status.onloan": "مُعار",
   "statusConnected": "متصل",
   "statusDisconnected": "غير متصل",
+  "asc": "تصاعدي",
+  "desc": "تنازلي",
+  "contextMenu": {
+    "appTitle": "قائمة ورّاق التفاعلية",
+    "refresh": "تحديث الصفحة / البيانات",
+    "refreshed": "تم تحديث البيانات بنجاح",
+    "goBack": "الرجوع للخلف",
+    "goForward": "التقدم للأمام",
+    "dashboard": "الذهاب للوحة التحكم",
+    "lightTheme": "التبديل إلى الوضع الفاتح",
+    "darkTheme": "التبديل إلى الوضع الداكن",
+    "commandPalette": "البحث السريع / قائمة الأوامر",
+    "fullscreen": "ملء الشاشة"
+  },
   "nav": {
     "dashboard": "لوحة التحكم",
     "catalog": "الفهرس",
@@ -42,6 +58,7 @@
     "placeholderOp": "مثال: محمد بن علي"
   },
   "dashboard": {
+    "title": "نظرة عامة على لوحة التحكم",
     "welcome": "أهلاً بك مجددًا، {{name}}",
     "subtitle": "إليك ملخص ما يحدث في مكتبتك اليوم.",
     "quote": "العلم يُؤتى ولا يأتي",
@@ -88,7 +105,13 @@
     "return": "إرجاع كتاب",
     "checkIn": "تسجيل إرجاع نسخة",
     "renew": "تمديد الإعارة",
-    "extendLoan": "تمديد مدة الاستعارة"
+    "extendLoan": "تمديد مدة الاستعارة",
+    "refresh": "تحديث بيانات لوحة التحكم",
+    "refreshed": "تم تحديث بيانات لوحة التحكم",
+    "gotoCatalog": "الذهاب للفهرس",
+    "gotoMembers": "الذهاب للأعضاء",
+    "gotoReservations": "الذهاب للحجوزات",
+    "gotoInventory": "الذهاب للجرد"
   },
   "itemTypes": {
     "allItems": "جميع أنواع المواد",
@@ -127,6 +150,15 @@
     "subtitle": "المجموعة الرقمية • {{count}} مادة",
     "addBook": "إضافة مادة",
     "searchPlaceholder": "ابحث في الفهرس (العنوان، المؤلف، ردمك، نوع المادة)...",
+    "copiedIsbn": "تم نسخ الـ ISBN إلى الحافظة",
+    "copiedTitle": "تم نسخ العنوان إلى الحافظة",
+    "contextMenu": {
+      "viewDetails": "عرض تفاصيل الكتاب والنسخ",
+      "copyIsbn": "نسخ الـ ISBN",
+      "copyTitle": "نسخ العنوان",
+      "reserveBook": "حجز الكتاب",
+      "deleteBook": "حذف العنصر"
+    },
     "allCategories": "جميع التصنيفات",
     "allLanguages": "جميع اللغات",
     "allItems": "جميع أنواع المواد",
@@ -134,9 +166,7 @@
     "savedViews": "طرق العرض",
     "allBooks": "جميع المواد",
     "recentAdditions": "المضافة حديثًا",
-    "availableNow": "المتاحة حاليًا",
     "lowStock": "كمية منخفضة",
-    "outOfStock": "نفذت الكمية",
     "noCopies": "بدون نسخ",
     "missingCover": "بدون غلاف",
     "missingIsbn": "بدون ردمك",
@@ -185,7 +215,8 @@
       "copyShelfPlaceholder": "مثال: A-12",
       "copyCondition": "حالة النسخة",
       "addCopyBtn": "إضافة النسخة",
-      "byActor": "بواسطة {{actor}}"
+      "byActor": "بواسطة {{actor}}",
+      "specifications": "مواصفات العنصر"
     },
     "addModal": {
       "title": "إضافة كتاب جديد",
@@ -233,6 +264,7 @@
       "groqTip": "تلميح: قم بتهيئة مفتاح Groq API في الإعدادات للحصول على عناوين مترجمة للغة العربية تلقائيًا، وأوصاف مفصلة، ووسوم دقيقة.",
       "downloadingCover": "جاري تحميل صورة غلاف الكتاب...",
       "coverDownloaded": "تم تحميل غلاف الكتاب بنجاح!",
+      "bookDeleted": "تم حذف العنصر بنجاح",
       "updated": "تم تحديث بيانات الكتاب.",
       "updateError": "حدث خطأ غير معروف أثناء تحديث بيانات الكتاب.",
       "archived": "تم أرشفة الكتاب وجميع النسخ التابعة له.",
@@ -372,6 +404,23 @@
       "reservationCancelled": "تم إلغاء الحجز.",
       "confirmDelete": "هل أنت متأكد من رغبتك في حذف هذا العضو؟ سيتم الاحتفاظ بالسجل التاريخي ولكن ستتوقف أهليته للاستعارة."
     },
+    "noDepartment": "بدون قسم",
+    "firstName": "الاسم الأول",
+    "lastName": "اللقب",
+    "setActive": "تعيين كنشط",
+    "setSuspended": "تعيين كموقوف",
+    "setExpired": "تعيين كمنتهي",
+    "setArchived": "تعيين كـ مؤرشف",
+    "statusUpdated": "تم تحديث حالة العضو",
+    "viewDetails": "عرض التفاصيل والإعارات",
+    "copyNumber": "نسخ رقم العضوية",
+    "copiedNumber": "تم نسخ رقم العضوية",
+    "copyEmail": "نسخ البريد الإلكتروني",
+    "copiedEmail": "تم نسخ البريد الإلكتروني",
+    "copyPhone": "نسخ رقم الهاتف",
+    "copiedPhone": "تم نسخ رقم الهاتف",
+    "deleteMember": "حذف العضو",
+    "confirmDelete": "هل أنت متأكد أنك تريد حذف {{name}}؟ لا يمكن التراجع عن هذا الإجراء.",
     "bulk": {
       "selectedCount_zero": "لم يتم تحديد أي عضو",
       "selectedCount_one": "عضو واحد محدد",
@@ -380,6 +429,18 @@
       "selectedCount_many": "{{count}} عضوًا محددًا",
       "selectedCount_other": "{{count}} عضو محدد"
     }
+  },
+  "users": {
+    "switchedUser": "تم تغيير المشغل النشط إلى {{name}}",
+    "nameRequired": "يرجى إدخال اسم المشغل.",
+    "atLeastOne": "يجب الاحتفاظ بملف شخصي واحد على الأقل للمشغل.",
+    "operatorDeleted": "تمت إزالة ملف المشغل.",
+    "createProfile": "إنشاء ملف مشغل جديد",
+    "selectProfile": "تبديل ملف المشغل النشط",
+    "selectSubtitle": "حدد ملف أمين مكتبة محلي لتبديل مشغل الجلسة:",
+    "addProfile": "إضافة ملف جديد",
+    "avatarLabel": "الصورة الشخصية",
+    "saveAndSwitch": "إنشاء وتبديل"
   },
   "reservations": {
     "title": "الحجوزات المعلقة",
@@ -468,10 +529,6 @@
       "submit": "تأكيد وإنشاء الحجز",
       "submitting": "جاري الإنشاء..."
     },
-    "status": {
-      "ready": "جاهز للاستلام",
-      "queued": "في الانتظار"
-    },
     "alerts": {
       "bulkCancelled": "تم إلغاء الحجوزات المحددة.",
       "bulkCancelFailed": "فشل إلغاء الحجوزات.",
@@ -480,7 +537,26 @@
       "reservationCreated": "تم إنشاء الحجز بنجاح لـ {{name}}.",
       "fillVisitorName": "يرجى إدخال الاسم الكامل للزائر.",
       "selectMember": "يرجى اختيار عضو أو إدخال بيانات الزائر.",
-      "selectItem": "يرجى اختيار الكتاب المراد حجزه."
+      "selectItem": "يرجى اختيار الكتاب المراد حجزه.",
+      "deleted": "تم حذف الحجز نهائيًا.",
+      "markedReady": "تم تحديد الحجز كجاهز للاستلام.",
+      "extended": "تم تمديد مهلة الحجز 7 أيام.",
+      "bulkDeleted": "تم حذف الحجوزات المحددة.",
+      "bulkReady": "تم تحديد الحجوزات المحددة كجاهزة.",
+      "bulkExtended": "تم تمديد مهلة الحجوزات المحددة."
+    },
+    "markReady": "تعيين كجاهز للاستلام",
+    "extendHold": "تمديد الحجز (+7 أيام)",
+    "cancelRes": "إلغاء الحجز",
+    "viewDetails": "عرض تفاصيل الحجز",
+    "copyMember": "نسخ اسم العضو",
+    "copiedMember": "تم نسخ اسم العضو",
+    "copyBarcode": "نسخ الباركود",
+    "copiedBarcode": "تم نسخ الباركود",
+    "deleteRes": "حذف الحجز",
+    "confirmDelete": "هل أنت متأكد أنك تريد حذف الحجز الخاص بـ \"{{title}}\"؟",
+    "detailsModal": {
+      "title": "تفاصيل الحجز"
     },
     "bulk": {
       "selectedCount_zero": "لم يتم تحديد أي حجز",
@@ -488,7 +564,10 @@
       "selectedCount_two": "حجزان محددان",
       "selectedCount_few": "{{count}} حجوزات محددة",
       "selectedCount_many": "{{count}} حجزًا محددًا",
-      "selectedCount_other": "{{count}} حجز محدد"
+      "selectedCount_other": "{{count}} حجز محدد",
+      "markReady": "تحديد كجاهز",
+      "extend7Days": "تمديد +7 أيام",
+      "deleteSelected": "حذف نهائيًا"
     }
   },
   "inventory": {
@@ -549,6 +628,17 @@
       "copyUpdated": "تم تحديث تفاصيل النسخة بنجاح.",
       "confirmDiscardSession": "هل تريد التخلي عن جميع تقدم الجلسة الحالية؟"
     },
+    "setAvailable": "تعيين كـ متوفر",
+    "setLoaned": "تعيين كـ مُعار",
+    "setRepair": "تعيين في الصيانة",
+    "setLost": "تعيين كـ مفقود",
+    "statusUpdated": "تم تحديث حالة النسخة",
+    "viewCopy": "عرض / تعديل التفاصيل",
+    "copyBarcode": "نسخ الباركود",
+    "copiedBarcode": "تم نسخ الباركود إلى الحافظة",
+    "deleteCopy": "حذف النسخة",
+    "confirmDelete": "هل أنت متأكد من حذف النسخة رقم {{barcode}}؟",
+    "copyDeleted": "تم حذف النسخة بنجاح",
     "bulk": {
       "selectedCount_zero": "لم يتم تحديد أي نسخة",
       "selectedCount_one": "نسخة واحدة محددة",
@@ -561,6 +651,13 @@
   "reports": {
     "title": "التقارير والإحصائيات",
     "subtitle": "تصدير ملخصات النشاط، وسجلات الاستعارة ووثائق إكسل (Excel).",
+    "refreshReports": "تحديث التقارير",
+    "refreshed": "تم تحديث التقارير بنجاح",
+    "printReport": "طباعة صفحة التقارير",
+    "copySummary": "نسخ الملخص الإحصائي",
+    "copiedSummary": "تم نسخ ملخص الإحصائيات إلى الحافظة",
+    "exportCSV": "تصدير CSV",
+    "csvExported": "تم تصدير تقرير CSV بنجاح",
     "catalog": {
       "title": "جرد الفهرس العام",
       "desc": "تصدير قائمة الكتب والنسخ بالكامل إلى ملف إكسل"
@@ -623,6 +720,9 @@
       "details": "التفاصيل"
     },
     "searchPlaceholder": "البحث في سجل العمليات...",
+    "copiedEntity": "تم نسخ معرف العنصر",
+    "refreshLogs": "تحديث سجل النشاط",
+    "refreshed": "تم تحديث السجلات",
     "time": "التوقيت",
     "actor": "منفذ العملية",
     "action": "نوع العملية",
@@ -637,10 +737,16 @@
       "noActivitiesToExport": "لا توجد عمليات تطابق الفلاتر المحددة لتصديرها.",
       "exportSuccess": "تم تصدير {{count}} سجل عملية بنجاح بصيغة CSV.",
       "exportFailed": "فشل تصدير ملف CSV: {{error}}"
-    }
+    },
+    "inspectLog": "معاينة التفاصيل",
+    "copyAction": "نسخ اسم الإجراء",
+    "copiedAction": "تم نسخ الإجراء",
+    "copyEntity": "نسخ معرف العنصر"
   },
   "settings": {
     "title": "الإعدادات",
+    "saved": "حفظ التفضيلات",
+    "savedMsg": "تم حفظ الإعدادات بنجاح",
     "search": "ابحث في الإعدادات...",
     "searchPlaceholder": "ابحث في الإعدادات...",
     "proverb": "المخطوط الحي",
@@ -674,8 +780,6 @@
       "libName": "اسم المكتبة",
       "shortName": "الاسم المختصر (اختياري)",
       "shortNamePlaceholder": "مثال: مكتبة مستشفى مصطفى باشا",
-      "logo": "شعار المكتبة (اختياري)",
-      "logoHelp": "موصى به: شعار أفقي أو مربع. الحجم الأقصى: 2 ميجابايت",
       "operatorTitle": "ملف تعريف المشغل",
       "opName": "اسم المشغل",
       "opNamePlaceholder": "مثال: محمد بن علي",
@@ -922,7 +1026,13 @@
       "developer": "المطور المسؤول",
       "updates": "تحديثات البرنامج",
       "upToDate": "نظام ورّاق محدث بالكامل لأحدث إصدار",
-      "checkBtn": "التحقق من وجود تحديثات"
+      "checkBtn": "التحقق من وجود تحديثات",
+      "credits": "شكر وتقدير",
+      "designAndEngineering": "التصميم والهندسة",
+      "legal": "الجوانب القانونية",
+      "terms": "شروط الخدمة",
+      "privacy": "سياسة الخصوصية",
+      "licenses": "تراخيص المصادر المفتوحة"
     }
   },
   "profileCard": {

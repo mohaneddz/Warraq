@@ -9,8 +9,24 @@
   "actions": "Actions",
   "status": "Statut",
   "status.active": "Actif",
+  "status.overdue": "En retard",
+  "status.onloan": "En prêt",
   "statusConnected": "Connecté",
   "statusDisconnected": "Déconnecté",
+  "asc": "Croissant",
+  "desc": "Décroissant",
+  "contextMenu": {
+    "appTitle": "Menu contextuel Warraq",
+    "refresh": "Actualiser la page / les données",
+    "refreshed": "Données actualisées avec succès",
+    "goBack": "Retour",
+    "goForward": "Avancer",
+    "dashboard": "Aller au Tableau de bord",
+    "lightTheme": "Passer au mode clair",
+    "darkTheme": "Passer au mode sombre",
+    "commandPalette": "Recherche rapide / Palette de commandes",
+    "fullscreen": "Plein écran"
+  },
   "nav": {
     "dashboard": "Tableau de bord",
     "catalog": "Catalogue",
@@ -42,6 +58,7 @@
     "placeholderOp": "ex. Mohamed Benali"
   },
   "dashboard": {
+    "title": "Aperçu du tableau de bord",
     "welcome": "Bon retour, {{name}}",
     "subtitle": "Voici ce qui se passe dans votre bibliothèque aujourd'hui.",
     "quote": "العلم يُؤتى ولا يأتي",
@@ -88,7 +105,13 @@
     "return": "Retourner",
     "checkIn": "Enregistrer le retour",
     "renew": "Renouveler",
-    "extendLoan": "Prolonger l'emprunt"
+    "extendLoan": "Prolonger l'emprunt",
+    "refresh": "Actualiser les données",
+    "refreshed": "Données du tableau de bord mises à jour",
+    "gotoCatalog": "Aller au catalogue",
+    "gotoMembers": "Aller aux membres",
+    "gotoReservations": "Aller aux réservations",
+    "gotoInventory": "Aller à l'inventaire"
   },
   "itemTypes": {
     "allItems": "Tous les types d'éléments",
@@ -127,6 +150,15 @@
     "subtitle": "Collection numérique • {{count}} éléments",
     "addBook": "Ajouter un élément",
     "searchPlaceholder": "Rechercher (titres, auteurs, ISBN, types)...",
+    "copiedIsbn": "ISBN copié dans le presse-papiers",
+    "copiedTitle": "Titre copié dans le presse-papiers",
+    "contextMenu": {
+      "viewDetails": "Voir les détails et les exemplaires",
+      "copyIsbn": "Copier l'ISBN",
+      "copyTitle": "Copier le titre",
+      "reserveBook": "Réserver le livre",
+      "deleteBook": "Supprimer l'élément"
+    },
     "allCategories": "Toutes les catégories",
     "allLanguages": "Toutes les langues",
     "allItems": "Tous les types",
@@ -134,9 +166,7 @@
     "savedViews": "Vues enregistrées",
     "allBooks": "Tous les éléments",
     "recentAdditions": "Ajouts récents",
-    "availableNow": "Disponible actuellement",
     "lowStock": "Stock faible",
-    "outOfStock": "Rupture de stock",
     "noCopies": "Sans exemplaires",
     "missingCover": "Sans couverture",
     "missingIsbn": "Sans ISBN",
@@ -185,7 +215,8 @@
       "copyShelfPlaceholder": "ex: A-12",
       "copyCondition": "État",
       "addCopyBtn": "Ajouter l'exemplaire",
-      "byActor": "par {{actor}}"
+      "byActor": "par {{actor}}",
+      "specifications": "Caractéristiques de l'article"
     },
     "addModal": {
       "title": "Ajouter un nouveau livre",
@@ -233,6 +264,7 @@
       "groqTip": "Astuce: Configurez votre clé API Groq dans les paramètres pour obtenir des traductions automatiques en arabe, des descriptions détaillées et des tags ciblés.",
       "downloadingCover": "Téléchargement de l'image de couverture...",
       "coverDownloaded": "Couverture du livre téléchargée!",
+      "bookDeleted": "Élément supprimé avec succès",
       "updated": "Métadonnées du livre mises à jour.",
       "updateError": "Une erreur inconnue est survenue lors de la mise à jour du livre.",
       "archived": "Le livre et tous ses exemplaires ont été archivés.",
@@ -368,10 +400,39 @@
       "reservationCancelled": "Réservation annulée.",
       "confirmDelete": "Voulez-vous vraiment supprimer ce membre? L'historique est conservé mais son éligibilité prend fin."
     },
+    "noDepartment": "Sans département",
+    "firstName": "Prénom",
+    "lastName": "Nom de famille",
+    "setActive": "Définir comme actif",
+    "setSuspended": "Définir comme suspendu",
+    "setExpired": "Définir comme expiré",
+    "setArchived": "Définir comme archivé",
+    "statusUpdated": "Statut du membre mis à jour",
+    "viewDetails": "Voir les détails et prêts",
+    "copyNumber": "Copier le N° d'adhérent",
+    "copiedNumber": "N° d'adhérent copié",
+    "copyEmail": "Copier l'e-mail",
+    "copiedEmail": "E-mail copié",
+    "copyPhone": "Copier le téléphone",
+    "copiedPhone": "Téléphone copié",
+    "deleteMember": "Supprimer le membre",
+    "confirmDelete": "Voulez-vous vraiment supprimer {{name}} ? Cette action est irréversible.",
     "bulk": {
       "selectedCount_one": "{{count}} membre sélectionné",
       "selectedCount_other": "{{count}} membres sélectionnés"
     }
+  },
+  "users": {
+    "switchedUser": "Opérateur actif remplacé par {{name}}",
+    "nameRequired": "Veuillez entrer le nom de l'opérateur.",
+    "atLeastOne": "Vous devez conserver au moins un profil d'opérateur.",
+    "operatorDeleted": "Profil de l'opérateur supprimé.",
+    "createProfile": "Créer un nouveau profil d'opérateur",
+    "selectProfile": "Changer de profil d'opérateur actif",
+    "selectSubtitle": "Sélectionnez un profil de bibliothécaire local pour changer d'opérateur :",
+    "addProfile": "Ajouter un profil",
+    "avatarLabel": "Avatar du profil",
+    "saveAndSwitch": "Créer et basculer"
   },
   "reservations": {
     "title": "Réservations",
@@ -460,10 +521,6 @@
       "submit": "Créer la réservation",
       "submitting": "Création en cours..."
     },
-    "status": {
-      "ready": "Disponible",
-      "queued": "En attente"
-    },
     "alerts": {
       "bulkCancelled": "Réservations sélectionnées annulées.",
       "bulkCancelFailed": "Échec de l'annulation des réservations.",
@@ -472,11 +529,33 @@
       "reservationCreated": "Réservation créée pour {{name}}.",
       "fillVisitorName": "Veuillez saisir le nom complet du visiteur.",
       "selectMember": "Veuillez sélectionner un membre ou remplir les informations du visiteur.",
-      "selectItem": "Veuillez sélectionner un article à réserver."
+      "selectItem": "Veuillez sélectionner un article à réserver.",
+      "deleted": "Réservation supprimée définitivement.",
+      "markedReady": "Réservation marquée comme prête pour le retrait.",
+      "extended": "Délai de réservation prolongé de 7 jours.",
+      "bulkDeleted": "Réservations sélectionnées supprimées.",
+      "bulkReady": "Réservations sélectionnées marquées comme prêtes.",
+      "bulkExtended": "Délais des réservations sélectionnées prolongés."
+    },
+    "markReady": "Marquer prêt pour le retrait",
+    "extendHold": "Prolonger la réservation (+7 jours)",
+    "cancelRes": "Annuler la réservation",
+    "viewDetails": "Voir les détails de la réservation",
+    "copyMember": "Copier le nom du membre",
+    "copiedMember": "Nom du membre copié",
+    "copyBarcode": "Copier le code-barres",
+    "copiedBarcode": "Code-barres copié",
+    "deleteRes": "Supprimer la réservation",
+    "confirmDelete": "Voulez-vous vraiment supprimer la réservation pour « {{title}} » ?",
+    "detailsModal": {
+      "title": "Détails de la réservation"
     },
     "bulk": {
       "selectedCount_one": "{{count}} réservation sélectionnée",
-      "selectedCount_other": "{{count}} réservations sélectionnées"
+      "selectedCount_other": "{{count}} réservations sélectionnées",
+      "markReady": "Marquer prêt",
+      "extend7Days": "Prolonger de +7 jours",
+      "deleteSelected": "Supprimer définitivement"
     }
   },
   "inventory": {
@@ -537,6 +616,17 @@
       "copyUpdated": "Détails de l'exemplaire mis à jour.",
       "confirmDiscardSession": "Abandonner toute la progression de cette session?"
     },
+    "setAvailable": "Définir comme disponible",
+    "setLoaned": "Définir comme prêté",
+    "setRepair": "Définir en réparation",
+    "setLost": "Définir comme perdu",
+    "statusUpdated": "Statut de l'exemplaire mis à jour",
+    "viewCopy": "Voir / Modifier les détails",
+    "copyBarcode": "Copier le code-barres",
+    "copiedBarcode": "Code-barres copié dans le presse-papiers",
+    "deleteCopy": "Supprimer l'exemplaire",
+    "confirmDelete": "Voulez-vous vraiment supprimer l'exemplaire #{{barcode}}?",
+    "copyDeleted": "Exemplaire supprimé avec succès",
     "bulk": {
       "selectedCount_one": "{{count}} exemplaire sélectionné",
       "selectedCount_other": "{{count}} exemplaires sélectionnés"
@@ -545,6 +635,13 @@
   "reports": {
     "title": "Rapports",
     "subtitle": "Exporter des résumés, des statistiques de bibliothèque et des feuilles Excel.",
+    "refreshReports": "Actualiser les rapports",
+    "refreshed": "Rapports actualisés avec succès",
+    "printReport": "Imprimer le rapport",
+    "copySummary": "Copier le résumé statistique",
+    "copiedSummary": "Résumé des statistiques copié dans le presse-papiers",
+    "exportCSV": "Exporter en CSV",
+    "csvExported": "Rapport CSV exporté avec succès",
     "catalog": {
       "title": "Inventaire du catalogue",
       "desc": "Exporter tous les livres et exemplaires vers Excel"
@@ -603,6 +700,9 @@
       "details": "Détails"
     },
     "searchPlaceholder": "Rechercher dans les journaux d'activité...",
+    "copiedEntity": "ID d'entité copié",
+    "refreshLogs": "Actualiser l'historique d'activité",
+    "refreshed": "Journaux actualisés",
     "time": "Horodatage",
     "actor": "Acteur",
     "action": "Action",
@@ -617,10 +717,16 @@
       "noActivitiesToExport": "Aucune activité ne correspond aux filtres sélectionnés pour l'export.",
       "exportSuccess": "Export réussi de {{count}} lignes d'historique en CSV.",
       "exportFailed": "Échec de l'export CSV: {{error}}"
-    }
+    },
+    "inspectLog": "Inspecter les détails",
+    "copyAction": "Copier le nom de l'action",
+    "copiedAction": "Action copiée",
+    "copyEntity": "Copier l'ID de l'entité"
   },
   "settings": {
     "title": "Paramètres",
+    "saved": "Enregistrer les préférences",
+    "savedMsg": "Paramètres enregistrés avec succès",
     "search": "Rechercher des paramètres...",
     "searchPlaceholder": "Rechercher des paramètres...",
     "proverb": "المخطوط الحي",
@@ -654,8 +760,6 @@
       "libName": "Nom de la bibliothèque",
       "shortName": "Nom court (facultatif)",
       "shortNamePlaceholder": "ex. Bibliothèque Bacha",
-      "logo": "Logo de la bibliothèque (facultatif)",
-      "logoHelp": "Recommandé: logo paysage ou carré. Taille max: 2 Mo",
       "operatorTitle": "Profil de l'opérateur",
       "opName": "Nom de l'opérateur",
       "opNamePlaceholder": "ex. Mohamed Benali",
@@ -902,7 +1006,13 @@
       "developer": "Développeur principal",
       "updates": "Mises à jour",
       "upToDate": "Warraq est à jour",
-      "checkBtn": "Rechercher des mises à jour"
+      "checkBtn": "Rechercher des mises à jour",
+      "credits": "Crédits",
+      "designAndEngineering": "Design et développement",
+      "legal": "Mentions légales",
+      "terms": "Conditions d'utilisation",
+      "privacy": "Politique de confidentialité",
+      "licenses": "Licences open source"
     }
   },
   "profileCard": {

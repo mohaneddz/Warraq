@@ -9,8 +9,24 @@
   "actions": "Actions",
   "status": "Status",
   "status.active": "Active",
+  "status.overdue": "Overdue",
+  "status.onloan": "On loan",
   "statusConnected": "Connected",
   "statusDisconnected": "Disconnected",
+  "asc": "Asc",
+  "desc": "Desc",
+  "contextMenu": {
+    "appTitle": "Warraq Context Menu",
+    "refresh": "Refresh Page / Data",
+    "refreshed": "Data refreshed successfully",
+    "goBack": "Go Back",
+    "goForward": "Go Forward",
+    "dashboard": "Go to Dashboard",
+    "lightTheme": "Switch to Light Mode",
+    "darkTheme": "Switch to Dark Mode",
+    "commandPalette": "Quick Search / Command Palette",
+    "fullscreen": "Toggle Fullscreen"
+  },
   "nav": {
     "dashboard": "Dashboard",
     "catalog": "Catalog",
@@ -42,6 +58,7 @@
     "placeholderOp": "e.g. Mohamed Benali"
   },
   "dashboard": {
+    "title": "Dashboard Overview",
     "welcome": "Welcome back, {{name}}",
     "subtitle": "Here's what's happening in your library today.",
     "quote": "العلم يُؤتى ولا يأتي",
@@ -88,7 +105,13 @@
     "return": "Return",
     "checkIn": "Check in item",
     "renew": "Renew",
-    "extendLoan": "Extend loan"
+    "extendLoan": "Extend loan",
+    "refresh": "Refresh Dashboard Data",
+    "refreshed": "Dashboard data updated",
+    "gotoCatalog": "Go to Catalog",
+    "gotoMembers": "Go to Members",
+    "gotoReservations": "Go to Reservations",
+    "gotoInventory": "Go to Inventory"
   },
   "itemTypes": {
     "allItems": "All Item Types",
@@ -127,6 +150,15 @@
     "subtitle": "Digital collection • {{count}} items",
     "addBook": "Add item",
     "searchPlaceholder": "Search catalog (titles, authors, ISBNs, item types)...",
+    "copiedIsbn": "ISBN copied to clipboard",
+    "copiedTitle": "Title copied to clipboard",
+    "contextMenu": {
+      "viewDetails": "View Book Details & Copies",
+      "copyIsbn": "Copy ISBN",
+      "copyTitle": "Copy Title",
+      "reserveBook": "Reserve Book",
+      "deleteBook": "Delete Item"
+    },
     "allCategories": "All Categories",
     "allLanguages": "All Languages",
     "allItems": "All Item Types",
@@ -134,9 +166,7 @@
     "savedViews": "Saved views",
     "allBooks": "All Items",
     "recentAdditions": "Recent Additions",
-    "availableNow": "Available Now",
     "lowStock": "Low Stock",
-    "outOfStock": "Out of Stock",
     "noCopies": "No Copies",
     "missingCover": "Missing Cover",
     "missingIsbn": "Missing ISBN",
@@ -185,7 +215,8 @@
       "copyShelfPlaceholder": "e.g. A-12",
       "copyCondition": "Condition",
       "addCopyBtn": "Add copy",
-      "byActor": "by {{actor}}"
+      "byActor": "by {{actor}}",
+      "specifications": "Item Specifications"
     },
     "addModal": {
       "title": "Add New Book",
@@ -233,6 +264,7 @@
       "groqTip": "Tip: Configure your Groq API Key in Settings to get auto-translated Arabic titles, detailed descriptions, and targeted tags.",
       "downloadingCover": "Downloading book cover image...",
       "coverDownloaded": "Book cover downloaded!",
+      "bookDeleted": "Item deleted successfully",
       "updated": "Book metadata updated.",
       "updateError": "An unknown error occurred while updating the book.",
       "archived": "Book and all copies archived.",
@@ -368,10 +400,39 @@
       "reservationCancelled": "Reservation cancelled.",
       "confirmDelete": "Are you sure you want to delete this member? All history is retained, but eligibility ceases."
     },
+    "noDepartment": "No Department",
+    "firstName": "First Name",
+    "lastName": "Last Name",
+    "setActive": "Set Active",
+    "setSuspended": "Set Suspended",
+    "setExpired": "Set Expired",
+    "setArchived": "Set Archived",
+    "statusUpdated": "Member status updated",
+    "viewDetails": "View Details & Loans",
+    "copyNumber": "Copy Membership ID",
+    "copiedNumber": "Member ID copied",
+    "copyEmail": "Copy Email",
+    "copiedEmail": "Email copied",
+    "copyPhone": "Copy Phone",
+    "copiedPhone": "Phone copied",
+    "deleteMember": "Delete Member",
+    "confirmDelete": "Are you sure you want to delete {{name}}? This action cannot be undone.",
     "bulk": {
       "selectedCount_one": "{{count}} member selected",
       "selectedCount_other": "{{count}} members selected"
     }
+  },
+  "users": {
+    "switchedUser": "Switched active operator to {{name}}",
+    "nameRequired": "Please enter operator name.",
+    "atLeastOne": "You must keep at least one operator profile.",
+    "operatorDeleted": "Operator profile removed.",
+    "createProfile": "Create New Operator Profile",
+    "selectProfile": "Switch Active Operator Profile",
+    "selectSubtitle": "Select a local librarian profile to switch session operator:",
+    "addProfile": "Add New Profile",
+    "avatarLabel": "Profile Avatar",
+    "saveAndSwitch": "Create & Switch"
   },
   "reservations": {
     "title": "Reservations",
@@ -460,10 +521,6 @@
       "submit": "Create Reservation",
       "submitting": "Creating..."
     },
-    "status": {
-      "ready": "Ready",
-      "queued": "Queued"
-    },
     "alerts": {
       "bulkCancelled": "Selected reservations cancelled.",
       "bulkCancelFailed": "Failed to cancel reservations.",
@@ -472,11 +529,33 @@
       "reservationCreated": "Reservation created for {{name}}.",
       "fillVisitorName": "Please enter the visitor's full name.",
       "selectMember": "Please select a member or fill in visitor details.",
-      "selectItem": "Please select an item to reserve."
+      "selectItem": "Please select an item to reserve.",
+      "deleted": "Reservation deleted permanently.",
+      "markedReady": "Reservation marked as Ready for Pickup.",
+      "extended": "Reservation hold extended by 7 days.",
+      "bulkDeleted": "Selected reservations deleted.",
+      "bulkReady": "Selected reservations marked ready.",
+      "bulkExtended": "Selected reservation holds extended."
+    },
+    "markReady": "Mark Ready for Pickup",
+    "extendHold": "Extend Hold (+7 Days)",
+    "cancelRes": "Cancel Reservation",
+    "viewDetails": "View Reservation Details",
+    "copyMember": "Copy Member Name",
+    "copiedMember": "Member name copied",
+    "copyBarcode": "Copy Barcode",
+    "copiedBarcode": "Barcode copied",
+    "deleteRes": "Delete Reservation",
+    "confirmDelete": "Are you sure you want to delete the reservation for \"{{title}}\"?",
+    "detailsModal": {
+      "title": "Reservation Details"
     },
     "bulk": {
       "selectedCount_one": "{{count}} reservation selected",
-      "selectedCount_other": "{{count}} reservations selected"
+      "selectedCount_other": "{{count}} reservations selected",
+      "markReady": "Mark Ready",
+      "extend7Days": "Extend +7 Days",
+      "deleteSelected": "Delete Permanently"
     }
   },
   "inventory": {
@@ -537,6 +616,17 @@
       "copyUpdated": "Copy details updated.",
       "confirmDiscardSession": "Discard all scanning progress in this session?"
     },
+    "setAvailable": "Set Available",
+    "setLoaned": "Set On Loan",
+    "setRepair": "Set In Repair",
+    "setLost": "Set Lost",
+    "statusUpdated": "Copy status updated",
+    "viewCopy": "View / Edit Details",
+    "copyBarcode": "Copy Barcode",
+    "copiedBarcode": "Barcode copied to clipboard",
+    "deleteCopy": "Delete Copy",
+    "confirmDelete": "Are you sure you want to delete copy #{{barcode}}?",
+    "copyDeleted": "Copy deleted successfully",
     "bulk": {
       "selectedCount_one": "{{count}} copy selected",
       "selectedCount_other": "{{count}} copies selected"
@@ -545,6 +635,13 @@
   "reports": {
     "title": "Reports",
     "subtitle": "Export summaries, library statistics and Excel sheets.",
+    "refreshReports": "Refresh Reports",
+    "refreshed": "Reports refreshed successfully",
+    "printReport": "Print Report Page",
+    "copySummary": "Copy Stat Summary",
+    "copiedSummary": "Stat summary copied to clipboard",
+    "exportCSV": "Export CSV",
+    "csvExported": "CSV report exported successfully",
     "catalog": {
       "title": "Catalog Inventory",
       "desc": "Export all books and copies to Excel"
@@ -603,6 +700,9 @@
       "details": "Details"
     },
     "searchPlaceholder": "Search activity logs...",
+    "copiedEntity": "Entity ID copied",
+    "refreshLogs": "Refresh Activity History",
+    "refreshed": "Logs refreshed",
     "time": "Timestamp",
     "actor": "Actor",
     "action": "Action",
@@ -617,10 +717,16 @@
       "noActivitiesToExport": "No activities match the current filters to export.",
       "exportSuccess": "Successfully exported {{count}} audit logs as CSV.",
       "exportFailed": "Failed to export CSV: {{error}}"
-    }
+    },
+    "inspectLog": "Inspect Details",
+    "copyAction": "Copy Action Name",
+    "copiedAction": "Action copied",
+    "copyEntity": "Copy Entity ID"
   },
   "settings": {
     "title": "Settings",
+    "saved": "Save Preferences",
+    "savedMsg": "Settings saved successfully",
     "search": "Search settings...",
     "searchPlaceholder": "Search settings...",
     "proverb": "المخطوط الحي",
@@ -654,8 +760,6 @@
       "libName": "Library name",
       "shortName": "Short name (optional)",
       "shortNamePlaceholder": "e.g., MBH Library",
-      "logo": "Library logo (optional)",
-      "logoHelp": "Recommended: Landscape or Square logo. Max size: 2 MB",
       "operatorTitle": "Operator profile",
       "opName": "Operator name",
       "opNamePlaceholder": "e.g., Mohamed Benali",
@@ -902,7 +1006,13 @@
       "developer": "Developer",
       "updates": "Software updates",
       "upToDate": "Warraq is up to date",
-      "checkBtn": "Check for updates"
+      "checkBtn": "Check for updates",
+      "credits": "Credits",
+      "designAndEngineering": "Design & Engineering",
+      "legal": "Legal",
+      "terms": "Terms of Service",
+      "privacy": "Privacy Policy",
+      "licenses": "Open Source Licenses"
     }
   },
   "profileCard": {

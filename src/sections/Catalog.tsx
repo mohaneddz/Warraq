@@ -950,7 +950,7 @@ export function CatalogPage() {
         <div className="flex-1 bg-white dark:bg-[#1d2926] border border-black/5 dark:border-white/5 rounded-xl overflow-hidden flex flex-col shadow-card">
           <div className="flex-1 overflow-auto">
             {paginatedBooks.length ? (
-              <table className="w-full text-left text-[13px]">
+              <table className="min-w-[1100px] w-full text-left text-[13px]">
                 <thead className="bg-[#fcfbf8] dark:bg-[#111d1a] sticky top-0 border-b border-black/5 dark:border-white/5 text-[11px] font-bold text-[#122222]/50 dark:text-white/50 uppercase tracking-wider select-none">
                   <tr>
                     <th className="px-4 py-3 w-10">
@@ -967,25 +967,25 @@ export function CatalogPage() {
                         className="cursor-pointer rounded border-black/25 dark:border-white/25 text-emerald focus:ring-emerald h-4 w-4"
                       />
                     </th>
-                    <th className="px-4 py-3 cursor-pointer hover:text-emerald dark:hover:text-emerald-light" onClick={() => handleSort("title")}>
+                    <th className="px-4 py-3 whitespace-nowrap cursor-pointer hover:text-emerald dark:hover:text-emerald-light" onClick={() => handleSort("title")}>
                       {t("catalog.headers.title")} {sortBy === "title" ? (sortOrder === "asc" ? "▲" : "▼") : "↕"}
                     </th>
-                    <th className="px-4 py-3">
+                    <th className="px-4 py-3 whitespace-nowrap">
                       {t("catalog.headers.type", "TYPE")}
                     </th>
-                    <th className="px-4 py-3 cursor-pointer hover:text-emerald dark:hover:text-emerald-light" onClick={() => handleSort("author")}>
+                    <th className="px-4 py-3 whitespace-nowrap cursor-pointer hover:text-emerald dark:hover:text-emerald-light" onClick={() => handleSort("author")}>
                       {t("catalog.headers.author")} {sortBy === "author" ? (sortOrder === "asc" ? "▲" : "▼") : "↕"}
                     </th>
-                    <th className="px-4 py-3 cursor-pointer hover:text-emerald dark:hover:text-emerald-light" onClick={() => handleSort("category")}>
+                    <th className="px-4 py-3 whitespace-nowrap cursor-pointer hover:text-emerald dark:hover:text-emerald-light" onClick={() => handleSort("category")}>
                       {t("catalog.headers.category")} {sortBy === "category" ? (sortOrder === "asc" ? "▲" : "▼") : "↕"}
                     </th>
-                    <th className="px-4 py-3 cursor-pointer hover:text-emerald dark:hover:text-emerald-light" onClick={() => handleSort("isbn")}>
+                    <th className="px-4 py-3 whitespace-nowrap cursor-pointer hover:text-emerald dark:hover:text-emerald-light" onClick={() => handleSort("isbn")}>
                       {t("catalog.headers.isbn")} {sortBy === "isbn" ? (sortOrder === "asc" ? "▲" : "▼") : "↕"}
                     </th>
-                    <th className="px-4 py-3 cursor-pointer hover:text-emerald dark:hover:text-emerald-light" onClick={() => handleSort("created_at")}>
+                    <th className="px-4 py-3 whitespace-nowrap cursor-pointer hover:text-emerald dark:hover:text-emerald-light" onClick={() => handleSort("created_at")}>
                       {t("catalog.headers.dateAdded", "Date Added")} {sortBy === "created_at" ? (sortOrder === "asc" ? "▲" : "▼") : "↕"}
                     </th>
-                    <th className="px-4 py-3 cursor-pointer hover:text-emerald dark:hover:text-emerald-light" onClick={() => handleSort("available_copies")}>
+                    <th className="px-4 py-3 whitespace-nowrap cursor-pointer hover:text-emerald dark:hover:text-emerald-light" onClick={() => handleSort("available_copies")}>
                       {t("catalog.headers.availability", "Availability")} {sortBy === "available_copies" ? (sortOrder === "asc" ? "▲" : "▼") : "↕"}
                     </th>
                     <th className="px-4 py-3 w-10"></th>

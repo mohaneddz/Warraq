@@ -606,6 +606,7 @@ export function MembersPage() {
                 onChange={(val) => addForm.setValue("avatar_path", val)}
                 shape="circle"
                 label={t("members.avatar")}
+                fallbackInitials={getMemberInitials(`${addForm.watch("first_name") || ""} ${addForm.watch("last_name") || ""}`.trim()) || "MB"}
               />
             </div>
             
@@ -651,14 +652,14 @@ export function MembersPage() {
             <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60">
               <span>{t("members.roleLabel")} <span className="text-red-500">*</span></span>
               <select {...addForm.register("role")} className="field-select text-[13px] py-2 px-3 mt-1 font-semibold w-full bg-white dark:bg-[#1d2926]">
-                <option value="Student">{t("roles.student", "Student")}</option>
-                <option value="Staff">{t("roles.staff", "Staff")}</option>
-                <option value="Researcher">{t("roles.researcher", "Researcher")}</option>
-                <option value="Visitor">{t("roles.visitor", "Visitor")}</option>
-                <option value="Faculty">{t("roles.faculty", "Faculty")}</option>
-                <option value="Doctor">{t("roles.doctor", "Doctor")}</option>
-                <option value="Nurse">{t("roles.nurse", "Nurse")}</option>
-                <option value="Other">{t("roles.other", "Other")}</option>
+                <option value="Student">{t("members.roles.student", "Student")}</option>
+                <option value="Staff">{t("members.roles.staff", "Staff")}</option>
+                <option value="Researcher">{t("members.roles.researcher", "Researcher")}</option>
+                <option value="Visitor">{t("members.roles.visitor", "Visitor")}</option>
+                <option value="Faculty">{t("members.roles.faculty", "Faculty")}</option>
+                <option value="Doctor">{t("members.roles.doctor", "Doctor")}</option>
+                <option value="Nurse">{t("members.roles.nurse", "Nurse")}</option>
+                <option value="Other">{t("members.roles.other", "Other")}</option>
               </select>
               {addForm.formState.errors.role && <small className="text-red-500">{addForm.formState.errors.role.message}</small>}
             </label>
@@ -679,8 +680,8 @@ export function MembersPage() {
             </label>
 
             <div className="md:col-span-2 flex gap-2 justify-end pt-4 pb-4 border-t border-black/5 dark:border-white/5">
-              <Button type="button" variant="ghost" onClick={() => setAdding(false)}>{t("catalog.addModal.cancel")}</Button>
-              <Button type="submit" disabled={addMutation.isPending}>{addMutation.isPending ? "Saving..." : t("catalog.addModal.save")}</Button>
+              <Button type="button" variant="ghost" onClick={() => setAdding(false)}>{t("members.addModal.cancel") || t("catalog.addModal.cancel")}</Button>
+              <Button type="submit" disabled={addMutation.isPending}>{addMutation.isPending ? "Saving..." : (t("members.addModal.save") || "Save member")}</Button>
             </div>
           </form>
         </Modal>
@@ -939,6 +940,7 @@ function MemberSidebar({ member, onClose, registerClean }: { member: Member; onC
                   onChange={(val) => editForm.setValue("avatar_path", val || null)}
                   shape="circle"
                   label={t("members.avatar")}
+                  fallbackInitials={getMemberInitials(member.full_name)}
                 />
               </div>
 
@@ -971,14 +973,14 @@ function MemberSidebar({ member, onClose, registerClean }: { member: Member; onC
               <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60">
                 <span>{t("members.roleLabel")} <span className="text-red-500">*</span></span>
                 <select {...editForm.register("role")} className="field-select text-[13px] py-2 px-3 mt-1 font-semibold w-full bg-white dark:bg-[#1d2926]">
-                  <option value="Student">{t("roles.student", "Student")}</option>
-                  <option value="Staff">{t("roles.staff", "Staff")}</option>
-                  <option value="Researcher">{t("roles.researcher", "Researcher")}</option>
-                  <option value="Visitor">{t("roles.visitor", "Visitor")}</option>
-                  <option value="Faculty">{t("roles.faculty", "Faculty")}</option>
-                  <option value="Doctor">{t("roles.doctor", "Doctor")}</option>
-                  <option value="Nurse">{t("roles.nurse", "Nurse")}</option>
-                  <option value="Other">{t("roles.other", "Other")}</option>
+                  <option value="Student">{t("members.roles.student", "Student")}</option>
+                  <option value="Staff">{t("members.roles.staff", "Staff")}</option>
+                  <option value="Researcher">{t("members.roles.researcher", "Researcher")}</option>
+                  <option value="Visitor">{t("members.roles.visitor", "Visitor")}</option>
+                  <option value="Faculty">{t("members.roles.faculty", "Faculty")}</option>
+                  <option value="Doctor">{t("members.roles.doctor", "Doctor")}</option>
+                  <option value="Nurse">{t("members.roles.nurse", "Nurse")}</option>
+                  <option value="Other">{t("members.roles.other", "Other")}</option>
                 </select>
                 {editForm.formState.errors.role && <small className="text-red-500">{editForm.formState.errors.role.message}</small>}
               </label>
@@ -996,8 +998,8 @@ function MemberSidebar({ member, onClose, registerClean }: { member: Member; onC
                 </select>
               </label>
               <div className="md:col-span-2 flex gap-2 justify-end pt-4 border-t border-black/5 dark:border-white/5">
-                <Button type="button" variant="ghost" onClick={() => setIsEditing(false)}>{t("catalog.addModal.cancel")}</Button>
-                <Button type="submit" disabled={updateMutation.isPending}>{updateMutation.isPending ? "Saving..." : t("catalog.addModal.save")}</Button>
+                <Button type="button" variant="ghost" onClick={() => setIsEditing(false)}>{t("members.addModal.cancel") || t("catalog.addModal.cancel")}</Button>
+                <Button type="submit" disabled={updateMutation.isPending}>{updateMutation.isPending ? "Saving..." : (t("members.addModal.save") || "Save member")}</Button>
               </div>
             </form>
           </Modal>

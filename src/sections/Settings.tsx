@@ -108,13 +108,13 @@ export function SettingsPage() {
       },
       {
         id: "tab-appearance",
-        label: t("settings.groups.appearance", "Appearance & Theme"),
+        label: t("settings.tabs.appearance", "Appearance & Theme"),
         icon: Palette,
         onClick: () => setActiveTab("Appearance"),
       },
       {
         id: "tab-backup",
-        label: t("settings.groups.backup", "Backup & Restore"),
+        label: t("settings.tabs.backuprestore", "Backup & Restore"),
         icon: HardDrive,
         onClick: () => setActiveTab("Backup & Restore"),
       },
@@ -214,16 +214,6 @@ function GeneralTab({ prefs, update }: TabProps) {
             <input type="text" defaultValue={prefs.libraryShortName} placeholder={t("settings.general.shortNamePlaceholder")} onBlur={e => update({ libraryShortName: e.target.value })} className={inputCls} />
           </Field>
         </div>
-        <Field label={t("settings.general.logo")}>
-          <div className="flex items-center gap-4">
-            <ImageUpload
-              value={prefs.libraryLogo}
-              onChange={val => update({ libraryLogo: val })}
-              shape="rect"
-            />
-            <p className="text-[11px] text-[#122222]/40 dark:text-white/40">{t("settings.general.logoHelp")}</p>
-          </div>
-        </Field>
       </Card>
 
       <Card title={t("settings.general.operatorTitle")} icon={<UserCircle size={16} className="text-[#b96f3e]" />}>
