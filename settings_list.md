@@ -11,7 +11,6 @@ This file documents all the configuration settings available in the Warraq setti
 | :--- | :--- | :--- | :--- | :--- |
 | **Library Name** | `libraryName` | String | `"Mustapha Bacha Hospital Library"` | Official name of the library. |
 | **Short Name** | `libraryShortName` | String | `"Warraq"` | Abbreviated name used for compact UI layouts. |
-| **Library Logo** | `libraryLogo` | String (Path) | `null` | File path to the custom library logo. |
 | **Librarian / Operator Name** | `operatorName` | String | `""` | Name of the primary operator printed on slips and logs. |
 | **Operator Email** | `operatorEmail` | String | `""` | Contact email address for the active operator. |
 | **Operator Avatar** | `operatorAvatar` | String (Path) | `null` | Image file path for the operator's profile avatar. |

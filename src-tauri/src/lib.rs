@@ -1,3 +1,5 @@
+mod auth;
+
 use tauri::{Emitter, Manager, WindowEvent};
 use tauri::menu::{MenuBuilder, MenuItemBuilder};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
@@ -14,6 +16,7 @@ fn migrations() -> Vec<Migration> {
         Migration { version: 2, description: "library_indexes_and_fts", sql: include_str!("../migrations/0002_indexes.sql"), kind: MigrationKind::Up },
         Migration { version: 3, description: "add_arabic_title_and_tags", sql: include_str!("../migrations/0003_add_arabic_title.sql"), kind: MigrationKind::Up },
         Migration { version: 4, description: "schema_integrity_indexes", sql: include_str!("../migrations/0004_schema_integrity.sql"), kind: MigrationKind::Up },
+        Migration { version: 5, description: "users_auth", sql: include_str!("../migrations/0005_users_auth.sql"), kind: MigrationKind::Up },
     ]
 }
 
@@ -135,6 +138,12 @@ fn install_tray(app: &tauri::App) -> tauri::Result<()> {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // Best-effort: loads WARRAQ_ADMIN_USERNAME/WARRAQ_ADMIN_PASSWORD (and anything
+    // else) from a .env file if one is found searching up from the working
+    // directory. Silently does nothing if no .env exists — real OS environment
+    // variables work either way.
+    dotenvy::dotenv().ok();
+
     tauri::Builder::default()
         .plugin(tauri_plugin_sql::Builder::default().add_migrations("sqlite:warraq.db", migrations()).build())
         .plugin(tauri_plugin_store::Builder::default().build())
@@ -150,6 +159,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
             app.manage(TrayConfig(AtomicBool::new(true)));
+            app.manage(auth::SessionState::default());
             let salt = app.path().app_local_data_dir()?.join("stronghold.salt");
             app.handle().plugin(tauri_plugin_stronghold::Builder::with_argon2(&salt).build())?;
             install_tray(app)?;
@@ -165,7 +175,22 @@ pub fn run() {
                 }
             }
         })
-        .invoke_handler(tauri::generate_handler![validate_provider_url, application_diagnostics, set_close_to_tray, run_transaction])
+        .invoke_handler(tauri::generate_handler![
+            validate_provider_url,
+            application_diagnostics,
+            set_close_to_tray,
+            run_transaction,
+            auth::bootstrap_admin_if_needed,
+            auth::auth_login,
+            auth::auth_logout,
+            auth::auth_current_session,
+            auth::auth_list_users,
+            auth::auth_create_user,
+            auth::auth_update_user,
+            auth::auth_reset_password,
+            auth::auth_change_own_password,
+            auth::auth_delete_user,
+        ])
         .run(tauri::generate_context!())
         .expect("error while running Warraq");
 }
