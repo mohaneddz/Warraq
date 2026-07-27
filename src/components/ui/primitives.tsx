@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { cn } from "../../utils/cn";
 import { X } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { useThemedAsset } from "../../utils/useThemedAsset";
 
 export function Button({ className, variant = "primary", ...props }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: "primary" | "secondary" | "danger" | "ghost" }) {
   const variants = { 
@@ -55,15 +56,20 @@ export function ItemTypeBadge({ type, className }: { type?: string; className?: 
   );
 }
 
-export function EmptyState({ title, description, action, icon: Icon }: { title: string; description: string; action?: React.ReactNode; icon?: React.ElementType }) { 
+export function EmptyState({ title, description, action, icon: Icon, image }: { title: string; description: string; action?: React.ReactNode; icon?: React.ElementType; image?: string }) {
+  const illustration = useThemedAsset(image || "");
   return (
     <Card className="flex min-h-48 flex-col items-center justify-center text-center">
-      {Icon && <div className="mb-3 grid h-12 w-12 place-items-center rounded-full bg-emerald/10 text-emerald"><Icon size={24}/></div>}
+      {image ? (
+        <img src={illustration} alt="" aria-hidden="true" className="mb-3 h-28 w-auto object-contain" />
+      ) : Icon ? (
+        <div className="mb-3 grid h-12 w-12 place-items-center rounded-full bg-emerald/10 text-emerald"><Icon size={24}/></div>
+      ) : null}
       <h3 className="font-display text-lg font-bold">{title}</h3>
       <p className="mt-1 max-w-sm text-sm text-ink/65 dark:text-parchment/65">{description}</p>
       {action && <div className="mt-4">{action}</div>}
     </Card>
-  ); 
+  );
 }
 
 interface ModalProps {

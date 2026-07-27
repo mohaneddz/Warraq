@@ -312,6 +312,10 @@
     "fine": "Fine",
     "renew": "Renew",
     "return": "Return",
+    "renewReceiptTitle": "Renewal Receipt",
+    "returnReceiptTitle": "Return Receipt",
+    "newDueDate": "New due date",
+    "returnedOn": "Returned on",
     "noActiveLoans": "No active loans for this member.",
     "endSession": "End Session",
     "limitReached": "Limit reached",
@@ -340,6 +344,8 @@
     "title": "Members",
     "subtitle": "Manage borrowing eligibility, contact information, and membership.",
     "addMember": "Add member",
+    "viewIdCard": "View ID Card",
+    "idCardTitle": "Member ID Card",
     "search": "Search members...",
     "allMembers": "All Members",
     "active": "Active",
@@ -1239,7 +1245,8 @@
     "confirm": "Confirm",
     "select": "Select",
     "clear": "Clear",
-    "loading": "Loading..."
+    "loading": "Loading...",
+    "close": "Close"
   },
   "boot": {
     "database": "Connecting to SQLite database…",

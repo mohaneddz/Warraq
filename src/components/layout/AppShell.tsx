@@ -335,8 +335,16 @@ export function AppShell() {
 
       <div className="flex flex-1 overflow-hidden relative">
         {/* Sidebar */}
-        <aside className={(sidebarOpen ? "" : "w-[80px]") + " relative shrink-0 text-white flex flex-col z-40 " + (isDragging ? "" : "transition-[width]")} style={{ width: sidebarOpen ? `${sidebarWidth}px` : "80px", background: '#122222' }}>
-          
+        <aside className={(sidebarOpen ? "" : "w-[80px]") + " relative shrink-0 text-white flex flex-col z-40 overflow-hidden " + (isDragging ? "" : "transition-[width]")} style={{ width: sidebarOpen ? `${sidebarWidth}px` : "80px", background: '#122222' }}>
+
+          {/* Decorative geometric watermark, anchored to the sidebar's leading top corner */}
+          <img
+            src="/assets/warraq-sidebar-pattern-dark.png"
+            alt=""
+            aria-hidden="true"
+            className={`absolute top-0 w-full h-auto opacity-[0.16] mix-blend-screen pointer-events-none select-none ${preferences.locale === "ar" ? "right-0 scale-x-[-1]" : "left-0"}`}
+          />
+
           {/* Decorative Book Spine Pattern */}
           <div className="absolute top-0 right-0 bottom-0 w-[24px] opacity-100 pointer-events-none" style={{ background: 'url("data:image/svg+xml,%3Csvg width=\'24\' height=\'60\' viewBox=\'0 0 24 60\' fill=\'none\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cpath d=\'M24 0H20C15.5817 0 12 3.58172 12 8V22C12 26.4183 8.41828 30 4 30C8.41828 30 12 33.5817 12 38V52C12 56.4183 15.5817 60 20 60H24V0Z\' fill=\'%23c5a059\' fill-opacity=\'0.85\'/%3E%3C/svg%3E") repeat-y' }}></div>
 
