@@ -16,6 +16,8 @@ import { formatDisplayCurrency } from "../utils/currency";
 import { useContextMenu } from "../components/ui/ContextMenu";
 import { queryClient } from "../app/providers";
 import { toast } from "sonner";
+import { useThemedAsset } from "../utils/useThemedAsset";
+import { cn } from "../utils/cn";
 
 
 export function DashboardPage() {
@@ -90,6 +92,13 @@ export function DashboardPage() {
     });
   }, [metrics.activity, prefs.locale]);
 
+  const heroSrc = useThemedAsset("dashboard-hero-book");
+  const recentBooksSrc = useThemedAsset("dashboard-recent-books-quill");
+  const clockSrc = useThemedAsset("dashboard-clock");
+  const medalSrc = useThemedAsset("activity-medal");
+  const quillSrc = useThemedAsset("dashboard-quill");
+  const isRtl = prefs.locale === "ar";
+
   const { showContextMenu } = useContextMenu();
 
 
@@ -157,9 +166,25 @@ export function DashboardPage() {
           </h1>
           <p className="text-[14px] text-[#122222]/60 dark:text-white/60 mt-1">{t("dashboard.subtitle")}</p>
         </div>
-        <div className="text-left md:text-right">
-          <h2 className="text-[28px] font-arabic font-bold text-emerald dark:text-emerald-light mb-1">{t("dashboard.quote")}</h2>
-          <p className="text-[10px] font-bold tracking-[0.15em] text-[#122222]/40 dark:text-white/40 uppercase">{t("dashboard.quoteTranslation")}</p>
+
+        {/* Hero illustration: the quote sits in the illustration's own empty margin, so the
+            image is never stretched or cropped away from its authored 1774x887 proportions. */}
+        <div className="relative w-full md:w-auto md:max-w-[460px] aspect-[1774/887] shrink-0">
+          <img
+            src={heroSrc}
+            alt=""
+            aria-hidden="true"
+            className={cn("absolute inset-0 h-full w-full object-contain", isRtl && "scale-x-[-1]")}
+          />
+          <div
+            className={cn(
+              "absolute inset-y-[10%] w-[28%] flex flex-col justify-center text-center",
+              isRtl ? "left-[14%]" : "right-[14%]"
+            )}
+          >
+            <h2 className="text-[18px] leading-tight font-arabic font-bold text-emerald dark:text-emerald-light mb-1">{t("dashboard.quote")}</h2>
+            <p className="text-[8px] font-bold tracking-[0.1em] text-[#122222]/50 dark:text-white/60 uppercase">{t("dashboard.quoteTranslation")}</p>
+          </div>
         </div>
       </div>
 
@@ -239,8 +264,8 @@ export function DashboardPage() {
                   </div>
                 ))
               ) : (
-                <div className="flex flex-col items-center justify-center py-10 opacity-50">
-                  <BookOpen size={24} className="mb-2 text-[#122222]/30" />
+                <div className="flex flex-col items-center justify-center py-6 opacity-70">
+                  <img src={recentBooksSrc} alt="" aria-hidden="true" className="h-16 w-auto object-contain mb-1" />
                   <span className="text-xs">{t("dashboard.noActiveLoans")}</span>
                 </div>
               )}
@@ -294,8 +319,8 @@ export function DashboardPage() {
                   );
                 })
               ) : (
-                <div className="flex flex-col items-center justify-center py-10 opacity-50">
-                  <Clock3 size={24} className="mb-2 text-[#122222]/30" />
+                <div className="flex flex-col items-center justify-center py-6 opacity-80">
+                  <img src={medalSrc} alt="" aria-hidden="true" className="h-16 w-auto object-contain mb-1" />
                   <span className="text-xs">{t("dashboard.noOverdueLoans")}</span>
                 </div>
               )}
@@ -333,8 +358,8 @@ export function DashboardPage() {
                   </div>
                 ))
               ) : (
-                <div className="flex flex-col items-center justify-center py-10 opacity-50">
-                  <Bookmark size={24} className="mb-2 text-[#122222]/30" />
+                <div className="flex flex-col items-center justify-center py-6 opacity-70">
+                  <img src={clockSrc} alt="" aria-hidden="true" className="h-16 w-auto object-contain mb-1" />
                   <span className="text-xs">{t("dashboard.noHoldsReady")}</span>
                 </div>
               )}
@@ -384,9 +409,15 @@ export function DashboardPage() {
         {/* Quick actions & At a glance */}
         <div className="xl:col-span-1 flex flex-col gap-6 h-[300px]">
           {/* Quick Actions */}
-          <div className="flex-1 bg-white dark:bg-[#1d2926] rounded-2xl p-5 shadow-card border border-black/5 dark:border-white/5 flex flex-col">
-            <h3 className="font-bold text-[14px] text-[#122222] dark:text-white mb-4">{t("dashboard.quickActions")}</h3>
-            <div className="grid grid-cols-2 gap-3 flex-1">
+          <div className="relative flex-1 bg-white dark:bg-[#1d2926] rounded-2xl p-5 shadow-card border border-black/5 dark:border-white/5 flex flex-col overflow-hidden">
+            <img
+              src={quillSrc}
+              alt=""
+              aria-hidden="true"
+              className={`absolute -bottom-6 h-[140%] w-auto object-contain opacity-[0.06] pointer-events-none select-none ${isRtl ? "-left-6" : "-right-6"}`}
+            />
+            <h3 className="relative font-bold text-[14px] text-[#122222] dark:text-white mb-4">{t("dashboard.quickActions")}</h3>
+            <div className="relative grid grid-cols-2 gap-3 flex-1">
               <ActionCard icon={<ScanLine size={20}/>} title={t("dashboard.scanIsbn") || "Scan ISBN"} subtitle={t("dashboard.addBook") || "Add new book"} onClick={() => navigate("/catalog?action=add-book")} />
               <ActionCard icon={<UsersRound size={20}/>} title={t("dashboard.addMember") || "Add Member"} subtitle={t("dashboard.addMemberSub") || "Create member profile"} onClick={() => navigate("/members?action=add-member")} />
               <ActionCard icon={<CalendarClock size={20}/>} title={t("dashboard.newReservation") || "New Reservation"} subtitle={t("dashboard.newReservationSub") || "Reserve item for member"} onClick={() => navigate("/reservations?action=new-reservation")} />

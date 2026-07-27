@@ -18,12 +18,13 @@ import {
 import type { Member } from "../types";
 import { Modal, Input, Button } from "../components/ui/primitives";
 import { toast } from "sonner";
-import { daysLate, formatDisplayDate } from "../utils/dates";
+import { daysLate, formatDisplayDate, dueDate, today } from "../utils/dates";
 import { queryClient } from "../app/providers";
 import { useUiStore } from "../store/uiStore";
 import { ImageUpload } from "../components/ui/ImageUpload";
 import { cleanPhone, cleanMemberNumber, cleanText, cleanLastName, formatMemberNumber, generateRandomMemberNumber } from "../utils/isbn";
 import { useTranslation } from "react-i18next";
+import { useThemedAsset } from "../utils/useThemedAsset";
 
 const invalidate = () => queryClient.invalidateQueries();
 
@@ -727,6 +728,8 @@ function MemberSidebar({ member, onClose, registerClean }: { member: Member; onC
   const prefs = useUiStore((state) => state.preferences);
   const [activeTab, setActiveTab] = useState<"profile" | "loans" | "reservations">("profile");
   const [isEditing, setIsEditing] = useState(false);
+  const [showIdCard, setShowIdCard] = useState(false);
+  const [receipt, setReceipt] = useState<{ kind: "renew" | "return"; title: string; date: string } | null>(null);
 
   // Queries
   const { data: memberLoans, refetch: refetchLoans } = useQuery({ 
@@ -911,8 +914,15 @@ function MemberSidebar({ member, onClose, registerClean }: { member: Member; onC
               <SidebarInfoRow label={t("members.registeredOn")} value={formatDisplayDate(member.joined_at)} />
             </div>
 
+            <button
+              onClick={() => setShowIdCard(true)}
+              className="w-full flex items-center justify-center gap-2 bg-emerald/10 text-emerald dark:bg-emerald-light/10 dark:text-emerald-light text-[12px] font-bold py-2.5 rounded-lg hover:bg-emerald/15 transition-colors cursor-pointer"
+            >
+              <IdCard size={14} /> {t("members.viewIdCard", "View ID Card")}
+            </button>
+
             <div className="flex gap-2 pt-4 border-t border-black/5 dark:border-white/5 w-full">
-              <button 
+              <button
                 onClick={() => setIsEditing(true)}
                 className="flex-1 flex items-center justify-center gap-2 bg-[#fcfbf8] dark:bg-[#111d1a] border border-black/10 dark:border-white/10 text-[12px] font-bold text-[#122222] dark:text-white py-2 rounded-lg hover:bg-black/5 transition-colors cursor-pointer"
               >
@@ -931,6 +941,12 @@ function MemberSidebar({ member, onClose, registerClean }: { member: Member; onC
             </div>
           </div>
         )}
+
+        {/* Member ID Card Modal */}
+        <MemberIdCardModal member={member} isOpen={showIdCard} onClose={() => setShowIdCard(false)} />
+
+        {/* Circulation Receipt Modal */}
+        <CirculationReceiptModal receipt={receipt} memberName={member.full_name} onClose={() => setReceipt(null)} />
 
         {/* Edit Member Modal */}
         {isEditing && (
@@ -1029,16 +1045,20 @@ function MemberSidebar({ member, onClose, registerClean }: { member: Member; onC
                       {t("circulation.due") || "Due date"}: <span className="font-semibold">{formatDisplayDate(loan.due_at)}</span>
                     </div>
                     <div className="flex gap-2 mt-1">
-                      <button 
-                        onClick={() => renewMutation.mutate(loan.id)}
+                      <button
+                        onClick={() => renewMutation.mutate(loan.id, {
+                          onSuccess: () => setReceipt({ kind: "renew", title: loan.title || "", date: dueDate(prefs.loanDays) })
+                        })}
                         disabled={renewMutation.isPending || renewDisabled}
                         className="flex-1 flex items-center justify-center gap-1 py-1 text-[11px] font-semibold text-[#122222]/80 dark:text-white/80 bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 rounded cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                         title={renewDisabled ? t("circulation.alerts.renewLimitReached") || "Renewal limit reached" : undefined}
                       >
                         {t("circulation.renew") || "Renew"} ({loan.renewed_count}/{prefs.renewLimit})
                       </button>
-                      <button 
-                        onClick={() => returnMutation.mutate([loan.copy_id])}
+                      <button
+                        onClick={() => returnMutation.mutate([loan.copy_id], {
+                          onSuccess: () => setReceipt({ kind: "return", title: loan.title || "", date: today() })
+                        })}
                         disabled={returnMutation.isPending}
                         className="flex-1 flex items-center justify-center gap-1 py-1 text-[11px] font-semibold text-emerald bg-emerald/10 dark:bg-emerald-light/10 dark:text-emerald-light hover:bg-emerald/20 rounded cursor-pointer"
                       >
@@ -1090,5 +1110,87 @@ function SidebarInfoRow({ label, value }: { label: string; value: string }) {
       <span className="text-[10px] font-bold text-[#122222]/40 dark:text-white/40 uppercase tracking-wider block">{label}</span>
       <span className="text-[13px] font-semibold text-[#122222] dark:text-white block mt-0.5">{value}</span>
     </div>
+  );
+}
+
+// Overlay coordinates below are measured against the member-card artwork's own
+// 1023x1537 canvas (photo well, name rule, and footer band), so the card front
+// always lines up with the printed frame regardless of render size.
+function MemberIdCardModal({ member, isOpen, onClose }: { member: Member; isOpen: boolean; onClose: () => void }) {
+  const { t } = useTranslation();
+  const cardSrc = useThemedAsset("member-card");
+  if (!isOpen) return null;
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title={t("members.idCardTitle", "Member ID Card")} size="md">
+      <div className="flex flex-col items-center gap-4 py-2">
+        <div className="relative w-full max-w-[280px] aspect-[1023/1537] shrink-0">
+          <img src={cardSrc} alt="" aria-hidden="true" className="absolute inset-0 h-full w-full object-contain" />
+
+          {/* Photo well */}
+          <div className="absolute left-[34%] right-[34%] top-[38.5%] h-[25%] overflow-hidden rounded-[2px]">
+            {member.avatar_path ? (
+              <img src={member.avatar_path} alt="" className="h-full w-full object-cover" />
+            ) : (
+              <div className="h-full w-full flex items-center justify-center bg-emerald/10 text-emerald font-bold text-[18px]">
+                {getMemberInitials(member.full_name)}
+              </div>
+            )}
+          </div>
+
+          {/* Name, under the emblem rule */}
+          <div className="absolute left-[18%] right-[18%] top-[31%] h-[6%] flex items-center justify-center">
+            <span className="text-[11px] font-bold text-[#122222] text-center leading-tight truncate w-full">{member.full_name}</span>
+          </div>
+
+          {/* Member number, in the footer band */}
+          <div className="absolute left-[30%] right-[30%] top-[72.5%] h-[3.5%] flex items-center justify-center">
+            <span className="text-[8px] font-bold text-white tracking-wider uppercase truncate">{formatMemberNumber(member.member_number)}</span>
+          </div>
+        </div>
+
+        <div className="text-center">
+          <p className="text-[13px] font-bold text-[#122222] dark:text-white">{member.full_name}</p>
+          <p className="text-[11px] text-[#122222]/60 dark:text-white/60">{member.role}{member.department ? ` · ${member.department}` : ""}</p>
+        </div>
+
+        <Button type="button" variant="secondary" onClick={onClose}>{t("common.close", "Close")}</Button>
+      </div>
+    </Modal>
+  );
+}
+
+// Each border frame keeps its own authored proportions (checkout 1661x947, return 1774x887)
+// so the ornamental corners never stretch or clip regardless of modal width.
+function CirculationReceiptModal({ receipt, memberName, onClose }: { receipt: { kind: "renew" | "return"; title: string; date: string } | null; memberName: string; onClose: () => void }) {
+  const { t } = useTranslation();
+  const isReturn = receipt?.kind === "return";
+  const borderSrc = useThemedAsset(isReturn ? "circulation-return-border" : "circulation-checkout-border");
+  if (!receipt) return null;
+
+  return (
+    <Modal
+      isOpen={!!receipt}
+      onClose={onClose}
+      title={isReturn ? t("circulation.returnReceiptTitle", "Return Receipt") : t("circulation.renewReceiptTitle", "Renewal Receipt")}
+      size="lg"
+    >
+      <div className="relative w-full" style={{ aspectRatio: isReturn ? "1774 / 887" : "1661 / 947" }}>
+        <img src={borderSrc} alt="" aria-hidden="true" className="absolute inset-0 h-full w-full object-contain" />
+        <div className="absolute inset-[17%] flex flex-col items-center justify-center text-center gap-1.5">
+          <span className={`text-[10px] font-bold uppercase tracking-[0.2em] ${isReturn ? "text-copper" : "text-emerald dark:text-emerald-light"}`}>
+            {isReturn ? t("circulation.return") || "Return" : t("circulation.renew") || "Renew"}
+          </span>
+          <h3 className="font-display text-[18px] font-bold text-[#122222] dark:text-white leading-tight line-clamp-2">{receipt.title}</h3>
+          <p className="text-[12px] text-[#122222]/70 dark:text-white/70">{t("circulation.selectedMember") || "Member"}: <span className="font-semibold">{memberName}</span></p>
+          <p className="text-[12px] text-[#122222]/60 dark:text-white/60">
+            {isReturn ? t("circulation.returnedOn", "Returned on") : t("circulation.newDueDate", "New due date")}: <span className="font-bold text-emerald dark:text-emerald-light">{formatDisplayDate(receipt.date)}</span>
+          </p>
+        </div>
+      </div>
+      <div className="flex justify-center mt-4">
+        <Button type="button" onClick={onClose}>{t("common.close", "Close")}</Button>
+      </div>
+    </Modal>
   );
 }

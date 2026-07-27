@@ -4,7 +4,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
-  BookOpen, Plus, Search,
+  Plus, Search,
   MoreHorizontal, ChevronLeft, ChevronRight, X, Clock, Edit2, Trash2, MapPin, Sparkles,
   Eye, Copy, CalendarClock
 } from "lucide-react";
@@ -30,6 +30,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { ImageUpload } from "../components/ui/ImageUpload";
 import { useTranslation } from "react-i18next";
 import { formatDisplayDate } from "../utils/dates";
+import { useThemedAsset } from "../utils/useThemedAsset";
 
 const invalidate = () => queryClient.invalidateQueries();
 
@@ -429,6 +430,7 @@ export function CatalogPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const { showContextMenu } = useContextMenu();
+  const catalogLibrarySrc = useThemedAsset("catalog-library");
 
   const [term, setTerm] = useState("");
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
@@ -1063,8 +1065,8 @@ export function CatalogPage() {
                 </tbody>
               </table>
             ) : (
-              <div className="flex flex-col items-center justify-center py-20 text-[#122222]/50 dark:text-white/50">
-                <BookOpen size={48} className="mb-4 text-[#122222]/30" />
+              <div className="flex flex-col items-center justify-center py-16 text-[#122222]/50 dark:text-white/50">
+                <img src={catalogLibrarySrc} alt="" aria-hidden="true" className="h-36 w-auto object-contain mb-2 opacity-90" />
                 <p className="text-[14px]">{t("catalog.noBooks")}</p>
               </div>
             )}

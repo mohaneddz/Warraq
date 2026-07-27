@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { 
-  ClipboardList, Search, Calendar, Download, RefreshCw, Eye, Tag, User, BookOpen, Clock, Activity, Info, Copy
+  Search, Calendar, Download, RefreshCw, Eye, Tag, User, BookOpen, Clock, Activity, Info, Copy
 } from "lucide-react";
 import { useContextMenu } from "../components/ui/ContextMenu";
 
@@ -12,10 +12,12 @@ import { useTranslation } from "react-i18next";
 import { useUiStore } from "../store/uiStore";
 import { formatDisplayDate } from "../utils/dates";
 import { Modal, Button } from "../components/ui/primitives";
+import { useThemedAsset } from "../utils/useThemedAsset";
 
 export function ActivityPage() {
   const { t } = useTranslation();
   const prefs = useUiStore((state) => state.preferences);
+  const medalSrc = useThemedAsset("activity-medal");
   const [term, setTerm] = useState("");
   const [dateFilter, setDateFilter] = useState("");
   const [actorFilter, setActorFilter] = useState("All Users");
@@ -396,10 +398,8 @@ export function ActivityPage() {
               </tbody>
             </table>
           ) : (
-             <div className="flex-1 flex flex-col items-center justify-center py-20 opacity-60">
-              <div className="w-24 h-24 bg-black/5 dark:bg-white/5 rounded-full flex items-center justify-center text-[#122222]/40 dark:text-white/40 mb-6">
-                <ClipboardList size={40} />
-              </div>
+             <div className="flex-1 flex flex-col items-center justify-center py-16 opacity-90">
+              <img src={medalSrc} alt="" aria-hidden="true" className="h-32 w-auto object-contain mb-3" />
               <h2 className="text-[20px] font-bold text-[#122222] dark:text-white mb-2">{t("activity.noActivity") || "No Activity Recorded"}</h2>
               <p className="text-[14px] text-[#122222]/60 dark:text-white/60">{t("activity.noActivityHelp") || "Activities will automatically appear here as operations take place."}</p>
             </div>

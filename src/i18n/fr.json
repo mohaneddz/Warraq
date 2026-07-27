@@ -312,6 +312,10 @@
     "fine": "Amende",
     "renew": "Renouveler",
     "return": "Retourner",
+    "renewReceiptTitle": "Reçu de renouvellement",
+    "returnReceiptTitle": "Reçu de retour",
+    "newDueDate": "Nouvelle échéance",
+    "returnedOn": "Retourné le",
     "noActiveLoans": "Aucun emprunt actif pour ce membre.",
     "endSession": "Fin de Session",
     "limitReached": "Limite atteinte",
@@ -340,6 +344,8 @@
     "title": "Membres",
     "subtitle": "Gérer l'éligibilité aux emprunts, les coordonnées et les abonnements.",
     "addMember": "Ajouter un membre",
+    "viewIdCard": "Voir la carte de membre",
+    "idCardTitle": "Carte de membre",
     "search": "Rechercher des membres...",
     "allMembers": "Tous les membres",
     "active": "Actif",
@@ -1239,7 +1245,8 @@
     "confirm": "Confirmer",
     "select": "Sélectionner",
     "clear": "Effacer",
-    "loading": "Chargement..."
+    "loading": "Chargement...",
+    "close": "Fermer"
   },
   "boot": {
     "database": "Connexion à la base de données SQLite…",
