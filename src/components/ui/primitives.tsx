@@ -1,9 +1,18 @@
 import type { ButtonHTMLAttributes, InputHTMLAttributes, PropsWithChildren } from "react";
 import { createPortal } from "react-dom";
 import { cn } from "../../utils/cn";
-import { X } from "lucide-react";
+import { X, BookOpen, GraduationCap, Newspaper, FileQuestion } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useThemedAsset } from "../../utils/useThemedAsset";
+
+/** Icon per item type — reused by the type selector on the book form and by ItemTypeBadge. */
+export const ITEM_TYPE_ICONS: Record<string, React.ElementType> = {
+  book: BookOpen,
+  fyp: GraduationCap,
+  journal: Newspaper,
+  other: FileQuestion,
+};
+export const ITEM_TYPE_VALUES = ["book", "fyp", "journal", "other"] as const;
 
 export function Button({ className, variant = "primary", ...props }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: "primary" | "secondary" | "danger" | "ghost" }) {
   const variants = { 
@@ -37,22 +46,49 @@ export function ItemTypeBadge({ type, className }: { type?: string; className?: 
   const { t } = useTranslation();
   const normalized = (type || "book").toLowerCase();
   const label = t(`itemTypes.${normalized}`, normalized);
+  const Icon = ITEM_TYPE_ICONS[normalized] || ITEM_TYPE_ICONS.other;
 
   const styleMap: Record<string, string> = {
     book: "bg-emerald/10 text-emerald dark:text-emerald-light border-emerald/20",
-    magazine: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20",
-    notebook: "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20",
+    fyp: "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20",
     journal: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20",
-    newspaper: "bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/20",
-    disc: "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20",
-    discs: "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20",
     other: "bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20",
   };
 
   return (
-    <span className={cn("inline-flex items-center px-2.5 py-0.5 rounded-md text-[11px] font-bold border", styleMap[normalized] || styleMap.other, className)}>
+    <span className={cn("inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-bold border", styleMap[normalized] || styleMap.other, className)}>
+      <Icon size={11} />
       {label}
     </span>
+  );
+}
+
+/** Item-type selector with an icon per option, used on the book add/edit forms. */
+export function ItemTypeSelect({ value, onChange, className }: { value: string; onChange: (value: string) => void; className?: string }) {
+  const { t } = useTranslation();
+  return (
+    <div className={cn("grid grid-cols-4 gap-2", className)}>
+      {ITEM_TYPE_VALUES.map((type) => {
+        const Icon = ITEM_TYPE_ICONS[type];
+        const active = value === type;
+        return (
+          <button
+            key={type}
+            type="button"
+            onClick={() => onChange(type)}
+            className={cn(
+              "flex flex-col items-center justify-center gap-1 rounded-xl border py-2.5 text-[11px] font-bold transition-all cursor-pointer",
+              active
+                ? "border-emerald bg-emerald/10 text-emerald dark:text-emerald-light ring-2 ring-emerald/20"
+                : "border-ink/10 dark:border-parchment/10 text-ink/60 dark:text-parchment/60 hover:bg-ink/5 dark:hover:bg-parchment/5"
+            )}
+          >
+            <Icon size={16} />
+            {t(`itemTypes.${type}`, type)}
+          </button>
+        );
+      })}
+    </div>
   );
 }
 

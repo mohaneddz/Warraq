@@ -16,7 +16,8 @@ import {
   getShelves
 } from "../data/repositories/library";
 import type { Book } from "../types";
-import { Modal, Input, Button, StatusBadge, ItemTypeBadge } from "../components/ui/primitives";
+import { FLOOR_SHELF_CODE } from "../types";
+import { Modal, Input, Button, StatusBadge, ItemTypeBadge, ItemTypeSelect } from "../components/ui/primitives";
 import { toast } from "sonner";
 import { 
   isValidIsbn, normalizeIsbn, cleanBarcode, 
@@ -107,16 +108,10 @@ function buildMetadataAndItemFields(values: BookValues) {
   let publisher = values.publisher ? cleanText(values.publisher) : "";
   let callNumber = values.call_number ? cleanText(values.call_number) : null;
 
-  if (itemType === "magazine" || itemType === "newspaper") {
-    if (!publisher && values.press) publisher = cleanText(values.press);
-  } else if (itemType === "journal") {
+  if (itemType === "journal") {
     if (!author && values.editor) author = cleanText(values.editor);
-  } else if (itemType === "notebook") {
-    if (!publisher && values.brand) publisher = cleanText(values.brand);
-    if (!author && values.owner) author = cleanText(values.owner);
-  } else if (itemType === "disc") {
-    if (!author && values.artist) author = cleanText(values.artist);
-    if (!publisher && values.studio) publisher = cleanText(values.studio);
+  } else if (itemType === "fyp") {
+    if (!author && values.editor) author = cleanText(values.editor); // supervisor, reusing the editor field
   } else if (itemType === "other") {
     if (!publisher && values.brand) publisher = cleanText(values.brand);
   }
@@ -125,12 +120,24 @@ function buildMetadataAndItemFields(values: BookValues) {
   return { author, publisher, callNumber, metadataJson };
 }
 
+/** Shown under a field the lookup couldn't fill, so a blank input reads as "needs your
+ * input" rather than looking like the autofill silently failed. */
+function AutofillGapHint({ field, unresolvedFields, t }: { field: string; unresolvedFields?: string[]; t: any }) {
+  if (!unresolvedFields?.includes(field)) return null;
+  return (
+    <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-1">
+      {t("catalog.addModal.autofillGap", "Not found automatically — add a Groq API key in Settings for auto-translation, or fill this in by hand.")}
+    </p>
+  );
+}
+
 function TypeSpecificFields({
   itemType,
   form,
   registerClean,
   lookupLoading,
   handleIsbnLookup,
+  unresolvedFields,
   t
 }: {
   itemType: string;
@@ -138,84 +145,32 @@ function TypeSpecificFields({
   registerClean: any;
   lookupLoading?: boolean;
   handleIsbnLookup?: () => void;
+  unresolvedFields?: string[];
   t: any;
 }) {
   switch (itemType) {
-    case "magazine":
+    case "fyp":
       return (
         <>
           <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 md:col-span-2 block">
-            <span>{t("itemFields.issueNumber", "Issue / Volume Number")}</span>
-            <Input {...registerClean(form, "issue_number", cleanText)} placeholder="e.g. Vol. 24 Issue 7, or Issue #105" className="mt-1" />
+            <span>{t("catalog.addModal.subtitleLabel", "Subtitle")}</span>
+            <Input {...registerClean(form, "subtitle", cleanText)} placeholder="e.g. Étude rétrospective sur..." className="mt-1" />
           </label>
           <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">
-            <span>{t("itemFields.frequency", "Frequency")}</span>
-            <select
-              {...form.register("frequency")}
-              className="w-full bg-white dark:bg-[#1d2926] border border-black/10 dark:border-white/10 rounded-lg py-2 px-3 text-[13px] text-[#122222] dark:text-white outline-none focus:border-emerald mt-1 font-semibold cursor-pointer"
-            >
-              <option value="Monthly">Monthly</option>
-              <option value="Weekly">Weekly</option>
-              <option value="Bi-weekly">Bi-weekly</option>
-              <option value="Quarterly">Quarterly</option>
-              <option value="Annual">Annual</option>
-            </select>
+            <span>{t("itemFields.supervisor", "Supervisor")}</span>
+            <Input {...registerClean(form, "editor", cleanText)} placeholder="e.g. Pr. H. Vance" className="mt-1" />
           </label>
           <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">
-            <span>{t("itemFields.issn", "ISSN")}</span>
-            <Input {...registerClean(form, "issn", cleanText)} placeholder="e.g. 0028-0836" className="mt-1" />
+            <span>{t("catalog.details.pubYear", "Defense Year")}</span>
+            <Input {...form.register("publication_year")} type="number" placeholder="e.g. 2026" className="mt-1" />
           </label>
           <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">
-            <span>{t("catalog.addModal.publisherLabel", "Publisher / Organization")}</span>
-            <Input {...registerClean(form, "publisher", cleanText)} placeholder="e.g. Condé Nast / Springer" className="mt-1" />
+            <span>{t("itemFields.registrationNumber", "Registration Number")}</span>
+            <Input {...registerClean(form, "issue_number", cleanText)} placeholder="e.g. PFE-2026-014" className="mt-1" />
           </label>
           <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">
-            <span>{t("itemFields.pubDate", "Publication Month / Date")}</span>
-            <Input {...registerClean(form, "pub_date", cleanText)} placeholder="e.g. July 2026" className="mt-1" />
-          </label>
-          <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">
-            <span>{t("catalog.addModal.categoryLabel", "Category")}</span>
-            <Input {...registerClean(form, "category", cleanText)} placeholder="e.g. Science & Tech" className="mt-1" />
-          </label>
-          <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">
-            <span>{t("catalog.addModal.langLabel", "Language")} <span className="text-red-500">*</span></span>
-            <Input {...registerClean(form, "language", cleanText)} className="mt-1" />
-          </label>
-        </>
-      );
-    case "newspaper":
-      return (
-        <>
-          <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block md:col-span-2">
-            <span>{t("itemFields.issueDate", "Edition / Issue Date")}</span>
-            <Input {...registerClean(form, "issue_date", cleanText)} placeholder="e.g. July 21, 2026 - Morning Edition" className="mt-1" />
-          </label>
-          <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">
-            <span>{t("itemFields.frequency", "Frequency")}</span>
-            <select
-              {...form.register("frequency")}
-              className="w-full bg-white dark:bg-[#1d2926] border border-black/10 dark:border-white/10 rounded-lg py-2 px-3 text-[13px] text-[#122222] dark:text-white outline-none focus:border-emerald mt-1 font-semibold cursor-pointer"
-            >
-              <option value="Daily">Daily</option>
-              <option value="Weekend Edition">Weekend Edition</option>
-              <option value="Weekly">Weekly</option>
-            </select>
-          </label>
-          <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">
-            <span>{t("itemFields.press", "Press / Publisher")}</span>
-            <Input {...registerClean(form, "press", cleanText)} placeholder="e.g. Tribune Publishing" className="mt-1" />
-          </label>
-          <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">
-            <span>{t("itemFields.issn", "ISSN")}</span>
-            <Input {...registerClean(form, "issn", cleanText)} placeholder="e.g. 0362-4331" className="mt-1" />
-          </label>
-          <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">
-            <span>{t("itemFields.region", "City / Region")}</span>
-            <Input {...registerClean(form, "region", cleanText)} placeholder="e.g. London, UK / Cairo" className="mt-1" />
-          </label>
-          <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">
-            <span>{t("catalog.addModal.categoryLabel", "Category / Section")}</span>
-            <Input {...registerClean(form, "category", cleanText)} placeholder="e.g. World News, Finance" className="mt-1" />
+            <span>{t("itemFields.department", "Department / Specialty")}</span>
+            <Input {...registerClean(form, "category", cleanText)} placeholder="e.g. Cardiologie" className="mt-1" />
           </label>
           <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">
             <span>{t("catalog.addModal.langLabel", "Language")} <span className="text-red-500">*</span></span>
@@ -253,92 +208,6 @@ function TypeSpecificFields({
           <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">
             <span>{t("catalog.addModal.categoryLabel", "Discipline / Field")}</span>
             <Input {...registerClean(form, "category", cleanText)} placeholder="e.g. Clinical Medicine" className="mt-1" />
-          </label>
-          <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">
-            <span>{t("catalog.addModal.langLabel", "Language")} <span className="text-red-500">*</span></span>
-            <Input {...registerClean(form, "language", cleanText)} className="mt-1" />
-          </label>
-        </>
-      );
-    case "notebook":
-      return (
-        <>
-          <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">
-            <span>{t("itemFields.rulingType", "Ruling Type")}</span>
-            <select
-              {...form.register("ruling_type")}
-              className="w-full bg-white dark:bg-[#1d2926] border border-black/10 dark:border-white/10 rounded-lg py-2 px-3 text-[13px] text-[#122222] dark:text-white outline-none focus:border-emerald mt-1 font-semibold cursor-pointer"
-            >
-              <option value="Lined / Ruled">Lined / Ruled</option>
-              <option value="Dot Grid">Dot Grid</option>
-              <option value="Grid / Graph">Grid / Graph</option>
-              <option value="Blank">Blank</option>
-              <option value="Planner / Journal">Planner / Journal</option>
-            </select>
-          </label>
-          <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">
-            <span>{t("itemFields.pageCount", "Page Count")}</span>
-            <Input {...registerClean(form, "page_count", cleanText)} placeholder="e.g. 192 pages" className="mt-1" />
-          </label>
-          <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">
-            <span>{t("itemFields.paperSize", "Paper Size / Format")}</span>
-            <Input {...registerClean(form, "paper_size", cleanText)} placeholder="e.g. A5, A4, B5, Pocket" className="mt-1" />
-          </label>
-          <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">
-            <span>{t("itemFields.brand", "Brand / Maker")}</span>
-            <Input {...registerClean(form, "brand", cleanText)} placeholder="e.g. Moleskine, Rhodia, Custom" className="mt-1" />
-          </label>
-          <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">
-            <span>{t("itemFields.owner", "Owner / Department")}</span>
-            <Input {...registerClean(form, "owner", cleanText)} placeholder="e.g. Lab Tech, Medical Department" className="mt-1" />
-          </label>
-          <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">
-            <span>{t("catalog.addModal.langLabel", "Language")} <span className="text-red-500">*</span></span>
-            <Input {...registerClean(form, "language", cleanText)} className="mt-1" />
-          </label>
-        </>
-      );
-    case "disc":
-    case "discs":
-      return (
-        <>
-          <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">
-            <span>{t("catalog.addModal.subtitleLabel", "Edition / Subtitle")}</span>
-            <Input {...registerClean(form, "subtitle", cleanText)} placeholder="e.g. Deluxe Edition, Special Cut" className="mt-1" />
-          </label>
-          <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">
-            <span>{t("itemFields.mediaFormat", "Media Format")}</span>
-            <select
-              {...form.register("media_format")}
-              className="w-full bg-white dark:bg-[#1d2926] border border-black/10 dark:border-white/10 rounded-lg py-2 px-3 text-[13px] text-[#122222] dark:text-white outline-none focus:border-emerald mt-1 font-semibold cursor-pointer"
-            >
-              <option value="CD Audio">CD Audio</option>
-              <option value="DVD Video">DVD Video</option>
-              <option value="Blu-ray">Blu-ray</option>
-              <option value="Vinyl Record">Vinyl Record</option>
-              <option value="USB Flash Drive">USB Flash Drive</option>
-              <option value="Digital Media">Digital Media</option>
-            </select>
-          </label>
-          <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">
-            <span>{t("itemFields.artist", "Artist / Director / Creator")}</span>
-            <Input {...registerClean(form, "artist", cleanText)} placeholder="e.g. London Symphony, Dr. Aris" className="mt-1" />
-          </label>
-          <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">
-            <span>{t("itemFields.studio", "Studio / Label")}</span>
-            <Input {...registerClean(form, "studio", cleanText)} placeholder="e.g. Sony Classical, BBC Archives" className="mt-1" />
-          </label>
-          <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">
-            <span>{t("itemFields.duration", "Runtime / Duration")}</span>
-            <Input {...registerClean(form, "duration", cleanText)} placeholder="e.g. 74 mins, 2h 15m" className="mt-1" />
-          </label>
-          <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">
-            <span>{t("catalog.details.pubYear", "Release Year")}</span>
-            <Input {...form.register("publication_year")} type="number" placeholder="e.g. 2025" className="mt-1" />
-          </label>
-          <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">
-            <span>{t("catalog.addModal.categoryLabel", "Category / Genre")}</span>
-            <Input {...registerClean(form, "category", cleanText)} placeholder="e.g. Educational, Documentary" className="mt-1" />
           </label>
           <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">
             <span>{t("catalog.addModal.langLabel", "Language")} <span className="text-red-500">*</span></span>
@@ -389,10 +258,12 @@ function TypeSpecificFields({
           <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">
             {t("catalog.addModal.subtitleLabel")}
             <Input {...registerClean(form, "subtitle", cleanText)} placeholder="e.g. A Novel of Regency England" className="mt-1" />
+            <AutofillGapHint field="subtitle" unresolvedFields={unresolvedFields} t={t} />
           </label>
           <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">
             {t("catalog.addModal.arabicTitleLabel")}
             <Input {...registerClean(form, "arabic_title", cleanText)} placeholder="e.g. كبرياء وتحامل" className="mt-1" />
+            <AutofillGapHint field="arabic_title" unresolvedFields={unresolvedFields} t={t} />
           </label>
           <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">
             {t("catalog.addModal.authorLabel")}
@@ -492,6 +363,7 @@ export function CatalogPage() {
 
   const [adding, setAdding] = useState(false);
   const [lookupLoading, setLookupLoading] = useState(false);
+  const [unresolvedFields, setUnresolvedFields] = useState<string[]>([]);
 
   // Sorting, Filtering & Pagination State
   const [sortBy, setSortBy] = useState<"title" | "author" | "category" | "isbn" | "created_at" | "available_copies">("title");
@@ -615,6 +487,7 @@ export function CatalogPage() {
       return;
     }
     setLookupLoading(true);
+    setUnresolvedFields([]);
     const toastId = toast.loading(t("catalog.alerts.querying") || "Querying metadata provider...");
 
     let meta: any = null;
@@ -641,10 +514,8 @@ export function CatalogPage() {
         toast.success(t("catalog.alerts.enriched") || "Book metadata auto-filled & enriched with Groq AI!", { id: toastId });
       } else {
         toast.success(t("catalog.alerts.autofilled") || "Book metadata auto-filled!", { id: toastId });
-        toast.info(t("catalog.alerts.groqTip") || "Tip: Configure your Groq API Key in Settings to get auto-translated Arabic titles, detailed descriptions, and targeted tags.", {
-          duration: 8000
-        });
       }
+      setUnresolvedFields(meta?.unresolvedFields ?? []);
 
       if (meta) {
         addForm.setValue("title", cleanText(meta.title));
@@ -663,20 +534,24 @@ export function CatalogPage() {
           addForm.setValue("isbn", formatIsbn(retrievedIsbn));
         }
 
-        // Download cover url and convert to base64
+        // Download cover url and convert to base64. Awaited so this can't land after the
+        // lookup's `finally` clears the loading state and the rest of the form is already
+        // considered settled — that race previously let the cover fall out of sync with
+        // everything else that autofill just set.
         if (meta.cover_url) {
           try {
             toast.loading(t("catalog.alerts.downloadingCover") || "Downloading book cover image...", { id: toastId });
             const response = await fetch(meta.cover_url);
             if (response.ok) {
               const blob = await response.blob();
-              const reader = new FileReader();
-              reader.onloadend = () => {
-                const base64data = reader.result as string;
-                addForm.setValue("cover_path", base64data);
-                toast.success(t("catalog.alerts.coverDownloaded") || "Book cover downloaded!", { id: toastId });
-              };
-              reader.readAsDataURL(blob);
+              const base64data = await new Promise<string>((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result as string);
+                reader.onerror = () => reject(reader.error);
+                reader.readAsDataURL(blob);
+              });
+              addForm.setValue("cover_path", base64data);
+              toast.success(t("catalog.alerts.coverDownloaded") || "Book cover downloaded!", { id: toastId });
             } else {
               addForm.setValue("cover_path", meta.cover_url);
             }
@@ -883,11 +758,8 @@ export function CatalogPage() {
           >
             <option value="All Items">{t("itemTypes.allItems", "All Item Types")}</option>
             <option value="book">{t("itemTypes.book", "Book")}</option>
-            <option value="magazine">{t("itemTypes.magazine", "Magazine")}</option>
-            <option value="notebook">{t("itemTypes.notebook", "Notebook")}</option>
+            <option value="fyp">{t("itemTypes.fyp", "FYP / PFE")}</option>
             <option value="journal">{t("itemTypes.journal", "Journal")}</option>
-            <option value="newspaper">{t("itemTypes.newspaper", "Newspaper")}</option>
-            <option value="disc">{t("itemTypes.disc", "Disc / Media")}</option>
             <option value="other">{t("itemTypes.other", "Other / Misc")}</option>
           </select>
 
@@ -1122,18 +994,11 @@ export function CatalogPage() {
             </div>
             <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 md:col-span-2">
               <span>{t("catalog.itemType", "Item Type")} <span className="text-red-500">*</span></span>
-              <select
-                {...addForm.register("item_type")}
-                className="w-full bg-white dark:bg-[#1d2926] border border-black/10 dark:border-white/10 rounded-lg py-2 px-3 text-[13px] text-[#122222] dark:text-white outline-none focus:border-emerald mt-1 font-semibold cursor-pointer"
-              >
-                <option value="book">{t("itemTypes.book", "Book")}</option>
-                <option value="magazine">{t("itemTypes.magazine", "Magazine")}</option>
-                <option value="notebook">{t("itemTypes.notebook", "Notebook")}</option>
-                <option value="journal">{t("itemTypes.journal", "Journal")}</option>
-                <option value="newspaper">{t("itemTypes.newspaper", "Newspaper")}</option>
-                <option value="disc">{t("itemTypes.disc", "Disc / Media")}</option>
-                <option value="other">{t("itemTypes.other", "Other / Misc")}</option>
-              </select>
+              <ItemTypeSelect
+                value={addForm.watch("item_type") || "book"}
+                onChange={(v) => addForm.setValue("item_type", v)}
+                className="mt-1"
+              />
             </label>
             <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 md:col-span-2"><span>{t("catalog.addModal.titleLabel")} <span className="text-red-500">*</span></span>
               <Input {...registerClean(addForm, "title", cleanText)} placeholder="e.g. Title / Item Name" />
@@ -1146,6 +1011,7 @@ export function CatalogPage() {
               registerClean={registerClean}
               lookupLoading={lookupLoading}
               handleIsbnLookup={handleIsbnLookup}
+              unresolvedFields={unresolvedFields}
               t={t}
             />
 
@@ -1177,6 +1043,7 @@ export function CatalogPage() {
                 placeholder="Write summary description or notes..."
                 className="w-full bg-white dark:bg-[#1d2926] border border-black/10 dark:border-white/10 rounded-lg py-2 px-3 text-[13px] text-[#122222] dark:text-white outline-none focus:border-emerald min-h-[60px] mt-1"
               />
+              <AutofillGapHint field="description" unresolvedFields={unresolvedFields} t={t} />
             </label>
             <div className="md:col-span-2 flex gap-2 justify-end pt-4 pb-4 border-t border-black/5 dark:border-white/5">
               <Button type="button" variant="ghost" onClick={() => setAdding(false)}>{t("catalog.addModal.cancel")}</Button>
@@ -1329,64 +1196,12 @@ function BookSidebar({ book, onClose, registerClean }: { book: Book; onClose: ()
 
   // Add Copy Form
   const copyForm = useForm({
-    defaultValues: { barcode: "", accession: "", condition: "good", shelf: "" }
+    defaultValues: { barcode: "", accession: "", condition: "good", shelfId: "" }
   });
 
-  const [selectedBookcase, setSelectedBookcase] = useState("");
-  const [selectedRow, setSelectedRow] = useState("");
-
-  // Fetch shelves for dynamic location select
+  // Fetch shelves for the location select — the fixed A-F + floor model per room.
   const shelvesQuery = useQuery({ queryKey: ["shelves-all-catalog"], queryFn: () => getShelves() });
   const allShelves = shelvesQuery.data ?? [];
-
-  // Parse shelves into rows and columns
-  const parsedShelves = useMemo(() => {
-    return allShelves.map((s: any) => {
-      const code = s.code || "";
-      const m = code.match(/^([A-Za-z]+)[-_]?(\d+)$/);
-      const row = m ? m[1].toUpperCase() : "A";
-      const col = m ? m[2] : "01";
-      return { id: s.id, code, row, col };
-    });
-  }, [allShelves]);
-
-  const uniqueBookcases = useMemo(() => {
-    const cols = parsedShelves.map(s => s.col);
-    const set = new Set(cols);
-    if (set.size === 0) return ["01", "02", "03", "04", "05", "06", "07", "08"];
-    return Array.from(set).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
-  }, [parsedShelves]);
-
-  const uniqueRows = useMemo(() => {
-    const rows = parsedShelves.map(s => s.row);
-    const set = new Set(rows);
-    if (set.size === 0) return ["A", "B", "C", "D", "E"];
-    return Array.from(set).sort();
-  }, [parsedShelves]);
-
-  const filteredRows = useMemo(() => {
-    if (!selectedBookcase) return uniqueRows;
-    const existing = parsedShelves.filter(s => s.col === selectedBookcase).map(s => s.row);
-    if (existing.length === 0) return uniqueRows;
-    return Array.from(new Set(existing)).sort();
-  }, [uniqueRows, parsedShelves, selectedBookcase]);
-
-  const filteredBookcases = useMemo(() => {
-    if (!selectedRow) return uniqueBookcases;
-    const existing = parsedShelves.filter(s => s.row === selectedRow).map(s => s.col);
-    if (existing.length === 0) return uniqueBookcases;
-    return Array.from(new Set(existing)).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
-  }, [uniqueBookcases, parsedShelves, selectedRow]);
-
-  useEffect(() => {
-    if (selectedBookcase && selectedRow) {
-      const matched = parsedShelves.find(s => s.col === selectedBookcase && s.row === selectedRow);
-      const code = matched ? matched.code : `${selectedRow}${selectedBookcase}`;
-      copyForm.setValue("shelf", code);
-    } else {
-      copyForm.setValue("shelf", "");
-    }
-  }, [selectedBookcase, selectedRow, parsedShelves, copyForm]);
 
   // Mutations
   const updateBookMutation = useMutation({
@@ -1436,12 +1251,10 @@ function BookSidebar({ book, onClose, registerClean }: { book: Book; onClose: ()
   });
 
   const addCopyMutation = useMutation({
-    mutationFn: (values: any) => addCopy(book.id, cleanBarcode(values.barcode), cleanAccession(values.accession), values.condition, cleanText(values.shelf)),
+    mutationFn: (values: any) => addCopy(book.id, cleanBarcode(values.barcode), cleanAccession(values.accession), values.condition, values.shelfId || null),
     onSuccess: () => {
       toast.success(t("catalog.alerts.copyAdded") || "Copy added.");
       copyForm.reset();
-      setSelectedBookcase("");
-      setSelectedRow("");
       setAddCopyOpen(false);
       refetchCopies();
       invalidate();
@@ -1606,10 +1419,8 @@ function BookSidebar({ book, onClose, registerClean }: { book: Book; onClose: ()
                     barcode: "",
                     accession: crypto.randomUUID(),
                     condition: "good",
-                    shelf: ""
+                    shelfId: ""
                   });
-                  setSelectedBookcase("");
-                  setSelectedRow("");
                   setAddCopyOpen(true);
                 }}
                 className="flex items-center gap-1 text-[11px] font-bold text-emerald hover:underline cursor-pointer"
@@ -1657,32 +1468,14 @@ function BookSidebar({ book, onClose, registerClean }: { book: Book; onClose: ()
                   <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">{t("catalog.details.copyBarcode") || "Barcode"}
                     <Input {...registerClean(copyForm, "barcode", cleanBarcode)} placeholder="Scan or enter copy barcode (optional)" />
                   </label>
-                  <div className="grid grid-cols-2 gap-4">
-                    <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">Bookcase
-                      <select 
-                        value={selectedBookcase} 
-                        onChange={(e) => setSelectedBookcase(e.target.value)}
-                        className="field-select mt-1 text-[13px] py-2 px-3 bg-white dark:bg-[#1d2926]"
-                      >
-                        <option value="">None (Unassigned)</option>
-                        {filteredBookcases.map(col => (
-                          <option key={col} value={col}>Bookcase {col}</option>
-                        ))}
-                      </select>
-                    </label>
-                    <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">Row
-                      <select 
-                        value={selectedRow} 
-                        onChange={(e) => setSelectedRow(e.target.value)}
-                        className="field-select mt-1 text-[13px] py-2 px-3 bg-white dark:bg-[#1d2926]"
-                      >
-                        <option value="">None (Unassigned)</option>
-                        {filteredRows.map(row => (
-                          <option key={row} value={row}>Row {row}</option>
-                        ))}
-                      </select>
-                    </label>
-                  </div>
+                  <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">{t("catalog.details.shelfLabel", "Shelf")}
+                    <select {...copyForm.register("shelfId")} className="field-select mt-1 text-[13px] py-2 px-3 bg-white dark:bg-[#1d2926]">
+                      <option value="">{t("catalog.details.shelfUnassigned", "Unassigned")}</option>
+                      {allShelves.map((s) => (
+                        <option key={s.id} value={s.id}>{s.room} — {s.shelf_type === "floor" ? `${FLOOR_SHELF_CODE} ${t("inventory.floorShelf", "Floor shelf")}` : `${t("inventory.shelfLetter", "Shelf {{code}}", { code: s.code })}`}</option>
+                      ))}
+                    </select>
+                  </label>
                   <div>
                     <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">{t("catalog.details.copyCondition") || "Condition"}
                       <select {...copyForm.register("condition")} className="field-select mt-1 text-[13px] py-2 px-3">
@@ -1716,18 +1509,11 @@ function BookSidebar({ book, onClose, registerClean }: { book: Book; onClose: ()
               />
             </div>
             <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 md:col-span-2">{t("catalog.itemType", "Item Type")}
-              <select
-                {...editForm.register("item_type")}
-                className="w-full bg-white dark:bg-[#1d2926] border border-black/10 dark:border-white/10 rounded-lg py-2 px-3 text-[13px] text-[#122222] dark:text-white outline-none focus:border-emerald mt-1 font-semibold cursor-pointer"
-              >
-                <option value="book">{t("itemTypes.book", "Book")}</option>
-                <option value="magazine">{t("itemTypes.magazine", "Magazine")}</option>
-                <option value="notebook">{t("itemTypes.notebook", "Notebook")}</option>
-                <option value="journal">{t("itemTypes.journal", "Journal")}</option>
-                <option value="newspaper">{t("itemTypes.newspaper", "Newspaper")}</option>
-                <option value="disc">{t("itemTypes.disc", "Disc / Media")}</option>
-                <option value="other">{t("itemTypes.other", "Other / Misc")}</option>
-              </select>
+              <ItemTypeSelect
+                value={editForm.watch("item_type") || "book"}
+                onChange={(v) => editForm.setValue("item_type", v)}
+                className="mt-1"
+              />
             </label>
             <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 md:col-span-2">{t("catalog.addModal.titleLabel")}
               <Input {...registerClean(editForm, "title", cleanText)} />

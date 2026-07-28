@@ -656,14 +656,11 @@ export function MembersPage() {
             <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60">
               <span>{t("members.roleLabel")} <span className="text-red-500">*</span></span>
               <select {...addForm.register("role")} className="field-select text-[13px] py-2 px-3 mt-1 font-semibold w-full bg-white dark:bg-[#1d2926]">
-                <option value="Student">{t("members.roles.student", "Student")}</option>
-                <option value="Staff">{t("members.roles.staff", "Staff")}</option>
-                <option value="Researcher">{t("members.roles.researcher", "Researcher")}</option>
-                <option value="Visitor">{t("members.roles.visitor", "Visitor")}</option>
-                <option value="Faculty">{t("members.roles.faculty", "Faculty")}</option>
-                <option value="Doctor">{t("members.roles.doctor", "Doctor")}</option>
-                <option value="Nurse">{t("members.roles.nurse", "Nurse")}</option>
-                <option value="Other">{t("members.roles.other", "Other")}</option>
+                <option value="visitor">{t("members.roles.visitor", "Visitor")}</option>
+                <option value="student">{t("members.roles.student", "Student")}</option>
+                <option value="staff">{t("members.roles.staff", "Staff")}</option>
+                <option value="medic">{t("members.roles.medic", "Medic")}</option>
+                <option value="other">{t("members.roles.other", "Other")}</option>
               </select>
               {addForm.formState.errors.role && <small className="text-red-500">{addForm.formState.errors.role.message}</small>}
             </label>
@@ -992,14 +989,11 @@ function MemberSidebar({ member, onClose, registerClean }: { member: Member; onC
               <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60">
                 <span>{t("members.roleLabel")} <span className="text-red-500">*</span></span>
                 <select {...editForm.register("role")} className="field-select text-[13px] py-2 px-3 mt-1 font-semibold w-full bg-white dark:bg-[#1d2926]">
-                  <option value="Student">{t("members.roles.student", "Student")}</option>
-                  <option value="Staff">{t("members.roles.staff", "Staff")}</option>
-                  <option value="Researcher">{t("members.roles.researcher", "Researcher")}</option>
-                  <option value="Visitor">{t("members.roles.visitor", "Visitor")}</option>
-                  <option value="Faculty">{t("members.roles.faculty", "Faculty")}</option>
-                  <option value="Doctor">{t("members.roles.doctor", "Doctor")}</option>
-                  <option value="Nurse">{t("members.roles.nurse", "Nurse")}</option>
-                  <option value="Other">{t("members.roles.other", "Other")}</option>
+                  <option value="visitor">{t("members.roles.visitor", "Visitor")}</option>
+                  <option value="student">{t("members.roles.student", "Student")}</option>
+                  <option value="staff">{t("members.roles.staff", "Staff")}</option>
+                  <option value="medic">{t("members.roles.medic", "Medic")}</option>
+                  <option value="other">{t("members.roles.other", "Other")}</option>
                 </select>
                 {editForm.formState.errors.role && <small className="text-red-500">{editForm.formState.errors.role.message}</small>}
               </label>
