@@ -995,7 +995,7 @@
       "noBackup": "No backups found",
       "savedBadge": "Saved",
       "exportTitle": "Export backup",
-      "exportDesc": "Save a copy of the complete SQLite database to your computer. Includes all books, members, loans, and history.",
+      "exportDesc": "Warraq's data lives in Supabase, which manages its own backups — see the note above.",
       "exportBtn": "Export database (.db)",
       "exportSuccess": "Backup saved successfully.",
       "exportError": "Could not export backup. Please try again.",
@@ -1006,13 +1006,13 @@
       "restoreSuccess": "Database restored. Please restart Warraq to apply changes.",
       "restoreError": "Could not import backup.",
       "importTitle": "Import books or members",
-      "importDesc": "Import books or members from a JSON file (containing an array of objects) or another Warraq SQLite database (.db) file.",
+      "importDesc": "Import books or members from a JSON file containing an array of objects.",
       "importBooks": "Import Books (.json / .db)",
       "importBooksTitle": "Import books",
-      "importBooksDesc": "Import books from a JSON file (containing an array of objects) or another Warraq SQLite database (.db) file.",
+      "importBooksDesc": "Import books from a JSON file containing an array of objects.",
       "importMembers": "Import Members (.json / .db)",
       "importMembersTitle": "Import members",
-      "importMembersDesc": "Import library members from a JSON file (containing an array of objects) or another Warraq SQLite database (.db) file.",
+      "importMembersDesc": "Import library members from a JSON file containing an array of objects.",
       "importBooksSuccess": "Successfully imported {{count}} of {{total}} books from JSON.",
       "importBooksSuccessDb": "Successfully imported {{count}} new books from database.",
       "importMembersSuccess": "Successfully imported {{count}} of {{total}} members from JSON.",
@@ -1026,7 +1026,7 @@
     },
     "database": {
       "title": "Database",
-      "desc": "Inspect and maintain the local Warraq SQLite database.",
+      "desc": "View the Supabase project this library is connected to, and dangerous data-reset actions.",
       "infoTitle": "Database info",
       "infoName": "Library name",
       "infoEngine": "Database engine",
@@ -1143,7 +1143,7 @@
     "about": {
       "title": "About",
       "engine": "Warraq Library Engine",
-      "desc": "An offline-first, local-first library cataloging database designed for medical institutions. Built using Tauri, React, SQLite, and Rust.",
+      "desc": "A library cataloging system for medical institutions, backed by Supabase. Built using Tauri, React, Postgres, and Rust.",
       "version": "Version",
       "database": "Database schema",
       "platform": "Platform",
@@ -1226,20 +1226,20 @@
       },
       "backuprestore": {
         "title": "Backup & Restore",
-        "body": "Protect your library data with regular backups.",
+        "body": "Move catalog and member records in and out of Warraq as JSON.",
         "tips": [
-          "Export after major cataloging sessions",
-          "Keep backups on a separate drive",
-          "Never restore without a fresh export first"
+          "Supabase backs up the database automatically",
+          "Use JSON import/export to move records between libraries",
+          "Never import a JSON file you haven't reviewed"
         ]
       },
       "database": {
         "title": "Database",
-        "body": "Inspect the underlying SQLite database and perform maintenance.",
+        "body": "View connection details for the shared Supabase project and dangerous reset actions.",
         "tips": [
-          "VACUUM reclaims deleted record space",
-          "Run monthly for best performance",
-          "Factory reset requires a relaunch"
+          "This database is shared by every staff device",
+          "Clearing loans or resetting data cannot be undone",
+          "Contact your Supabase project owner for account-level changes"
         ]
       },
       "integrationsai": {
@@ -1313,9 +1313,9 @@
     "close": "Close"
   },
   "boot": {
-    "database": "Connecting to SQLite database…",
+    "database": "Connecting to Warraq…",
     "preferences": "Verifying system preferences & configurations…",
-    "optimizing": "Optimizing catalog indices & seed data…",
+    "optimizing": "Syncing reservation queue…",
     "loading": "Loading application modules…"
   },
   "commandPalette": {

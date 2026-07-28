@@ -995,7 +995,7 @@
       "noBackup": "Aucune sauvegarde trouvée",
       "savedBadge": "Enregistré",
       "exportTitle": "Exporter la sauvegarde",
-      "exportDesc": "Enregistrez une copie de la base SQLite sur votre ordinateur. Contient les livres, membres, prêts et historique.",
+      "exportDesc": "Les données de Warraq résident dans Supabase, qui gère ses propres sauvegardes — voir la remarque ci-dessus.",
       "exportBtn": "Exporter la base de données (.db)",
       "exportSuccess": "Sauvegarde enregistrée avec succès.",
       "exportError": "Impossible d'exporter la sauvegarde. Veuillez réessayer.",
@@ -1006,13 +1006,13 @@
       "restoreSuccess": "Base de données restaurée. Veuillez redémarrer Warraq pour appliquer les changements.",
       "restoreError": "Impossible d'importer le fichier de sauvegarde.",
       "importTitle": "Import des données",
-      "importDesc": "Importez des livres ou des membres depuis un fichier JSON ou une autre base de données Warraq SQLite (.db).",
+      "importDesc": "Importez des livres ou des membres à partir d'un fichier JSON contenant un tableau d'objets.",
       "importBooks": "Importer des Livres (.json / .db)",
       "importBooksTitle": "Importer des livres",
-      "importBooksDesc": "Importez des livres à partir d'un fichier JSON ou d'une autre base de données SQLite Warraq (.db).",
+      "importBooksDesc": "Importez des livres à partir d'un fichier JSON contenant un tableau d'objets.",
       "importMembers": "Importer des Membres (.json / .db)",
       "importMembersTitle": "Importer des membres",
-      "importMembersDesc": "Importez des membres à partir d'un fichier JSON ou d'une autre base de données SQLite Warraq (.db).",
+      "importMembersDesc": "Importez des membres de la bibliothèque à partir d'un fichier JSON contenant un tableau d'objets.",
       "importBooksSuccess": "Importation réussie de {{count}} sur {{total}} livres depuis le fichier JSON.",
       "importBooksSuccessDb": "Importation réussie de {{count}} nouveaux livres depuis la base de données.",
       "importMembersSuccess": "Importation réussie de {{count}} sur {{total}} membres depuis le fichier JSON.",
@@ -1026,7 +1026,7 @@
     },
     "database": {
       "title": "Base de données",
-      "desc": "Inspectez et gérez la base SQLite locale de Warraq.",
+      "desc": "Consultez le projet Supabase auquel cette bibliothèque est connectée, ainsi que les actions de réinitialisation sensibles.",
       "infoTitle": "Informations base de données",
       "infoName": "Nom de la bibliothèque",
       "infoEngine": "Moteur SQL",
@@ -1143,7 +1143,7 @@
     "about": {
       "title": "À propos",
       "engine": "Moteur de Bibliothèque Warraq",
-      "desc": "Un système de catalogage et d'indexation locale hors-ligne destiné aux bibliothèques d'hôpitaux et centres médicaux. Conçu avec Tauri, React, SQLite et Rust.",
+      "desc": "Un système de catalogage de bibliothèque pour les institutions médicales, adossé à Supabase. Conçu avec Tauri, React, Postgres et Rust.",
       "version": "Version logicielle",
       "database": "Schéma de la base",
       "platform": "Système d'exploitation",
@@ -1226,20 +1226,20 @@
       },
       "backuprestore": {
         "title": "Sauvegarde & Restauration",
-        "body": "Protégez les données de votre bibliothèque avec des sauvegardes régulières.",
+        "body": "Importez et exportez les fiches du catalogue et des membres de Warraq au format JSON.",
         "tips": [
-          "Exporter après de grandes sessions de catalogage",
-          "Conserver les sauvegardes sur un disque séparé",
-          "Ne jamais restaurer sans exporter d'abord"
+          "Supabase sauvegarde automatiquement la base de données",
+          "Utilisez l'import/export JSON pour déplacer des fiches entre bibliothèques",
+          "N'importez jamais un fichier JSON que vous n'avez pas vérifié"
         ]
       },
       "database": {
         "title": "Base de données",
-        "body": "Inspectez la base SQLite sous-jacente et effectuez la maintenance.",
+        "body": "Consultez les détails de connexion du projet Supabase partagé et les actions de réinitialisation sensibles.",
         "tips": [
-          "L'action VACUUM récupère l'espace disque inutilisé",
-          "Exécuter une fois par mois pour des performances optimales",
-          "La réinitialisation d'usine nécessite un redémarrage"
+          "Cette base de données est partagée par tous les postes du personnel",
+          "L'effacement des prêts ou la réinitialisation des données est irréversible",
+          "Contactez le propriétaire du projet Supabase pour les modifications au niveau du compte"
         ]
       },
       "integrationsai": {
@@ -1313,9 +1313,9 @@
     "close": "Fermer"
   },
   "boot": {
-    "database": "Connexion à la base de données SQLite…",
+    "database": "Connexion à Warraq…",
     "preferences": "Vérification des préférences et configurations du système…",
-    "optimizing": "Optimisation des index du catalogue et des données de base…",
+    "optimizing": "Synchronisation de la file de réservation…",
     "loading": "Chargement des modules de l'application…"
   },
   "commandPalette": {
