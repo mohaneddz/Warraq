@@ -6,7 +6,7 @@ import {
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 
 import { dashboard, loans } from "../data/repositories/library";
-import { database } from "../data/database";
+import { supabase, unwrap } from "../data/supabaseClient";
 import { daysLate } from "../utils/dates";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -14,6 +14,15 @@ import { useTranslation } from "react-i18next";
 import { useUiStore } from "../store/uiStore";
 import { useContextMenu } from "../components/ui/ContextMenu";
 import { toast } from "sonner";
+
+function countBy<T extends string>(values: (T | null | undefined)[], fallback: string): { name: string; count: number }[] {
+  const counts = new Map<string, number>();
+  for (const raw of values) {
+    const key = raw?.trim() || fallback;
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+  return [...counts.entries()].map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count);
+}
 
 export function ReportsPage() {
   const { t } = useTranslation();
@@ -28,64 +37,44 @@ export function ReportsPage() {
   const categoriesQuery = useQuery({
     queryKey: ["report-categories"],
     queryFn: async () => {
-      const db = await database();
-      return db.select<{ name: string; value: number }[]>(`
-        SELECT COALESCE(c.name, 'General Collection') as name, COUNT(l.id) as value
-        FROM loans l
-        JOIN copies cp ON cp.id = l.copy_id
-        JOIN books b ON b.id = cp.book_id
-        LEFT JOIN categories c ON c.id = b.category_id
-        GROUP BY name
-        ORDER BY value DESC
-        LIMIT 6`);
+      const rows = unwrap<{ copies: { books: { categories: { name: string } | null } | null } | null }[]>(
+        await supabase.from("loans").select("copies(books(categories(name)))")
+      );
+      return countBy(rows.map((r) => r.copies?.books?.categories?.name), "General Collection")
+        .slice(0, 6)
+        .map((c) => ({ name: c.name, value: c.count }));
     }
   });
 
   const conditionQuery = useQuery({
     queryKey: ["report-conditions"],
     queryFn: async () => {
-      const db = await database();
-      return db.select<{ condition: string; count: number }[]>(`
-        SELECT condition, COUNT(*) as count 
-        FROM copies 
-        WHERE status != 'archived'
-        GROUP BY condition`);
+      const rows = unwrap<{ condition: string }[]>(await supabase.from("copies").select("condition").neq("status", "archived"));
+      return countBy(rows.map((r) => r.condition), "good").map((c) => ({ condition: c.name, count: c.count }));
     }
   });
 
   const memberRolesQuery = useQuery({
     queryKey: ["report-member-roles"],
     queryFn: async () => {
-      const db = await database();
-      return db.select<{ role: string; count: number }[]>(`
-        SELECT COALESCE(role, 'Member') as role, COUNT(*) as count 
-        FROM members 
-        WHERE status != 'archived'
-        GROUP BY role 
-        ORDER BY count DESC`);
+      const rows = unwrap<{ role: string | null }[]>(await supabase.from("members").select("role").neq("status", "archived"));
+      return countBy(rows.map((r) => r.role), "Member").map((c) => ({ role: c.name, count: c.count }));
     }
   });
 
   const copyStatusQuery = useQuery({
     queryKey: ["report-copy-status"],
     queryFn: async () => {
-      const db = await database();
-      return db.select<{ status: string; count: number }[]>(`
-        SELECT status, COUNT(*) as count 
-        FROM copies 
-        GROUP BY status`);
+      const rows = unwrap<{ status: string }[]>(await supabase.from("copies").select("status"));
+      return countBy(rows.map((r) => r.status), "available").map((c) => ({ status: c.name, count: c.count }));
     }
   });
 
   const itemTypesQuery = useQuery({
     queryKey: ["report-item-types"],
     queryFn: async () => {
-      const db = await database();
-      return db.select<{ item_type: string; count: number }[]>(`
-        SELECT COALESCE(item_type, 'book') as item_type, COUNT(*) as count 
-        FROM books 
-        WHERE archived_at IS NULL 
-        GROUP BY item_type`);
+      const rows = unwrap<{ item_type: string | null }[]>(await supabase.from("books").select("item_type").is("archived_at", null));
+      return countBy(rows.map((r) => r.item_type), "book").map((c) => ({ item_type: c.name, count: c.count }));
     }
   });
 

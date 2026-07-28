@@ -10,6 +10,7 @@ import {
   LayoutGrid, Save, Users as UsersIcon, Plus, ShieldCheck, Ban, KeyRound, Pencil
 } from "lucide-react";
 import { useUiStore } from "../store/uiStore";
+import { useLibrarySettingsStore } from "../store/librarySettingsStore";
 import { useAuthStore } from "../store/authStore";
 import { changeOwnPassword, listUsers, createUser, updateUser, resetPassword, deleteUser } from "../data/auth";
 import type { PublicUser, UserRole, UserStatus } from "../types";
@@ -50,6 +51,7 @@ export function SettingsPage() {
   const [activeTab, setActiveTab] = useState<Tab>("General");
   const [search, setSearch] = useState("");
   const { preferences, updatePreferences } = useUiStore();
+  const { settings: librarySettings, update: updateLibrarySettings } = useLibrarySettingsStore();
   const isAdmin = useAuthStore((s) => s.user?.role === "admin");
   const location = useLocation();
 
@@ -175,13 +177,13 @@ export function SettingsPage() {
       <div className="flex-1 flex gap-6 overflow-hidden min-w-0">
         {/* Settings Form */}
         <div className="flex-1 overflow-y-auto pr-2 no-scrollbar pb-10 min-w-0">
-          {activeTab === "General" && <GeneralTab prefs={preferences} update={updatePreferences} />}
-          {activeTab === "Library Profile" && <LibraryProfileTab prefs={preferences} update={updatePreferences} />}
-          {activeTab === "Localization" && <LocalizationTab prefs={preferences} update={updatePreferences} />}
+          {activeTab === "General" && <GeneralTab prefs={librarySettings} update={updateLibrarySettings} localPrefs={preferences} updateLocal={updatePreferences} />}
+          {activeTab === "Library Profile" && <LibraryProfileTab prefs={librarySettings} update={updateLibrarySettings} />}
+          {activeTab === "Localization" && <LocalizationTab prefs={librarySettings} update={updateLibrarySettings} localPrefs={preferences} updateLocal={updatePreferences} />}
           {activeTab === "Appearance" && <AppearanceTab prefs={preferences} update={updatePreferences} />}
-          {activeTab === "Rules" && <RulesTab prefs={preferences} update={updatePreferences} />}
-          {activeTab === "Fines & Fees" && <FinesTab prefs={preferences} update={updatePreferences} />}
-          {activeTab === "Notifications" && <NotificationsTab prefs={preferences} update={updatePreferences} />}
+          {activeTab === "Rules" && <RulesTab prefs={librarySettings} update={updateLibrarySettings} />}
+          {activeTab === "Fines & Fees" && <FinesTab prefs={librarySettings} update={updateLibrarySettings} />}
+          {activeTab === "Notifications" && <NotificationsTab prefs={librarySettings} update={updateLibrarySettings} />}
           {activeTab === "Backup & Restore" && <BackupTab />}
           {activeTab === "Database" && <DatabaseTab />}
           {activeTab === "Integrations & AI" && <IntegrationsTab prefs={preferences} update={updatePreferences} />}
@@ -201,13 +203,14 @@ export function SettingsPage() {
 }
 
 // ─── Shared Props Type ────────────────────────────────────────────────────────
-import type { Preferences } from "../types";
+import type { Preferences, LibrarySettings } from "../types";
 type TabProps = { prefs: Preferences; update: (v: Partial<Preferences>) => void };
+type LibraryTabProps = { prefs: LibrarySettings; update: (v: Partial<LibrarySettings>) => Promise<void> };
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // 1. GENERAL TAB
 // ═══════════════════════════════════════════════════════════════════════════════
-function GeneralTab({ prefs, update }: TabProps) {
+function GeneralTab({ prefs, update, localPrefs, updateLocal }: LibraryTabProps & { localPrefs: Preferences; updateLocal: (v: Partial<Preferences>) => void }) {
   const { t } = useTranslation();
   return (
     <div className="max-w-2xl">
@@ -216,10 +219,10 @@ function GeneralTab({ prefs, update }: TabProps) {
       <Card title={t("settings.general.identityTitle")} icon={<SettingsIcon size={16} className="text-[#1a4d40]" />}>
         <div className="grid grid-cols-2 gap-4 mb-4">
           <Field label={t("settings.general.libName")}>
-            <input type="text" defaultValue={prefs.libraryName} onBlur={e => update({ libraryName: e.target.value })} className={inputCls} />
+            <input type="text" defaultValue={prefs.library_name} onBlur={e => update({ library_name: e.target.value })} className={inputCls} />
           </Field>
           <Field label={t("settings.general.shortName")}>
-            <input type="text" defaultValue={prefs.libraryShortName} placeholder={t("settings.general.shortNamePlaceholder")} onBlur={e => update({ libraryShortName: e.target.value })} className={inputCls} />
+            <input type="text" defaultValue={prefs.library_short_name} placeholder={t("settings.general.shortNamePlaceholder")} onBlur={e => update({ library_short_name: e.target.value })} className={inputCls} />
           </Field>
         </div>
       </Card>
@@ -232,12 +235,12 @@ function GeneralTab({ prefs, update }: TabProps) {
             <p className="font-bold text-[13px] text-[#122222] dark:text-white">{t("settings.general.autosaveLabel")}</p>
             <p className="text-[12px] text-[#122222]/60 dark:text-white/60 mt-0.5">{t("settings.general.autosaveDesc")}</p>
           </div>
-          <Toggle checked={prefs.autosaveEnabled} onChange={v => update({ autosaveEnabled: v })} />
+          <Toggle checked={localPrefs.autosaveEnabled} onChange={v => updateLocal({ autosaveEnabled: v })} />
         </div>
-        {prefs.autosaveEnabled && (
+        {localPrefs.autosaveEnabled && (
           <div className="mt-4 pt-4 border-t border-black/5 dark:border-white/5">
             <Field label={t("settings.general.autosaveInterval")}>
-              <input type="number" min={10} max={600} defaultValue={prefs.autosaveInterval} onBlur={e => update({ autosaveInterval: Number(e.target.value) })} className={inputCls + " w-32"} />
+              <input type="number" min={10} max={600} defaultValue={localPrefs.autosaveInterval} onBlur={e => updateLocal({ autosaveInterval: Number(e.target.value) })} className={inputCls + " w-32"} />
             </Field>
           </div>
         )}
@@ -331,7 +334,7 @@ function AccountCard() {
 // ═══════════════════════════════════════════════════════════════════════════════
 // 2. LIBRARY PROFILE TAB
 // ═══════════════════════════════════════════════════════════════════════════════
-function LibraryProfileTab({ prefs, update }: TabProps) {
+function LibraryProfileTab({ prefs, update }: LibraryTabProps) {
   const { t } = useTranslation();
   return (
     <div className="max-w-2xl">
@@ -340,22 +343,22 @@ function LibraryProfileTab({ prefs, update }: TabProps) {
       <Card title={t("settings.profile.contactTitle")} icon={<MapPin size={16} className="text-[#1a4d40]" />}>
         <div className="space-y-4">
           <Field label={t("settings.profile.address")}>
-            <input type="text" defaultValue={prefs.libraryAddress} placeholder={t("settings.profile.addressPlaceholder")} onBlur={e => update({ libraryAddress: e.target.value })} className={inputCls} />
+            <input type="text" defaultValue={prefs.library_address} placeholder={t("settings.profile.addressPlaceholder")} onBlur={e => update({ library_address: e.target.value })} className={inputCls} />
           </Field>
           <div className="grid grid-cols-2 gap-4">
             <Field label={t("settings.profile.city")}>
-              <input type="text" defaultValue={prefs.libraryCity} placeholder={t("settings.profile.cityPlaceholder")} onBlur={e => update({ libraryCity: e.target.value })} className={inputCls} />
+              <input type="text" defaultValue={prefs.library_city} placeholder={t("settings.profile.cityPlaceholder")} onBlur={e => update({ library_city: e.target.value })} className={inputCls} />
             </Field>
             <Field label={t("settings.profile.phone")}>
-              <input type="tel" defaultValue={prefs.libraryPhone} placeholder={t("settings.profile.phonePlaceholder")} onBlur={e => update({ libraryPhone: e.target.value })} className={inputCls} />
+              <input type="tel" defaultValue={prefs.library_phone} placeholder={t("settings.profile.phonePlaceholder")} onBlur={e => update({ library_phone: e.target.value })} className={inputCls} />
             </Field>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <Field label={t("settings.profile.email")}>
-              <input type="email" defaultValue={prefs.libraryEmail} placeholder={t("settings.profile.emailPlaceholder")} onBlur={e => update({ libraryEmail: e.target.value })} className={inputCls} />
+              <input type="email" defaultValue={prefs.library_email} placeholder={t("settings.profile.emailPlaceholder")} onBlur={e => update({ library_email: e.target.value })} className={inputCls} />
             </Field>
             <Field label={t("settings.profile.website")}>
-              <input type="url" defaultValue={prefs.libraryWebsite} placeholder={t("settings.profile.websitePlaceholder")} onBlur={e => update({ libraryWebsite: e.target.value })} className={inputCls} />
+              <input type="url" defaultValue={prefs.library_website} placeholder={t("settings.profile.websitePlaceholder")} onBlur={e => update({ library_website: e.target.value })} className={inputCls} />
             </Field>
           </div>
         </div>
@@ -366,14 +369,14 @@ function LibraryProfileTab({ prefs, update }: TabProps) {
           <Field label={t("settings.profile.description")}>
             <textarea
               rows={4}
-              defaultValue={prefs.libraryDescription}
+              defaultValue={prefs.library_description}
               placeholder={t("settings.profile.descriptionPlaceholder")}
-              onBlur={e => update({ libraryDescription: e.target.value })}
+              onBlur={e => update({ library_description: e.target.value })}
               className={inputCls + " resize-none"}
             />
           </Field>
           <Field label={t("settings.profile.hours")}>
-            <input type="text" defaultValue={prefs.libraryHours} placeholder={t("settings.profile.hoursPlaceholder")} onBlur={e => update({ libraryHours: e.target.value })} className={inputCls} />
+            <input type="text" defaultValue={prefs.library_hours} placeholder={t("settings.profile.hoursPlaceholder")} onBlur={e => update({ library_hours: e.target.value })} className={inputCls} />
           </Field>
         </div>
       </Card>
@@ -386,7 +389,7 @@ function LibraryProfileTab({ prefs, update }: TabProps) {
 // ═══════════════════════════════════════════════════════════════════════════════
 // 3. LOCALIZATION TAB
 // ═══════════════════════════════════════════════════════════════════════════════
-function LocalizationTab({ prefs, update }: TabProps) {
+function LocalizationTab({ prefs, update, localPrefs, updateLocal }: LibraryTabProps & { localPrefs: Preferences; updateLocal: (v: Partial<Preferences>) => void }) {
   const { t } = useTranslation();
   const languages = [
     { code: "en" as const, label: "English", native: "English" },
@@ -401,7 +404,7 @@ function LocalizationTab({ prefs, update }: TabProps) {
   const currencies = ["DZD", "EUR", "USD", "GBP", "MAD", "TND", "SAR", "AED"];
 
   const handleLocaleChange = (code: "en" | "fr" | "ar") => {
-    update({ locale: code });
+    updateLocal({ locale: code });
     document.documentElement.lang = code;
     document.documentElement.dir = code === "ar" ? "rtl" : "ltr";
   };
@@ -417,19 +420,19 @@ function LocalizationTab({ prefs, update }: TabProps) {
               key={lang.code}
               onClick={() => handleLocaleChange(lang.code)}
               className={`p-4 rounded-xl border-2 border-solid text-start transition-all cursor-pointer ${
-                prefs.locale === lang.code 
-                  ? "border-[#b96f3e] bg-[#b96f3e]/5 scale-[1.02]" 
+                localPrefs.locale === lang.code
+                  ? "border-[#b96f3e] bg-[#b96f3e]/5 scale-[1.02]"
                   : "border-transparent bg-[#122222]/[0.03] dark:bg-[#ffffff]/[0.03]"
               } hover:brightness-90 hover:scale-[0.98] active:scale-[1.02] active:brightness-110`}
             >
               <div className="text-[18px] mb-2">{lang.code === "en" ? "🇬🇧" : lang.code === "fr" ? "🇫🇷" : "🇩🇿"}</div>
               <div className="font-bold text-[13px] text-[#122222] dark:text-white">{lang.label}</div>
               <div className="text-[11px] text-[#122222]/50 dark:text-white/50">{lang.native}</div>
-              {prefs.locale === lang.code && <div className="mt-2 flex items-center gap-1 text-[11px] font-bold text-[#b96f3e]"><CheckCircle2 size={12} /> {t("status.active", "Active")}</div>}
+              {localPrefs.locale === lang.code && <div className="mt-2 flex items-center gap-1 text-[11px] font-bold text-[#b96f3e]"><CheckCircle2 size={12} /> {t("status.active", "Active")}</div>}
             </button>
           ))}
         </div>
-        {prefs.locale === "ar" && (
+        {localPrefs.locale === "ar" && (
           <div className="mt-4 p-3 rounded-lg bg-[#b96f3e]/10 border border-[#b96f3e]/20 flex items-start gap-2">
             <Info size={14} className="text-[#b96f3e] shrink-0 mt-0.5" />
             <p className="text-[12px] text-[#b96f3e]">{t("settings.localization.rtlTip")}</p>
@@ -455,10 +458,10 @@ function LocalizationTab({ prefs, update }: TabProps) {
             {formats.map(f => (
               <button
                 key={f}
-                onClick={() => update({ dateFormat: f })}
+                onClick={() => update({ date_format: f })}
                 className={`flex-1 py-2 px-3 rounded-lg border border-solid transition-all cursor-pointer ${
-                  prefs.dateFormat === f 
-                    ? "border-[#1a4d40] bg-[#1a4d40]/10 text-[#1a4d40] dark:text-[#1b9277] scale-[1.02]" 
+                  prefs.date_format === f
+                    ? "border-[#1a4d40] bg-[#1a4d40]/10 text-[#1a4d40] dark:text-[#1b9277] scale-[1.02]"
                     : "border-transparent bg-[#122222]/[0.03] dark:bg-[#ffffff]/[0.03] text-[#122222]/70 dark:text-white/70"
                 } hover:brightness-90 hover:scale-[0.98] active:scale-[1.02] active:brightness-110`}
               >
@@ -554,7 +557,7 @@ function AppearanceTab({ prefs, update }: TabProps) {
 // ═══════════════════════════════════════════════════════════════════════════════
 // 5. RULES TAB
 // ═══════════════════════════════════════════════════════════════════════════════
-function RulesTab({ prefs, update }: TabProps) {
+function RulesTab({ prefs, update }: LibraryTabProps) {
   const { t } = useTranslation();
   return (
     <div className="max-w-2xl">
@@ -563,20 +566,34 @@ function RulesTab({ prefs, update }: TabProps) {
       <Card title={t("settings.rules.paramsTitle")} icon={<BookMarked size={16} className="text-[#1a4d40] dark:text-[#1b9277]" />}>
         <div className="grid grid-cols-2 gap-4 mb-4">
           <Field label={t("settings.rules.loanPeriod")}>
-            <NumberInput value={prefs.loanDays} min={1} max={365} onChange={v => update({ loanDays: v })} />
+            <NumberInput value={prefs.loan_days} min={1} max={365} onChange={v => update({ loan_days: v })} />
           </Field>
           <Field label={t("settings.rules.loanLimit")}>
-            <NumberInput value={prefs.loanLimit} min={1} max={50} onChange={v => update({ loanLimit: v })} />
+            <NumberInput value={prefs.loan_limit} min={1} max={50} onChange={v => update({ loan_limit: v })} />
           </Field>
         </div>
         <div className="grid grid-cols-2 gap-4">
           <Field label={t("settings.rules.renewLimit")}>
-            <NumberInput value={prefs.renewLimit} min={0} max={10} onChange={v => update({ renewLimit: v })} />
+            <NumberInput value={prefs.renew_limit} min={0} max={10} onChange={v => update({ renew_limit: v })} />
           </Field>
           <Field label={t("settings.rules.holdPeriod")}>
-            <NumberInput value={prefs.reservationHoldDays} min={1} max={30} onChange={v => update({ reservationHoldDays: v })} />
+            <NumberInput value={prefs.reservation_hold_days} min={1} max={30} onChange={v => update({ reservation_hold_days: v })} />
           </Field>
         </div>
+      </Card>
+
+      <Card title={t("settings.rules.scopeDurationsTitle", "Internal / External Durations")} icon={<Clock size={16} className="text-[#1a4d40] dark:text-[#1b9277]" />}>
+        <div className="grid grid-cols-2 gap-4">
+          <Field label={t("settings.rules.internalDays", "Internal loan duration (days)")}>
+            <NumberInput value={prefs.reservation_internal_days} min={1} max={7} onChange={v => update({ reservation_internal_days: v })} />
+          </Field>
+          <Field label={t("settings.rules.externalDays", "External loan duration (days)")}>
+            <NumberInput value={prefs.reservation_external_days} min={1} max={90} onChange={v => update({ reservation_external_days: v })} />
+          </Field>
+        </div>
+        <p className="text-[11px] text-[#122222]/50 dark:text-white/50 mt-3">
+          {t("settings.rules.scopeDurationsHelp", "Internal reservations stay in the library (read-in-place); external reservations are taken home. Visitors and single-copy titles can only be reserved internally.")}
+        </p>
       </Card>
 
       <Card title={t("settings.rules.gracePeriodTitle", "Grace Period")} icon={<Clock size={16} className="text-[#1a4d40] dark:text-[#1b9277]" />}>
@@ -585,11 +602,11 @@ function RulesTab({ prefs, update }: TabProps) {
             <p className="font-bold text-[13px] text-[#122222] dark:text-white">{t("settings.rules.enableGracePeriod")}</p>
             <p className="text-[12px] text-[#122222]/60 dark:text-white/60 mt-0.5">{t("settings.rules.enableGracePeriodDesc")}</p>
           </div>
-          <Toggle checked={prefs.gracePeriodEnabled} onChange={v => update({ gracePeriodEnabled: v })} />
+          <Toggle checked={prefs.grace_period_enabled} onChange={v => update({ grace_period_enabled: v })} />
         </div>
-        <div className={`transition-all duration-200 ${prefs.gracePeriodEnabled ? "opacity-100" : "opacity-40 pointer-events-none"}`}>
+        <div className={`transition-all duration-200 ${prefs.grace_period_enabled ? "opacity-100" : "opacity-40 pointer-events-none"}`}>
           <Field label={t("settings.rules.gracePeriodLength")}>
-            <NumberInput value={prefs.gracePeriodDays} min={1} max={14} disabled={!prefs.gracePeriodEnabled} onChange={v => update({ gracePeriodDays: v })} />
+            <NumberInput value={prefs.grace_period_days} min={1} max={14} disabled={!prefs.grace_period_enabled} onChange={v => update({ grace_period_days: v })} />
           </Field>
         </div>
       </Card>
@@ -602,7 +619,7 @@ function RulesTab({ prefs, update }: TabProps) {
 // ═══════════════════════════════════════════════════════════════════════════════
 // 6. FINES & FEES TAB
 // ═══════════════════════════════════════════════════════════════════════════════
-function FinesTab({ prefs, update }: TabProps) {
+function FinesTab({ prefs, update }: LibraryTabProps) {
   const { t } = useTranslation();
   return (
     <div className="max-w-2xl">
@@ -612,34 +629,34 @@ function FinesTab({ prefs, update }: TabProps) {
         <ToggleRow
           label={t("settings.fines.enableFines")}
           desc={t("settings.fines.enableFinesDesc")}
-          checked={prefs.finesEnabled}
-          onChange={v => update({ finesEnabled: v })}
+          checked={prefs.fines_enabled}
+          onChange={v => update({ fines_enabled: v })}
         />
-        {prefs.finesEnabled && (
+        {prefs.fines_enabled && (
           <div className="mt-4 pt-4 border-t border-black/5 dark:border-white/5 space-y-4">
             <div className="grid grid-cols-2 gap-4">
-              <Field label={t("settings.fines.finePerDay", { currency: prefs.fineCurrency })}>
+              <Field label={t("settings.fines.fine_per_day", { currency: prefs.fine_currency })}>
                 <input
                   type="number"
                   min={0}
                   step={0.5}
-                  defaultValue={prefs.finePerDay}
-                  onBlur={e => update({ finePerDay: Number(e.target.value) })}
+                  defaultValue={prefs.fine_per_day}
+                  onBlur={e => update({ fine_per_day: Number(e.target.value) })}
                   className={inputCls}
                 />
               </Field>
-              <Field label={t("settings.fines.maxFine", { currency: prefs.fineCurrency })}>
+              <Field label={t("settings.fines.maxFine", { currency: prefs.fine_currency })}>
                 <input
                   type="number"
                   min={0}
-                  defaultValue={prefs.maxFineAmount}
-                  onBlur={e => update({ maxFineAmount: Number(e.target.value) })}
+                  defaultValue={prefs.max_fine_amount}
+                  onBlur={e => update({ max_fine_amount: Number(e.target.value) })}
                   className={inputCls}
                 />
               </Field>
             </div>
             <Field label={t("settings.fines.currencyLabel")}>
-              <select value={prefs.fineCurrency} onChange={e => update({ fineCurrency: e.target.value })} className={selectCls}>
+              <select value={prefs.fine_currency} onChange={e => update({ fine_currency: e.target.value })} className={selectCls}>
                 {["DZD", "EUR", "USD", "GBP", "MAD", "TND"].map(c => <option key={c} value={c}>{c}</option>)}
               </select>
             </Field>
@@ -647,16 +664,16 @@ function FinesTab({ prefs, update }: TabProps) {
         )}
       </Card>
 
-      {prefs.finesEnabled && (
+      {prefs.fines_enabled && (
         <Card title={t("settings.fines.paymentTitle")} icon={<DollarSign size={16} className="text-[#b96f3e]" />}>
           <p className="text-[12px] text-[#122222]/60 dark:text-white/60 mb-4">{t("settings.fines.paymentDesc")}</p>
           <div className="grid grid-cols-3 gap-3">
             {(["cash", "card", "both"] as const).map(method => (
               <button
                 key={method}
-                onClick={() => update({ finesPaymentMethod: method })}
+                onClick={() => update({ fines_payment_method: method })}
                 className={`py-3 px-4 rounded-xl border-2 border-solid font-semibold text-[13px] capitalize transition-all cursor-pointer ${
-                  prefs.finesPaymentMethod === method 
+                  prefs.fines_payment_method === method 
                     ? "border-[#b96f3e] bg-[#b96f3e]/5 text-[#b96f3e] scale-[1.02]" 
                     : "border-transparent bg-[#122222]/[0.03] dark:bg-[#ffffff]/[0.03] text-[#122222]/70 dark:text-white/70"
                 } hover:brightness-90 hover:scale-[0.98] active:scale-[1.02] active:brightness-110`}
@@ -668,7 +685,7 @@ function FinesTab({ prefs, update }: TabProps) {
         </Card>
       )}
 
-      {!prefs.finesEnabled && (
+      {!prefs.fines_enabled && (
         <div className="bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-700/30 rounded-2xl p-5 flex items-start gap-3">
           <AlertTriangle size={16} className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
           <div>
@@ -686,7 +703,7 @@ function FinesTab({ prefs, update }: TabProps) {
 // ═══════════════════════════════════════════════════════════════════════════════
 // 7. NOTIFICATIONS TAB
 // ═══════════════════════════════════════════════════════════════════════════════
-function NotificationsTab({ prefs, update }: TabProps) {
+function NotificationsTab({ prefs, update }: LibraryTabProps) {
   const { t } = useTranslation();
   return (
     <div className="max-w-2xl">
@@ -697,21 +714,21 @@ function NotificationsTab({ prefs, update }: TabProps) {
           <ToggleRow
             label={t("settings.notifications.overdueAlerts")}
             desc={t("settings.notifications.overdueAlertsDesc")}
-            checked={prefs.notifyOverdue}
-            onChange={v => update({ notifyOverdue: v })}
+            checked={prefs.notify_overdue}
+            onChange={v => update({ notify_overdue: v })}
           />
           <div className="border-t border-black/5 dark:border-white/5 pt-5">
             <ToggleRow
               label={t("settings.notifications.dueSoonReminders")}
               desc={t("settings.notifications.dueSoonRemindersDesc")}
-              checked={prefs.notifyDueSoon}
-              onChange={v => update({ notifyDueSoon: v })}
+              checked={prefs.notify_due_soon}
+              onChange={v => update({ notify_due_soon: v })}
             />
-            {prefs.notifyDueSoon && (
+            {prefs.notify_due_soon && (
               <div className="mt-4 ml-12">
                 <Field label={t("settings.notifications.dueSoonDays")}>
                   <div className="flex items-center gap-3">
-                    <NumberInput value={prefs.notifyDueSoonDays} min={1} max={14} onChange={v => update({ notifyDueSoonDays: v })} />
+                    <NumberInput value={prefs.notify_due_soon_days} min={1} max={14} onChange={v => update({ notify_due_soon_days: v })} />
                     <span className="text-[13px] text-[#122222]/60 dark:text-white/60">{t("settings.notifications.dueSoonDaysSuffix")}</span>
                   </div>
                 </Field>
@@ -725,8 +742,8 @@ function NotificationsTab({ prefs, update }: TabProps) {
         <ToggleRow
           label={t("settings.notifications.readyAlerts")}
           desc={t("settings.notifications.readyAlertsDesc")}
-          checked={prefs.notifyReady}
-          onChange={v => update({ notifyReady: v })}
+          checked={prefs.notify_ready}
+          onChange={v => update({ notify_ready: v })}
         />
       </Card>
 
@@ -747,100 +764,56 @@ function NotificationsTab({ prefs, update }: TabProps) {
 // ═══════════════════════════════════════════════════════════════════════════════
 function BackupTab() {
   const { t } = useTranslation();
-  const [lastBackup, setLastBackup] = useState<string | null>(() => {
-    return localStorage.getItem("warraq-last-backup-timestamp");
-  });
-  const [restoring, setRestoring] = useState(false);
   const [importingBooks, setImportingBooks] = useState(false);
   const [importingMembers, setImportingMembers] = useState(false);
-
-  const handleExport = async () => {
-    try {
-      const { save } = await import("@tauri-apps/plugin-dialog");
-      const { copyFile } = await import("@tauri-apps/plugin-fs");
-      const { appDataDir } = await import("@tauri-apps/api/path");
-      const dir = await appDataDir();
-      const dest = await save({ defaultPath: "warraq-backup.db", filters: [{ name: "Database", extensions: ["db"] }] });
-      if (dest) {
-        await copyFile(`${dir}/warraq.db`, dest);
-        const nowStr = new Date().toISOString().replace("T", " ").substring(0, 16);
-        localStorage.setItem("warraq-last-backup-timestamp", nowStr);
-        setLastBackup(nowStr);
-        alert(t("settings.backup.exportSuccess"));
-      }
-    } catch {
-      alert(t("settings.backup.exportError"));
-    }
-  };
-
-  const handleImport = async () => {
-    try {
-      setRestoring(true);
-      const { open } = await import("@tauri-apps/plugin-dialog");
-      const file = await open({ filters: [{ name: "Database", extensions: ["db"] }] });
-      if (file) {
-        await new Promise(r => setTimeout(r, 800));
-        alert(t("settings.backup.restoreSuccess"));
-      }
-    } catch {
-      alert(t("settings.backup.restoreError"));
-    } finally {
-      setRestoring(false);
-    }
-  };
 
   const handleImportBooks = async () => {
     try {
       setImportingBooks(true);
       const { open } = await import("@tauri-apps/plugin-dialog");
       const { readTextFile } = await import("@tauri-apps/plugin-fs");
-      const { saveBook, importBooksFromDb } = await import("../data/repositories/library");
-      
-      const file = await open({
-        filters: [{ name: "Data File", extensions: ["json", "db"] }]
-      });
+      const { saveBook } = await import("../data/repositories/library");
+
+      const file = await open({ filters: [{ name: "JSON", extensions: ["json"] }] });
       if (!file) return;
 
-      if (file.endsWith(".json")) {
-        const text = await readTextFile(file);
-        const data = JSON.parse(text);
-        if (!Array.isArray(data)) {
-          alert(t("settings.backup.invalidJsonBooks"));
-          return;
-        }
-
-        let count = 0;
-        for (const item of data) {
-          if (!item.title) continue;
-          try {
-            await saveBook({
-              title: item.title,
-              subtitle: item.subtitle || null,
-              arabic_title: item.arabic_title || null,
-              author: item.author || null,
-              isbn10: item.isbn10 || (item.isbn && item.isbn.length === 10 ? item.isbn : null),
-              isbn13: item.isbn13 || (item.isbn && item.isbn.length === 13 ? item.isbn : null),
-              publisher: item.publisher || null,
-              category: item.category || null,
-              description: item.description || null,
-              language: item.language || "English",
-              call_number: item.call_number || null,
-              barcode: item.barcode || null,
-              accession: item.accession || null,
-              tags: item.tags || null,
-              cover_path: item.cover_path || null,
-              publication_year: item.publication_year || null
-            });
-            count++;
-          } catch (err) {
-            console.error("Failed to import book:", item.title, err);
-          }
-        }
-        alert(t("settings.backup.importBooksSuccess", { count, total: data.length }));
-      } else if (file.endsWith(".db")) {
-        const res = await importBooksFromDb(file);
-        alert(t("settings.backup.importBooksSuccessDb", { count: res.importedCount }));
+      const text = await readTextFile(file);
+      const data = JSON.parse(text);
+      if (!Array.isArray(data)) {
+        alert(t("settings.backup.invalidJsonBooks"));
+        return;
       }
+
+      let count = 0;
+      for (const item of data) {
+        if (!item.title) continue;
+        try {
+          await saveBook({
+            title: item.title,
+            item_type: item.item_type || "book",
+            subtitle: item.subtitle || null,
+            arabic_title: item.arabic_title || null,
+            author: item.author || null,
+            isbn10: item.isbn10 || (item.isbn && item.isbn.length === 10 ? item.isbn : null),
+            isbn13: item.isbn13 || (item.isbn && item.isbn.length === 13 ? item.isbn : null),
+            publisher: item.publisher || null,
+            category: item.category || null,
+            description: item.description || null,
+            language: item.language || "French",
+            call_number: item.call_number || null,
+            dewey_code: item.dewey_code || null,
+            barcode: item.barcode || null,
+            accession: item.accession || null,
+            tags: item.tags || null,
+            cover_path: item.cover_path || null,
+            publication_year: item.publication_year || null
+          });
+          count++;
+        } catch (err) {
+          console.error("Failed to import book:", item.title, err);
+        }
+      }
+      alert(t("settings.backup.importBooksSuccess", { count, total: data.length }));
     } catch (err: any) {
       console.error(err);
       alert(t("settings.backup.importFailed", { error: err.message || String(err) }));
@@ -854,44 +827,37 @@ function BackupTab() {
       setImportingMembers(true);
       const { open } = await import("@tauri-apps/plugin-dialog");
       const { readTextFile } = await import("@tauri-apps/plugin-fs");
-      const { saveMember, importMembersFromDb } = await import("../data/repositories/library");
-      
-      const file = await open({
-        filters: [{ name: "Data File", extensions: ["json", "db"] }]
-      });
+      const { saveMember } = await import("../data/repositories/library");
+
+      const file = await open({ filters: [{ name: "JSON", extensions: ["json"] }] });
       if (!file) return;
 
-      if (file.endsWith(".json")) {
-        const text = await readTextFile(file);
-        const data = JSON.parse(text);
-        if (!Array.isArray(data)) {
-          alert(t("settings.backup.invalidJsonMembers"));
-          return;
-        }
-
-        let count = 0;
-        for (const item of data) {
-          if (!item.full_name) continue;
-          try {
-            await saveMember({
-              full_name: item.full_name,
-              email: item.email || null,
-              phone: item.phone || null,
-              role: item.role || null,
-              department: item.department || null,
-              status: item.status || "active",
-              member_number: item.member_number || undefined
-            });
-            count++;
-          } catch (err) {
-            console.error("Failed to import member:", item.full_name, err);
-          }
-        }
-        alert(t("settings.backup.importMembersSuccess", { count, total: data.length }));
-      } else if (file.endsWith(".db")) {
-        const res = await importMembersFromDb(file);
-        alert(t("settings.backup.importMembersSuccessDb", { count: res.importedCount }));
+      const text = await readTextFile(file);
+      const data = JSON.parse(text);
+      if (!Array.isArray(data)) {
+        alert(t("settings.backup.invalidJsonMembers"));
+        return;
       }
+
+      let count = 0;
+      for (const item of data) {
+        if (!item.full_name) continue;
+        try {
+          await saveMember({
+            full_name: item.full_name,
+            email: item.email || null,
+            phone: item.phone || null,
+            role: item.role || "visitor",
+            department: item.department || null,
+            status: item.status || "active",
+            member_number: item.member_number || undefined
+          });
+          count++;
+        } catch (err) {
+          console.error("Failed to import member:", item.full_name, err);
+        }
+      }
+      alert(t("settings.backup.importMembersSuccess", { count, total: data.length }));
     } catch (err: any) {
       console.error(err);
       alert(t("settings.backup.importFailed", { error: err.message || String(err) }));
@@ -904,61 +870,37 @@ function BackupTab() {
     <div className="max-w-2xl">
       <PageHeader title={t("settings.backup.title")} desc={t("settings.backup.desc")} />
 
-      <Card title={t("settings.backup.lastBackupTitle")} icon={<HardDrive size={16} className="text-[#1a4d40]" />}>
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="font-bold text-[13px] text-[#122222] dark:text-white">{t("settings.backup.latestBackup")}</p>
-            <p className="text-[12px] text-[#122222]/60 dark:text-white/60 mt-0.5">{lastBackup ? lastBackup : t("settings.backup.noBackup")}</p>
-          </div>
-          {lastBackup && <span className="text-[11px] font-bold text-[#1a4d40] dark:text-[#1b9277] bg-[#1a4d40]/10 px-3 py-1 rounded-full">{t("settings.backup.savedBadge")}</span>}
-        </div>
-      </Card>
-
-      <Card title={t("settings.backup.exportTitle")} icon={<Download size={16} className="text-[#b96f3e]" />}>
-        <p className="text-[12px] text-[#122222]/70 dark:text-white/70 mb-4 font-normal">
-          {t("settings.backup.exportDesc")}
+      <div className="bg-[#1a4d40]/5 dark:bg-[#1b9277]/5 border border-[#1a4d40]/10 dark:border-[#1b9277]/10 rounded-2xl p-5 flex items-start gap-3 mb-6">
+        <Info size={16} className="text-[#1a4d40] dark:text-[#1b9277] shrink-0 mt-0.5" />
+        <p className="text-[12px] text-[#1a4d40] dark:text-[#1b9277] leading-relaxed">
+          {t("settings.backup.supabaseNote", "Warraq's data now lives in Supabase, which handles automated database backups on its own — there is nothing to export or restore from this desktop app. The tools below only cover moving catalog/member records in and out as JSON.")}
         </p>
-        <button onClick={handleExport} className="flex items-center gap-2 bg-[#1a4d40] text-white px-5 py-2.5 rounded-lg font-bold text-[13px] hover:bg-[#1a4d40]/90 transition-colors shadow-sm">
-          <Download size={15} /> {t("settings.backup.exportBtn")}
-        </button>
-      </Card>
-
-      <Card title={t("settings.backup.restoreTitle")} icon={<Upload size={16} className="text-[#122222]/60 dark:text-white/60" />}>
-        <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-700/30 flex items-start gap-3 mb-4">
-          <AlertTriangle size={15} className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
-          <p className="text-[12px] text-amber-700 dark:text-amber-400 font-medium leading-normal">
-            {t("settings.backup.restoreWarn")}
-          </p>
-        </div>
-        <button onClick={handleImport} disabled={restoring} className="flex items-center gap-2 border border-[#122222]/15 dark:border-white/15 text-[#122222] dark:text-white px-5 py-2.5 rounded-lg font-bold text-[13px] hover:bg-black/5 dark:hover:bg-white/5 transition-colors disabled:opacity-50">
-          {restoring ? <><RefreshCw size={15} className="animate-spin" /> {t("settings.backup.restoringBtn")}</> : <><Upload size={15} /> {t("settings.backup.restoreBtn")}</>}
-        </button>
-      </Card>
+      </div>
 
       <Card title={t("settings.backup.importBooksTitle", "Import books")} icon={<BookOpen size={16} className="text-[#1a4d40] dark:text-[#1b9277]" />}>
         <p className="text-[12px] text-[#122222]/70 dark:text-white/70 mb-4 font-normal">
-          {t("settings.backup.importBooksDesc", "Import books from a JSON file (containing an array of objects) or another Warraq SQLite database (.db) file.")}
+          {t("settings.backup.importBooksDescJson", "Import books from a JSON file containing an array of book objects.")}
         </p>
-        <button 
-          onClick={handleImportBooks} 
-          disabled={importingBooks || importingMembers || restoring} 
+        <button
+          onClick={handleImportBooks}
+          disabled={importingBooks || importingMembers}
           className="flex items-center gap-2 bg-[#1a4d40] text-white px-5 py-2.5 rounded-lg font-bold text-[13px] hover:bg-[#1a4d40]/90 transition-colors shadow-sm disabled:opacity-50 cursor-pointer"
         >
-          {importingBooks ? <RefreshCw size={15} className="animate-spin" /> : <Download size={15} className="rotate-180" />} 
+          {importingBooks ? <RefreshCw size={15} className="animate-spin" /> : <Download size={15} className="rotate-180" />}
           {t("settings.backup.importBooks")}
         </button>
       </Card>
 
       <Card title={t("settings.backup.importMembersTitle", "Import members")} icon={<UserCircle size={16} className="text-[#b96f3e]" />}>
         <p className="text-[12px] text-[#122222]/70 dark:text-white/70 mb-4 font-normal">
-          {t("settings.backup.importMembersDesc", "Import library members from a JSON file (containing an array of objects) or another Warraq SQLite database (.db) file.")}
+          {t("settings.backup.importMembersDescJson", "Import library members from a JSON file containing an array of member objects.")}
         </p>
-        <button 
-          onClick={handleImportMembers} 
-          disabled={importingBooks || importingMembers || restoring} 
+        <button
+          onClick={handleImportMembers}
+          disabled={importingBooks || importingMembers}
           className="flex items-center gap-2 border border-[#1a4d40]/25 text-[#1a4d40] dark:text-[#1b9277] dark:border-[#1b9277]/25 px-5 py-2.5 rounded-lg font-bold text-[13px] hover:bg-black/5 dark:hover:bg-white/5 transition-colors disabled:opacity-50 cursor-pointer"
         >
-          {importingMembers ? <RefreshCw size={15} className="animate-spin" /> : <Upload size={15} />} 
+          {importingMembers ? <RefreshCw size={15} className="animate-spin" /> : <Upload size={15} />}
           {t("settings.backup.importMembers")}
         </button>
       </Card>
@@ -971,44 +913,25 @@ function BackupTab() {
 // ═══════════════════════════════════════════════════════════════════════════════
 function DatabaseTab() {
   const { t } = useTranslation();
-  const [vacuuming, setVacuuming] = useState(false);
-  const [vacuumDone, setVacuumDone] = useState(false);
   const [showDanger, setShowDanger] = useState(false);
   const [clearingLoans, setClearingLoans] = useState(false);
   const [resetting, setResetting] = useState(false);
-  const { preferences } = useUiStore();
+  const { settings: librarySettings } = useLibrarySettingsStore();
 
   const stats = [
-    { label: t("settings.database.infoName"), value: preferences.libraryName },
-    { label: t("settings.database.infoEngine"), value: "SQLite 3" },
-    { label: t("settings.database.infoLocation"), value: "AppData / warraq.db" },
-    { label: t("settings.database.infoWal"), value: "Enabled" },
+    { label: t("settings.database.infoName"), value: librarySettings.library_name },
+    { label: t("settings.database.infoEngine"), value: "Supabase (Postgres)" },
+    { label: t("settings.database.infoLocation"), value: (import.meta.env.VITE_SUPABASE_URL as string).replace("https://", "") },
   ];
-
-  const handleVacuum = async () => {
-    setVacuuming(true);
-    try {
-      const { database } = await import("../data/database");
-      const db = await database();
-      await db.execute("VACUUM");
-      setVacuumDone(true);
-      setTimeout(() => setVacuumDone(false), 3000);
-    } catch (err) {
-      console.error("VACUUM failed", err);
-      alert(t("settings.database.maintenanceFailed"));
-    } finally {
-      setVacuuming(false);
-    }
-  };
 
   const handleClearLoans = async () => {
     const confirmed = window.confirm(t("settings.database.clearLoansConfirm"));
     if (!confirmed) return;
     setClearingLoans(true);
     try {
-      const { database } = await import("../data/database");
-      const db = await database();
-      await db.execute("DELETE FROM loans");
+      const { supabase } = await import("../data/supabaseClient");
+      const { error } = await supabase.from("loans").delete().not("id", "is", null);
+      if (error) throw error;
       alert(t("settings.database.clearLoansSuccess"));
     } catch (err) {
       console.error("Clear loans failed", err);
@@ -1025,13 +948,11 @@ function DatabaseTab() {
     if (!second) return;
     setResetting(true);
     try {
-      const { database } = await import("../data/database");
-      const db = await database();
-      await db.execute("DELETE FROM reservations");
-      await db.execute("DELETE FROM loans");
-      await db.execute("DELETE FROM copies");
-      await db.execute("DELETE FROM books");
-      await db.execute("DELETE FROM members");
+      const { supabase } = await import("../data/supabaseClient");
+      for (const table of ["reservations", "loans", "copies", "books", "members"] as const) {
+        const { error } = await supabase.from(table).delete().not("id", "is", null);
+        if (error) throw error;
+      }
       localStorage.removeItem("warraq-preferences");
       alert(t("settings.database.factoryResetSuccess"));
       window.location.reload();
@@ -1056,19 +977,6 @@ function DatabaseTab() {
             </div>
           ))}
         </div>
-      </Card>
-
-      <Card title={t("settings.database.maintenanceTitle")} icon={<Cpu size={16} className="text-[#b96f3e]" />}>
-        <p className="text-[12px] text-[#122222]/70 dark:text-white/70 mb-4 font-normal">
-          {t("settings.database.maintenanceDesc")}
-        </p>
-        <button
-          onClick={handleVacuum}
-          disabled={vacuuming}
-          className="flex items-center gap-2 bg-[#1a4d40] text-white px-5 py-2.5 rounded-lg font-bold text-[13px] hover:bg-[#1a4d40]/90 transition-colors shadow-sm disabled:opacity-60"
-        >
-          {vacuuming ? <><RefreshCw size={15} className="animate-spin" /> {t("settings.database.maintenanceBtnRunning")}</> : vacuumDone ? <><Check size={15} /> {t("settings.database.maintenanceBtnDone")}</> : <><Zap size={15} /> {t("settings.database.maintenanceBtn")}</>}
-        </button>
       </Card>
 
       <Card title={t("settings.database.dangerTitle")} icon={<AlertTriangle size={16} className="text-red-500" />}>

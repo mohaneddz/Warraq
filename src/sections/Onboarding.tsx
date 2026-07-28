@@ -2,10 +2,12 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ShieldCheck, Sun, Moon, Laptop } from "lucide-react";
 import { useUiStore } from "../store/uiStore";
+import { useLibrarySettingsStore } from "../store/librarySettingsStore";
 import { useTranslation } from "react-i18next";
 
 export function OnboardingPage() {
   const { updatePreferences } = useUiStore();
+  const updateLibrarySettings = useLibrarySettingsStore((s) => s.update);
   const navigate = useNavigate();
   const { t, i18n } = useTranslation();
 
@@ -14,19 +16,14 @@ export function OnboardingPage() {
   const [theme, setTheme] = useState<"light" | "dark" | "system">("light");
   const [finesEnabled, setFinesEnabled] = useState(false);
 
-  const handleComplete = () => {
-    updatePreferences({
-      onboardingComplete: true,
-      libraryName: libName.trim(),
-      locale,
-      theme,
-      finesEnabled
-    });
-    
+  const handleComplete = async () => {
+    await updateLibrarySettings({ library_name: libName.trim(), fines_enabled: finesEnabled });
+    updatePreferences({ onboardingComplete: true, locale, theme });
+
     // Set system language and directionality
     document.documentElement.lang = locale;
     document.documentElement.dir = locale === "ar" ? "rtl" : "ltr";
-    
+
     navigate("/dashboard");
   };
 

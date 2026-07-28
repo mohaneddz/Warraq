@@ -4,21 +4,21 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import {
   Search, Bookmark, Clock, Trash2, Plus,
   UserCheck, UserPlus, BookOpen, Calendar, CheckCircle2, ChevronRight,
-  Layers, Tag, MapPin, Hash, XCircle, Eye, Copy as CopyIcon
+  Layers, Tag, MapPin, Hash, XCircle, Eye, Copy as CopyIcon, Ban, Globe, Building2
 } from "lucide-react";
 import { useContextMenu } from "../components/ui/ContextMenu";
 
 
 import {
-  reservations, cancelReservation, deleteReservation, markReservationReady, extendReservation,
-  members, books, addReservation, saveMember, getCopiesForBook
+  reservations, cancelReservation, deleteReservation, acceptReservation, declineReservation, extendReservation,
+  members, books, addReservation, saveMember, getCopiesForBook, banMember
 } from "../data/repositories/library";
 import { queryClient } from "../app/providers";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
-import { formatDisplayDate, today } from "../utils/dates";
+import { formatDisplayDate } from "../utils/dates";
 import { Modal, Input, Button, ItemTypeBadge, StatusBadge } from "../components/ui/primitives";
-import type { Book, Member, Copy, Reservation } from "../types";
+import type { Book, Member, Copy, Reservation, ReservationScope } from "../types";
 
 const invalidate = () => queryClient.invalidateQueries();
 
@@ -46,15 +46,17 @@ export function ReservationsPage() {
 
   // Status counts
   const counts = useMemo(() => {
-    if (!result.data) return { all: 0, ready: 0, queued: 0, cancelled: 0 };
+    if (!result.data) return { all: 0, pending: 0, ready: 0, queued: 0, cancelled: 0, declined: 0 };
     const all = result.data.length;
-    let ready = 0, queued = 0, cancelled = 0;
+    let pending = 0, ready = 0, queued = 0, cancelled = 0, declined = 0;
     result.data.forEach(r => {
-      if (r.status === 'ready') ready++;
+      if (r.status === 'pending') pending++;
+      else if (r.status === 'ready') ready++;
       else if (r.status === 'queued') queued++;
       else if (r.status === 'cancelled') cancelled++;
+      else if (r.status === 'declined') declined++;
     });
-    return { all, ready, queued, cancelled };
+    return { all, pending, ready, queued, cancelled, declined };
   }, [result.data]);
 
   // Client-side search and status filtering
@@ -92,11 +94,29 @@ export function ReservationsPage() {
     onError: (err: any) => toast.error(err.message)
   });
 
-  const markReadyMutation = useMutation({
-    mutationFn: (id: string) => markReservationReady(id),
+  const acceptMutation = useMutation({
+    mutationFn: (id: string) => acceptReservation(id),
     onSuccess: () => {
       invalidate();
-      toast.success(t("reservations.alerts.markedReady") || "Reservation marked as Ready for Pickup.");
+      toast.success(t("reservations.alerts.accepted") || "Reservation accepted.");
+    },
+    onError: (err: any) => toast.error(err.message)
+  });
+
+  const declineMutation = useMutation({
+    mutationFn: ({ id, reason }: { id: string; reason?: string }) => declineReservation(id, reason),
+    onSuccess: () => {
+      invalidate();
+      toast.success(t("reservations.alerts.declined") || "Reservation declined.");
+    },
+    onError: (err: any) => toast.error(err.message)
+  });
+
+  const banMutation = useMutation({
+    mutationFn: ({ memberId, reason }: { memberId: string; reason: string }) => banMember(memberId, reason),
+    onSuccess: () => {
+      invalidate();
+      toast.success(t("reservations.alerts.banned") || "Member banned from making further reservations.");
     },
     onError: (err: any) => toast.error(err.message)
   });
@@ -136,16 +156,16 @@ export function ReservationsPage() {
     onError: (err: any) => toast.error(err.message || "Failed to delete reservations.")
   });
 
-  const bulkMarkReadyMutation = useMutation({
+  const bulkAcceptMutation = useMutation({
     mutationFn: async () => {
-      await Promise.all(selectedIds.map(id => markReservationReady(id)));
+      await Promise.all(selectedIds.map(id => acceptReservation(id)));
     },
     onSuccess: () => {
       invalidate();
-      toast.success(t("reservations.alerts.bulkReady") || "Selected reservations marked ready.");
+      toast.success(t("reservations.alerts.bulkAccepted") || "Selected reservations accepted.");
       setSelectedIds([]);
     },
-    onError: (err: any) => toast.error(err.message || "Failed to mark ready.")
+    onError: (err: any) => toast.error(err.message || "Failed to accept reservations.")
   });
 
   const { showContextMenu } = useContextMenu();
@@ -153,25 +173,46 @@ export function ReservationsPage() {
   const handleReservationContextMenu = (e: React.MouseEvent, res: Reservation) => {
     showContextMenu(e, [
       {
-        id: "mark-ready",
-        label: t("reservations.markReady", "Mark Ready for Pickup"),
+        id: "accept-res",
+        label: t("reservations.accept", "Accept Reservation"),
         icon: CheckCircle2,
-        hidden: res.status === "ready",
+        hidden: res.status !== "pending",
         variant: "success",
-        onClick: () => markReadyMutation.mutate(res.id),
+        onClick: () => acceptMutation.mutate(res.id),
+      },
+      {
+        id: "decline-res",
+        label: t("reservations.decline", "Decline Reservation"),
+        icon: XCircle,
+        hidden: res.status !== "pending",
+        variant: "warning",
+        onClick: () => {
+          const reason = prompt(t("reservations.declineReasonPrompt", "Reason for declining (optional):") as string) ?? undefined;
+          declineMutation.mutate({ id: res.id, reason });
+        },
+      },
+      {
+        id: "ban-member",
+        label: t("reservations.banMember", "Ban Member From Reservations"),
+        icon: Ban,
+        variant: "danger",
+        onClick: () => {
+          const reason = prompt(t("reservations.banReasonPrompt", "Reason for banning this member:") as string);
+          if (reason && reason.trim()) banMutation.mutate({ memberId: res.member_id, reason: reason.trim() });
+        },
       },
       {
         id: "extend-hold",
         label: t("reservations.extendHold", "Extend Hold (+7 Days)"),
         icon: Clock,
-        hidden: res.status === "cancelled",
+        hidden: res.status !== "ready",
         onClick: () => extendMutation.mutate(res.id),
       },
       {
         id: "cancel-res",
         label: t("reservations.cancelRes", "Cancel Reservation"),
         icon: XCircle,
-        hidden: res.status === "cancelled",
+        hidden: !["queued", "ready"].includes(res.status),
         variant: "warning",
         onClick: () => cancelMutation.mutate(res.id),
       },
@@ -473,25 +514,42 @@ export function ReservationsPage() {
                     </td>
                     <td className="px-6 py-3">
                       <span className={`px-2 py-1 rounded-[4px] text-[11px] font-bold ${
-                        res.status === 'ready' 
-                          ? 'bg-emerald/10 text-emerald dark:bg-emerald-light/20 dark:text-emerald-light' 
+                        res.status === 'ready'
+                          ? 'bg-emerald/10 text-emerald dark:bg-emerald-light/20 dark:text-emerald-light'
                           : res.status === 'queued'
                           ? 'bg-copper/10 text-copper'
+                          : res.status === 'pending'
+                          ? 'bg-amber-500/10 text-amber-600'
+                          : res.status === 'declined'
+                          ? 'bg-red-500/10 text-red-500'
                           : 'bg-gray-500/10 text-gray-500'
                       }`}>
-                        {res.status === 'ready' ? t("reservations.status.ready") || "Ready" : res.status === 'queued' ? t("reservations.status.queued") || "Queued" : res.status}
+                        {res.status === 'ready' ? t("reservations.status.ready") || "Ready"
+                          : res.status === 'queued' ? t("reservations.status.queued") || "Queued"
+                          : res.status === 'pending' ? t("reservations.status.pending") || "Pending"
+                          : res.status === 'declined' ? t("reservations.status.declined") || "Declined"
+                          : res.status}
                       </span>
                     </td>
                     <td className="px-6 py-3" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center gap-2">
-                        {res.status === 'queued' && (
-                          <button
-                            title="Mark as Ready for Pickup"
-                            onClick={() => markReadyMutation.mutate(res.id)}
-                            className="p-1.5 rounded-lg text-emerald hover:bg-emerald/10 cursor-pointer transition-colors"
-                          >
-                            <CheckCircle2 size={15} />
-                          </button>
+                        {res.status === 'pending' && (
+                          <>
+                            <button
+                              title="Accept Reservation"
+                              onClick={() => acceptMutation.mutate(res.id)}
+                              className="p-1.5 rounded-lg text-emerald hover:bg-emerald/10 cursor-pointer transition-colors"
+                            >
+                              <CheckCircle2 size={15} />
+                            </button>
+                            <button
+                              title="Decline Reservation"
+                              onClick={() => declineMutation.mutate({ id: res.id })}
+                              className="p-1.5 rounded-lg text-red-500 hover:bg-red-500/10 cursor-pointer transition-colors"
+                            >
+                              <XCircle size={15} />
+                            </button>
+                          </>
                         )}
                         {(res.status === 'ready' || res.status === 'queued') && (
                           <button
@@ -570,14 +628,14 @@ export function ReservationsPage() {
 
             <button
               onClick={() => {
-                if (confirm(`Mark ${selectedIds.length} selected reservation(s) as Ready for Pickup?`)) {
-                  bulkMarkReadyMutation.mutate();
+                if (confirm(`Accept ${selectedIds.length} selected pending reservation(s)?`)) {
+                  bulkAcceptMutation.mutate();
                 }
               }}
               className="flex items-center gap-1.5 text-[12px] font-bold bg-emerald hover:bg-emerald/90 text-white px-3 py-1.5 rounded-xl shadow-sm transition-colors cursor-pointer"
             >
               <CheckCircle2 size={13} />
-              {t("reservations.bulk.markReady") || "Mark Ready"}
+              {t("reservations.bulk.accept") || "Accept"}
             </button>
 
             <button
@@ -629,7 +687,9 @@ export function ReservationsPage() {
             deleteMutation.mutate(id);
           }
         }}
-        onMarkReady={(id) => markReadyMutation.mutate(id)}
+        onAccept={(id) => acceptMutation.mutate(id)}
+        onDecline={(id) => declineMutation.mutate({ id })}
+        onBan={(memberId, reason) => banMutation.mutate({ memberId, reason })}
         onExtend={(id) => extendMutation.mutate(id)}
       />
 
@@ -645,14 +705,18 @@ export function ReservationsPage() {
   onClose,
   onCancel,
   onDelete,
-  onMarkReady,
+  onAccept,
+  onDecline,
+  onBan,
   onExtend
 }: {
   reservation: Reservation | null;
   onClose: () => void;
   onCancel: (id: string) => void;
   onDelete: (id: string) => void;
-  onMarkReady: (id: string) => void;
+  onAccept: (id: string) => void;
+  onDecline: (id: string) => void;
+  onBan: (memberId: string, reason: string) => void;
   onExtend: (id: string) => void;
 }) {
   const { t } = useTranslation();
@@ -671,21 +735,35 @@ export function ReservationsPage() {
         <div className="bg-[#fcfbf8] dark:bg-[#111d1a] border border-black/10 dark:border-white/10 p-4 rounded-2xl flex items-center justify-between">
           <div className="flex items-center gap-3">
             <span className={`px-3 py-1.5 rounded-full text-[12px] font-bold ${
-              reservation.status === 'ready' 
-                ? 'bg-emerald/10 text-emerald dark:bg-emerald-light/20 dark:text-emerald-light' 
+              reservation.status === 'ready'
+                ? 'bg-emerald/10 text-emerald dark:bg-emerald-light/20 dark:text-emerald-light'
                 : reservation.status === 'queued'
                 ? 'bg-copper/10 text-copper'
+                : reservation.status === 'pending'
+                ? 'bg-amber-500/10 text-amber-600'
+                : reservation.status === 'declined'
+                ? 'bg-red-500/10 text-red-500'
                 : 'bg-gray-500/10 text-gray-500'
             }`}>
-              {reservation.status === 'ready' 
-                ? t("reservations.status.ready") || "Ready for Pickup" 
-                : reservation.status === 'queued' 
-                ? t("reservations.status.queued") || "Queued in Line" 
+              {reservation.status === 'ready'
+                ? t("reservations.status.ready") || "Ready for Pickup"
+                : reservation.status === 'queued'
+                ? t("reservations.status.queued") || "Queued in Line"
+                : reservation.status === 'pending'
+                ? t("reservations.status.pending") || "Pending Approval"
+                : reservation.status === 'declined'
+                ? t("reservations.status.declined") || "Declined"
                 : reservation.status}
             </span>
-            <span className="text-[12px] font-bold text-[#122222]/70 dark:text-white/70 bg-black/5 dark:bg-white/5 px-2.5 py-1 rounded-lg">
-              Queue Position #{reservation.position || 1}
+            <span className="text-[11px] font-bold text-[#122222]/70 dark:text-white/70 bg-black/5 dark:bg-white/5 px-2.5 py-1 rounded-lg uppercase flex items-center gap-1">
+              {reservation.scope === "external" ? <Globe size={11} /> : <Building2 size={11} />}
+              {reservation.scope === "external" ? t("reservations.scope.external", "External") : t("reservations.scope.internal", "Internal")}
             </span>
+            {reservation.status === "queued" && (
+              <span className="text-[12px] font-bold text-[#122222]/70 dark:text-white/70 bg-black/5 dark:bg-white/5 px-2.5 py-1 rounded-lg">
+                Queue Position #{reservation.position || 1}
+              </span>
+            )}
           </div>
 
           <div className="text-[11px] font-mono text-[#122222]/50 dark:text-white/50">
@@ -785,19 +863,40 @@ export function ReservationsPage() {
         {/* Footer Actions */}
         <div className="pt-4 border-t border-black/10 dark:border-white/10 flex items-center justify-between flex-wrap gap-2">
           <div className="flex items-center gap-2 flex-wrap">
-            {reservation.status === 'queued' && (
-              <Button
-                type="button"
-                className="bg-emerald text-white hover:bg-emerald/90 text-[12px] flex items-center gap-1.5 cursor-pointer"
-                onClick={() => {
-                  onMarkReady(reservation.id);
-                  onClose();
-                }}
-              >
-                <CheckCircle2 size={14} />
-                Mark Ready
-              </Button>
+            {reservation.status === 'pending' && (
+              <>
+                <Button
+                  type="button"
+                  className="bg-emerald text-white hover:bg-emerald/90 text-[12px] flex items-center gap-1.5 cursor-pointer"
+                  onClick={() => { onAccept(reservation.id); onClose(); }}
+                >
+                  <CheckCircle2 size={14} />
+                  {t("reservations.accept", "Accept")}
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="text-red-600 hover:text-red-700 border-red-200 hover:border-red-300 text-[12px] flex items-center gap-1.5 cursor-pointer"
+                  onClick={() => { onDecline(reservation.id); onClose(); }}
+                >
+                  <XCircle size={14} />
+                  {t("reservations.decline", "Decline")}
+                </Button>
+              </>
             )}
+
+            <Button
+              type="button"
+              variant="secondary"
+              className="text-red-600 hover:text-red-700 border-red-200 hover:border-red-300 text-[12px] flex items-center gap-1.5 cursor-pointer"
+              onClick={() => {
+                const reason = prompt(t("reservations.banReasonPrompt", "Reason for banning this member:") as string);
+                if (reason && reason.trim()) { onBan(reservation.member_id, reason.trim()); onClose(); }
+              }}
+            >
+              <Ban size={14} />
+              {t("reservations.banMember", "Ban Member")}
+            </Button>
 
             {(reservation.status === 'ready' || reservation.status === 'queued') && (
               <Button
@@ -882,9 +981,14 @@ function NewReservationModal({ isOpen, onClose }: NewReservationModalProps) {
   // Step 3: Physical Copy state
   const [selectedCopy, setSelectedCopy] = useState<Copy | null>(null);
 
-  // Step 4: Duration state
-  const [durationDays, setDurationDays] = useState<number>(7);
-  const [customDate, setCustomDate] = useState<string>("");
+  // Step 4: Scope (internal = in-library only, external = take home)
+  const [scope, setScope] = useState<ReservationScope>("internal");
+  const isVisitor = mode === "visitor";
+  const isSingleCopyBook = (selectedBook?.total_copies ?? 0) <= 1;
+  const externalBlocked = isVisitor || isSingleCopyBook;
+  const externalBlockedReason = isVisitor
+    ? (t("reservations.addModal.visitorsInternalOnly", "Visitors can only reserve items for internal use.") as string)
+    : (t("reservations.addModal.singleCopyInternalOnly", "This title has only one copy and can only be reserved for internal use.") as string);
 
   // Queries
   const membersQuery = useQuery({
@@ -966,13 +1070,12 @@ function NewReservationModal({ isOpen, onClose }: NewReservationModalProps) {
     });
   }, [booksQuery.data, selectedCategory, selectedItemType, availabilityFilter]);
 
-  // Expiration calculation
-  const expiresAtDate = useMemo(() => {
-    if (customDate) return new Date(customDate);
-    const d = new Date();
-    d.setDate(d.getDate() + durationDays);
-    return d;
-  }, [durationDays, customDate]);
+  // Visitors and single-copy titles can only be reserved internally — force the scope
+  // back to internal whenever either condition becomes true (mirrors the server-side
+  // enforce_reservation_rules() trigger, which is the actual authority on this rule).
+  useEffect(() => {
+    if (externalBlocked && scope === "external") setScope("internal");
+  }, [externalBlocked, scope]);
 
   // Create Reservation Mutation
   const createMutation = useMutation({
@@ -991,7 +1094,7 @@ function NewReservationModal({ isOpen, onClose }: NewReservationModalProps) {
           email: visitorEmail.trim() || null,
           phone: visitorPhone.trim() || null,
           department: visitorDept.trim() || "Visitor",
-          role: "Visitor",
+          role: "visitor",
           status: "active",
           member_number: visitorNumber
         });
@@ -1005,8 +1108,7 @@ function NewReservationModal({ isOpen, onClose }: NewReservationModalProps) {
         throw new Error(t("reservations.alerts.selectItem") || "Please select an item to reserve.");
       }
 
-      const expiresAtIso = expiresAtDate.toISOString().split("T")[0];
-      await addReservation(selectedBook.id, targetMemberId, expiresAtIso, selectedCopy?.id ?? null);
+      await addReservation(selectedBook.id, targetMemberId, scope);
       return targetMemberName;
     },
     onSuccess: (memberName) => {
@@ -1039,8 +1141,7 @@ function NewReservationModal({ isOpen, onClose }: NewReservationModalProps) {
     setSelectedCategory("all");
     setSelectedItemType("all");
     setAvailabilityFilter("all");
-    setDurationDays(7);
-    setCustomDate("");
+    setScope("internal");
     onClose();
   };
 
@@ -1586,74 +1687,51 @@ function NewReservationModal({ isOpen, onClose }: NewReservationModalProps) {
         </div>
       )}
 
-      {/* Step 4: Hold Duration & Review */}
+      {/* Step 4: Scope & Review */}
       {step === 4 && (
         <div className="flex-1 min-h-0 flex flex-col justify-between">
           <div className="flex-1 min-h-0 flex flex-col space-y-4 overflow-y-auto">
-            {/* Duration Selector */}
+            {/* Scope Selector */}
             <div className="shrink-0">
               <label className="text-[12px] font-bold text-[#122222] dark:text-white block mb-2">
-                {t("reservations.addModal.durationLabel") || "Hold Expiration Duration"}
+                {t("reservations.addModal.scopeLabel", "Reservation Scope")}
               </label>
 
-              {/* 5-Option Grid: Predefined Durations + Custom Date */}
-              <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-                {[3, 7, 14, 30].map((d) => (
-                  <button
-                    key={d}
-                    type="button"
-                    onClick={() => {
-                      setDurationDays(d);
-                      setCustomDate("");
-                    }}
-                    className={`py-3 px-2 rounded-xl text-[13px] font-bold border transition-all flex flex-col items-center justify-center gap-1 cursor-pointer ${
-                      durationDays === d && !customDate
-                        ? "bg-emerald text-white border-emerald shadow-sm ring-2 ring-emerald/20"
-                        : "border-black/10 dark:border-white/10 hover:bg-black/5 dark:hover:bg-white/5 text-[#122222] dark:text-white bg-white dark:bg-[#1d2926]"
-                    }`}
-                  >
-                    <Clock size={16} className={durationDays === d && !customDate ? "text-white" : "text-emerald"} />
-                    <span>{t("reservations.addModal.days" + d) || `${d} Days`}</span>
-                  </button>
-                ))}
-
-                {/* Custom Date Option */}
+              <div className="grid grid-cols-2 gap-3">
                 <button
                   type="button"
-                  onClick={() => {
-                    if (!customDate) {
-                      const defaultCustom = new Date();
-                      defaultCustom.setDate(defaultCustom.getDate() + 10);
-                      setCustomDate(defaultCustom.toISOString().split("T")[0]);
-                    }
-                  }}
+                  onClick={() => setScope("internal")}
                   className={`py-3 px-2 rounded-xl text-[13px] font-bold border transition-all flex flex-col items-center justify-center gap-1 cursor-pointer ${
-                    !!customDate
+                    scope === "internal"
                       ? "bg-emerald text-white border-emerald shadow-sm ring-2 ring-emerald/20"
                       : "border-black/10 dark:border-white/10 hover:bg-black/5 dark:hover:bg-white/5 text-[#122222] dark:text-white bg-white dark:bg-[#1d2926]"
                   }`}
                 >
-                  <Calendar size={16} className={!!customDate ? "text-white" : "text-emerald"} />
-                  <span>{t("reservations.addModal.customDate") || "Custom Date"}</span>
+                  <Building2 size={16} className={scope === "internal" ? "text-white" : "text-emerald"} />
+                  <span>{t("reservations.scope.internal", "Internal — stays in library")}</span>
+                </button>
+                <button
+                  type="button"
+                  disabled={externalBlocked}
+                  title={externalBlocked ? externalBlockedReason : undefined}
+                  onClick={() => !externalBlocked && setScope("external")}
+                  className={`py-3 px-2 rounded-xl text-[13px] font-bold border transition-all flex flex-col items-center justify-center gap-1 ${
+                    externalBlocked ? "opacity-40 cursor-not-allowed border-black/10 dark:border-white/10 bg-white dark:bg-[#1d2926]"
+                      : scope === "external"
+                      ? "bg-emerald text-white border-emerald shadow-sm ring-2 ring-emerald/20 cursor-pointer"
+                      : "border-black/10 dark:border-white/10 hover:bg-black/5 dark:hover:bg-white/5 text-[#122222] dark:text-white bg-white dark:bg-[#1d2926] cursor-pointer"
+                  }`}
+                >
+                  <Globe size={16} className={!externalBlocked && scope === "external" ? "text-white" : "text-emerald"} />
+                  <span>{t("reservations.scope.external", "External — taken home")}</span>
                 </button>
               </div>
-
-              {/* Custom Date Picker Input (Revealed when Custom Date option is active) */}
-              {!!customDate && (
-                <div className="mt-3.5 p-3 rounded-xl bg-emerald/5 dark:bg-emerald-light/10 border border-emerald/20 animate-in fade-in duration-200">
-                  <label className="text-[11px] font-bold text-emerald dark:text-emerald-light block mb-1.5 flex items-center gap-1.5">
-                    <Calendar size={14} />
-                    {t("reservations.addModal.customDate") || "Select Specific Expiry Date"}
-                  </label>
-                  <Input
-                    type="date"
-                    min={today()}
-                    value={customDate}
-                    onChange={(e) => setCustomDate(e.target.value)}
-                    className="bg-white dark:bg-[#1d2926]"
-                  />
-                </div>
+              {externalBlocked && (
+                <p className="text-[11px] text-amber-600 dark:text-amber-400 mt-2">{externalBlockedReason}</p>
               )}
+              <p className="text-[11px] text-[#122222]/50 dark:text-white/50 mt-2">
+                {t("reservations.addModal.approvalHint", "An admin must accept this request before it enters the queue. Loan duration is set automatically based on scope.")}
+              </p>
             </div>
 
             {/* Summary Preview Card */}
@@ -1701,11 +1779,11 @@ function NewReservationModal({ isOpen, onClose }: NewReservationModalProps) {
 
                 <div>
                   <span className="text-[#122222]/60 dark:text-white/60 text-[11px] block mb-0.5">
-                    {t("reservations.addModal.summaryExpires") || "Hold Expires On"}
+                    {t("reservations.addModal.scopeLabel", "Reservation Scope")}
                   </span>
                   <span className="font-bold text-amber-600 dark:text-amber-400 flex items-center gap-1.5 mt-0.5">
-                    <Calendar size={14} className="opacity-80" />
-                    {formatDisplayDate(expiresAtDate.toISOString().split("T")[0])}
+                    {scope === "external" ? <Globe size={14} className="opacity-80" /> : <Building2 size={14} className="opacity-80" />}
+                    {scope === "external" ? t("reservations.scope.external", "External") : t("reservations.scope.internal", "Internal")}
                   </span>
                 </div>
               </div>
