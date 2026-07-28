@@ -136,3 +136,10 @@ pnpm tauri dev    # Run the desktop app
 - `Ctrl/Cmd + ,` opens settings.
 - The system tray can restore the app, open search or circulation, open settings, and quit explicitly.
 - When configured, closing the window hides it to the tray instead of terminating the application.
+
+---
+
+## License
+
+This project is licensed under the [PolyForm Noncommercial License 1.0.0](file:///d:/Programming/Tauri/Projects/Warraq/LICENSE). It may be used, modified, and shared strictly for non-commercial purposes. Any commercial use, sale, integration into paid software, or paid service usage is prohibited.
+
