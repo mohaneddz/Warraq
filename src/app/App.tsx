@@ -35,7 +35,7 @@ function Failure({ error }: { error: unknown }) {
     <main className="grid min-h-screen place-items-center bg-[#111d1a] p-6 text-[#f9f8f4]">
       <div className="max-w-lg rounded-2xl bg-[#f9f8f4] p-6 text-[#122222]">
         <h1 className="font-display text-2xl font-bold">Warraq could not start</h1>
-        <p className="mt-3 text-sm">The local library database could not be opened. Check available disk space and restart the application.</p>
+        <p className="mt-3 text-sm">Warraq could not reach its Supabase database. Check your internet connection, confirm the VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY settings, and try again.</p>
         <pre className="mt-4 overflow-auto rounded-lg bg-black/5 p-3 text-xs font-mono">{String(error)}</pre>
         <div className="flex items-center gap-3 mt-5">
           <button 
