@@ -3,6 +3,7 @@ import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useEffect, useState, useRef } from "react";
 
 import { useUiStore } from "../../store/uiStore";
+import { useLibrarySettingsStore } from "../../store/librarySettingsStore";
 import { useAuthStore } from "../../store/authStore";
 import { useQuery } from "@tanstack/react-query";
 import { dashboard, reservations } from "../../data/repositories/library";
@@ -122,19 +123,20 @@ export function AppShell() {
   }, [isDragging, preferences.locale]);
 
   const { t, i18n } = useTranslation();
+  const librarySettings = useLibrarySettingsStore((s) => s.settings);
 
   // Live queries for overdue alerts
   const { data: dashData } = useQuery({ queryKey: ["dashboard-shell"], queryFn: dashboard });
-  const overdueCount = preferences.notifyOverdue ? (dashData?.overdue ?? 0) : 0;
-  const overdueList = preferences.notifyOverdue ? (dashData?.overdueLoans ?? []) : [];
+  const overdueCount = librarySettings.notify_overdue ? (dashData?.overdue ?? 0) : 0;
+  const overdueList = librarySettings.notify_overdue ? (dashData?.overdueLoans ?? []) : [];
 
   // Live reservations holds ready alert
   const { data: resData } = useQuery({
     queryKey: ["reservations-shell"],
     queryFn: reservations,
-    enabled: preferences.notifyReady
+    enabled: librarySettings.notify_ready
   });
-  const readyReservations = preferences.notifyReady
+  const readyReservations = librarySettings.notify_ready
     ? (resData?.filter(r => r.status === "ready") ?? [])
     : [];
 

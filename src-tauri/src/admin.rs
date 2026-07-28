@@ -155,7 +155,7 @@ pub async fn admin_bootstrap_if_needed() -> Result<bool, String> {
             "id": created.id,
             "username": username,
             "full_name": "Administrator",
-            "email": email_env,
+            "email": email,
             "role": "admin",
             "status": "active",
         }))
@@ -227,7 +227,7 @@ pub async fn admin_create_staff(
             "id": created.id,
             "username": uname,
             "full_name": name,
-            "email": email.as_deref().map(str::trim).filter(|e| !e.is_empty()),
+            "email": identity,
             "role": role,
             "status": "active",
             "must_change_password": true,

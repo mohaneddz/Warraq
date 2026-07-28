@@ -3,12 +3,11 @@ import { HashRouter, Navigate, Route, Routes, useNavigate } from "react-router-d
 import { ErrorBoundary } from "react-error-boundary";
 import { useTranslation } from "react-i18next";
 import { initializeDatabase } from "../data/database";
-import { members } from "../data/repositories/library";
-import { seedDummyData, ensureMedicalBooksSeeded } from "../data/seed";
 import { bootstrapAdminIfNeeded, currentSession } from "../data/auth";
 import { useAuthStore } from "../store/authStore";
 import { Providers } from "./providers";
 import { useUiStore } from "../store/uiStore";
+import { useLibrarySettingsStore } from "../store/librarySettingsStore";
 import { AppShell } from "../components/layout/AppShell";
 import { CommandPalette } from "../components/layout/CommandPalette";
 import { DashboardPage } from "../sections/Dashboard";
@@ -108,16 +107,13 @@ function Boot() {
         useAuthStore.getState().setUser(session);
         setProgress(45);
 
-        // Step 2: Checking rules and seeding if needed
+        // Step 2: Loading shared library settings
         setLoadingStep(1);
         setProgress(65);
         await new Promise(r => setTimeout(r, 500));
-        
-        const m = await members();
-        if (m.length === 0) {
-          await seedDummyData();
-        } else {
-          await ensureMedicalBooksSeeded();
+
+        if (session) {
+          await useLibrarySettingsStore.getState().load();
         }
         setProgress(85);
         
