@@ -37,53 +37,23 @@ export function DashboardPage() {
     return reservationsQuery.data?.filter(r => r.status === "ready").slice(0, 5) ?? [];
   }, [reservationsQuery.data]);
 
-  // Rhythm layout (fetches live or falls back gracefully)
-  const circulationRhythm = useMemo(() => {
-    if (metrics.circulationRhythm && metrics.circulationRhythm.some(r => r.checkouts > 0 || r.returns > 0)) {
-      return metrics.circulationRhythm;
-    }
-    return [
-      { time: '8 AM', checkouts: 2, returns: 0 },
-      { time: '10 AM', checkouts: 6, returns: 2 },
-      { time: '12 PM', checkouts: 3, returns: 5 },
-      { time: '2 PM', checkouts: 12, returns: 3 },
-      { time: '4 PM', checkouts: 8, returns: 4 },
-      { time: '6 PM', checkouts: 4, returns: 1 }
-    ];
-  }, [metrics.circulationRhythm]);
+  // Today's hourly rhythm — an all-quiet day is real data, not a reason to show made-up
+  // activity numbers.
+  const circulationRhythm = useMemo(() => metrics.circulationRhythm ?? [], [metrics.circulationRhythm]);
 
   const activeDepartmentsList = useMemo(() => {
-    if (metrics.activeDepartments && metrics.activeDepartments.length > 0) {
-      const maxVal = Math.max(...metrics.activeDepartments.map(d => d.count), 1);
-      return metrics.activeDepartments.map(d => ({
-        name: d.name,
-        val: d.count,
-        percent: (d.count / maxVal) * 100
-      }));
-    }
-    return [
-      { name: 'Medicine', val: 12, percent: 100 },
-      { name: 'Surgery', val: 8, percent: 66 },
-      { name: 'Pharmacy', val: 5, percent: 41 },
-      { name: 'Neurology', val: 3, percent: 25 },
-      { name: 'Radiology', val: 1, percent: 8 }
-    ];
+    if (!metrics.activeDepartments || metrics.activeDepartments.length === 0) return [];
+    const maxVal = Math.max(...metrics.activeDepartments.map(d => d.count), 1);
+    return metrics.activeDepartments.map(d => ({
+      name: d.name,
+      val: d.count,
+      percent: (d.count / maxVal) * 100
+    }));
   }, [metrics.activeDepartments]);
 
   // 7-day activity mapper
   const activityData = useMemo(() => {
-    if (!metrics.activity || metrics.activity.length === 0) {
-      return [
-        { day: 'May 10', checkouts: 0 },
-        { day: 'May 11', checkouts: 0 },
-        { day: 'May 12', checkouts: 0 },
-        { day: 'May 13', checkouts: 0 },
-        { day: 'May 14', checkouts: 0 },
-        { day: 'May 15', checkouts: 0 },
-        { day: 'May 16', checkouts: 0 }
-      ];
-    }
-    return metrics.activity.map(act => {
+    return (metrics.activity ?? []).map(act => {
       // Localize the date string
       const dateVal = new Date(act.date);
       const dayLabel = dateVal.toLocaleDateString(prefs.locale === "ar" ? "ar-DZ" : prefs.locale === "fr" ? "fr-FR" : "en-US", { month: 'short', day: 'numeric' });

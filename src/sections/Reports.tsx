@@ -97,38 +97,28 @@ export function ReportsPage() {
     return { totalLoans, activeMembers, overdueRate, totalCopies, totalTitles, returnedLoans, openLoansCount: openLoans.length, overdueLoansCount: overdueLoans.length };
   }, [loansQuery.data, dashQuery.data]);
 
-  // Map activity to trend chart
+  // Map activity to trend chart — an empty week is real data (nothing circulated), not a
+  // reason to substitute made-up numbers.
   const trendData = useMemo(() => {
-    if (!dashQuery.data?.activity || dashQuery.data.activity.length === 0) {
-      return [
-        { name: 'Mon', circulation: 12 },
-        { name: 'Tue', circulation: 19 },
-        { name: 'Wed', circulation: 15 },
-        { name: 'Thu', circulation: 24 },
-        { name: 'Fri', circulation: 18 },
-        { name: 'Sat', circulation: 8 },
-        { name: 'Sun', circulation: 5 }
-      ];
-    }
-    return dashQuery.data.activity.map(act => ({
+    return (dashQuery.data?.activity ?? []).map(act => ({
       name: new Date(act.date).toLocaleDateString(prefs.locale === "ar" ? "ar-DZ" : prefs.locale === "fr" ? "fr-FR" : "en-US", { weekday: 'short' }),
       circulation: act.count
     }));
   }, [dashQuery.data?.activity, prefs.locale]);
 
-  // Map top categories
-  const categoriesList = useMemo(() => {
-    const raw = categoriesQuery.data ?? [];
-    if (raw.length === 0) {
-      return [
-        { name: "Medicine & Health", value: 42 },
-        { name: "Pharmacology", value: 28 },
-        { name: "Computer Science", value: 18 },
-        { name: "General Science", value: 12 }
-      ];
-    }
-    return raw;
-  }, [categoriesQuery.data]);
+  // Trend badge computed from the real week-over-week split instead of a fixed "+14%".
+  const trendBadge = useMemo(() => {
+    if (trendData.length < 2) return null;
+    const mid = Math.floor(trendData.length / 2);
+    const firstHalf = trendData.slice(0, mid).reduce((s, d) => s + d.circulation, 0);
+    const secondHalf = trendData.slice(mid).reduce((s, d) => s + d.circulation, 0);
+    if (firstHalf === 0) return secondHalf > 0 ? "+100%" : null;
+    const pct = Math.round(((secondHalf - firstHalf) / firstHalf) * 100);
+    return `${pct >= 0 ? "+" : ""}${pct}%`;
+  }, [trendData]);
+
+  // Map top categories — real data only; an empty catalog shows an empty chart.
+  const categoriesList = useMemo(() => categoriesQuery.data ?? [], [categoriesQuery.data]);
 
   // Context Menu
   const { showContextMenu } = useContextMenu();
@@ -279,7 +269,7 @@ export function ReportsPage() {
       {activeTab === "Overview" && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 flex-1">
           {/* Chart 1: Circulation Activity Trend */}
-          <ChartWidget title={t("reports.charts.circulationTrend") || "Circulation Activity Trend"} icon={TrendingUp} badge={t("reports.charts.vsLastPeriod") || "+14% vs last period"}>
+          <ChartWidget title={t("reports.charts.circulationTrend") || "Circulation Activity Trend"} icon={TrendingUp} badge={trendBadge ? `${trendBadge} ${t("reports.charts.vsLastPeriodSuffix") || "vs previous period"}` : undefined}>
             <ResponsiveContainer width="100%" height={220}>
               <AreaChart data={trendData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
                 <defs>
