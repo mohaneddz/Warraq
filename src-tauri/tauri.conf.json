@@ -22,11 +22,8 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; img-src 'self' asset: data: https:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; connect-src 'self' https://openlibrary.org https://covers.openlibrary.org https://www.googleapis.com https://www.loc.gov https://api.crossref.org https://api.isbndb.com https://api.groq.com"
+      "csp": "default-src 'self'; img-src 'self' asset: data: https:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://openlibrary.org https://covers.openlibrary.org https://www.googleapis.com https://www.loc.gov https://api.crossref.org https://api.isbndb.com https://api.groq.com"
     }
-  },
-  "plugins": {
-    "sql": { "preload": ["sqlite:warraq.db"] }
   },
   "bundle": {
     "active": true,

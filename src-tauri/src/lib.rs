@@ -1,24 +1,13 @@
-mod auth;
+mod admin;
 
 use tauri::{Emitter, Manager, WindowEvent};
 use tauri::menu::{MenuBuilder, MenuItemBuilder};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
-use tauri_plugin_sql::{DbInstances, DbPool, Migration, MigrationKind};
 use url::Url;
 use std::sync::atomic::{AtomicBool, Ordering};
 use tauri::State;
 
 pub struct TrayConfig(pub AtomicBool);
-
-fn migrations() -> Vec<Migration> {
-    vec![
-        Migration { version: 1, description: "initial_library_schema", sql: include_str!("../migrations/0001_initial.sql"), kind: MigrationKind::Up },
-        Migration { version: 2, description: "library_indexes_and_fts", sql: include_str!("../migrations/0002_indexes.sql"), kind: MigrationKind::Up },
-        Migration { version: 3, description: "add_arabic_title_and_tags", sql: include_str!("../migrations/0003_add_arabic_title.sql"), kind: MigrationKind::Up },
-        Migration { version: 4, description: "schema_integrity_indexes", sql: include_str!("../migrations/0004_schema_integrity.sql"), kind: MigrationKind::Up },
-        Migration { version: 5, description: "users_auth", sql: include_str!("../migrations/0005_users_auth.sql"), kind: MigrationKind::Up },
-    ]
-}
 
 #[tauri::command]
 fn validate_provider_url(value: String) -> Result<(), String> {
@@ -35,60 +24,12 @@ fn validate_provider_url(value: String) -> Result<(), String> {
 
 #[tauri::command]
 fn application_diagnostics() -> serde_json::Value {
-    serde_json::json!({ "database": "sqlite:warraq.db", "mode": "local-first", "secrets": "stronghold" })
+    serde_json::json!({ "database": "supabase", "mode": "online", "secrets": "stronghold" })
 }
 
 #[tauri::command]
 fn set_close_to_tray(config: State<'_, TrayConfig>, enabled: bool) {
     config.0.store(enabled, Ordering::Relaxed);
-}
-
-#[derive(serde::Deserialize)]
-struct TxStatement {
-    sql: String,
-    #[serde(default)]
-    values: Vec<serde_json::Value>,
-}
-
-/// Executes a batch of parameterized statements inside a single SQLite transaction,
-/// rolling back entirely if any statement fails. tauri-plugin-sql's `execute`/`select`
-/// commands each borrow a connection from the pool independently, so sequential
-/// `BEGIN`/`COMMIT` calls from the frontend cannot be relied on to share one connection.
-#[tauri::command]
-async fn run_transaction(
-    db_instances: State<'_, DbInstances>,
-    db: String,
-    statements: Vec<TxStatement>,
-) -> Result<(), String> {
-    let instances = db_instances.0.read().await;
-    let pool = instances
-        .get(&db)
-        .ok_or_else(|| format!("Database '{db}' is not loaded."))?;
-    #[allow(irrefutable_let_patterns)]
-    let DbPool::Sqlite(pool) = pool else {
-        return Err("Transactions are only supported for the SQLite driver.".into());
-    };
-
-    let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
-    for statement in statements {
-        let mut query = sqlx::query(&statement.sql);
-        for value in statement.values {
-            query = if value.is_null() {
-                query.bind(None::<serde_json::Value>)
-            } else if value.is_string() {
-                query.bind(value.as_str().unwrap().to_owned())
-            } else if let Some(number) = value.as_number() {
-                query.bind(number.as_f64().unwrap_or_default())
-            } else {
-                query.bind(value)
-            };
-        }
-        if let Err(err) = query.execute(&mut *tx).await {
-            let _ = tx.rollback().await;
-            return Err(err.to_string());
-        }
-    }
-    tx.commit().await.map_err(|e| e.to_string())
 }
 
 fn focus_main_window(app: &tauri::AppHandle) {
@@ -138,14 +79,13 @@ fn install_tray(app: &tauri::App) -> tauri::Result<()> {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    // Best-effort: loads WARRAQ_ADMIN_USERNAME/WARRAQ_ADMIN_PASSWORD (and anything
-    // else) from a .env file if one is found searching up from the working
-    // directory. Silently does nothing if no .env exists — real OS environment
-    // variables work either way.
+    // Best-effort: loads WARRAQ_ADMIN_USERNAME/WARRAQ_ADMIN_PASSWORD/WARRAQ_ADMIN_EMAIL and
+    // the Supabase PROJECT_ID/PUBLISHABLE_KEY/SECRET_KEY from a .env file if one is found
+    // searching up from the working directory. Silently does nothing if no .env exists —
+    // real OS environment variables work either way.
     dotenvy::dotenv().ok();
 
     tauri::Builder::default()
-        .plugin(tauri_plugin_sql::Builder::default().add_migrations("sqlite:warraq.db", migrations()).build())
         .plugin(tauri_plugin_store::Builder::default().build())
         .plugin(tauri_plugin_autostart::init(tauri_plugin_autostart::MacosLauncher::LaunchAgent, None))
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
@@ -159,7 +99,6 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
             app.manage(TrayConfig(AtomicBool::new(true)));
-            app.manage(auth::SessionState::default());
             let salt = app.path().app_local_data_dir()?.join("stronghold.salt");
             app.handle().plugin(tauri_plugin_stronghold::Builder::with_argon2(&salt).build())?;
             install_tray(app)?;
@@ -179,17 +118,10 @@ pub fn run() {
             validate_provider_url,
             application_diagnostics,
             set_close_to_tray,
-            run_transaction,
-            auth::bootstrap_admin_if_needed,
-            auth::auth_login,
-            auth::auth_logout,
-            auth::auth_current_session,
-            auth::auth_list_users,
-            auth::auth_create_user,
-            auth::auth_update_user,
-            auth::auth_reset_password,
-            auth::auth_change_own_password,
-            auth::auth_delete_user,
+            admin::admin_bootstrap_if_needed,
+            admin::admin_create_staff,
+            admin::admin_reset_password,
+            admin::admin_delete_staff,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Warraq");
