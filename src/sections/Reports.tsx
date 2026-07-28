@@ -203,15 +203,14 @@ export function ReportsPage() {
       fair: t("catalog.condition.fair") || "Fair",
       worn: t("catalog.condition.worn") || "Worn",
       damaged: t("catalog.condition.damaged") || "Damaged",
-      Student: t("members.roles.student") || "Student",
-      Faculty: t("members.roles.faculty") || "Faculty",
-      Researcher: t("members.roles.researcher") || "Researcher",
-      Doctor: t("members.roles.doctor") || "Doctor",
-      Staff: t("members.roles.staff") || "Staff",
+      visitor: t("members.roles.visitor") || "Visitor",
+      student: t("members.roles.student") || "Student",
+      staff: t("members.roles.staff") || "Staff",
+      medic: t("members.roles.medic") || "Medic",
+      other: t("members.roles.other") || "Other",
       book: t("itemTypes.book") || "Book",
+      fyp: t("itemTypes.fyp") || "FYP / PFE",
       journal: t("itemTypes.journal") || "Journal",
-      magazine: t("itemTypes.magazine") || "Magazine",
-      disc: t("itemTypes.disc") || "Disc / Media",
     };
     return map[st] || st;
   };

@@ -12,6 +12,12 @@ export interface ExternalBookMetadata {
   cover_url?: string | null;
   isbn10?: string | null;
   isbn13?: string | null;
+  /**
+   * Fields Google Books/OpenLibrary did not return (used to show a clear "needs manual
+   * entry" hint instead of silently leaving the field blank with no explanation — see
+   * enrichMetadataWithGroq, which is the only thing that can actually fill these in).
+   */
+  unresolvedFields?: ("arabic_title" | "subtitle" | "description")[];
 }
 
 function cleanCategory(cat: string): string {
@@ -30,44 +36,6 @@ function cleanCategory(cat: string): string {
   });
   if (filtered.length > 0) return filtered[0];
   return parts[0] || "";
-}
-
-function getFallbackArabicTitle(title: string): string {
-  const t = title.toLowerCase();
-  if (t.includes("alchemist")) return "الخيميائي";
-  if (t.includes("pride and prejudice")) return "كبرياء وتحامل";
-  if (t.includes("canon of medicine")) return "القانون في الطب";
-  if (t.includes("study in scarlet")) return "دراسة في اللون القرمزي";
-  if (t.includes("hamlet")) return "هاملت";
-  if (t.includes("republic")) return "الجمهورية";
-  if (t.includes("al-muqaddimah") || t.includes("muqaddimah")) return "المقدمة";
-  return "";
-}
-
-function getFallbackSubtitle(title: string): string {
-  const t = title.toLowerCase();
-  if (t.includes("alchemist")) return "A Fable About Following Your Dream";
-  if (t.includes("pride and prejudice")) return "A Classic Regency Novel";
-  if (t.includes("canon of medicine")) return "The Definitive Encyclopedia of Medical Wisdom";
-  if (t.includes("study in scarlet")) return "The First Sherlock Holmes Adventure";
-  return "";
-}
-
-function getFallbackDescription(title: string): string {
-  const t = title.toLowerCase();
-  if (t.includes("alchemist")) {
-    return "Paulo Coelho's masterpiece tells the mystical story of Santiago, an Andalusian shepherd boy who yearns to travel in search of a worldly treasure. His quest will lead him to riches far different—and far more satisfying—than he ever imagined. Santiago's journey teaches us about the essential wisdom of listening to our hearts, of recognizing opportunity and learning to read the omens strewn along life's path, and, most importantly, to follow our dreams.";
-  }
-  if (t.includes("pride and prejudice")) {
-    return "Jane Austen's classic novel is a romantic comedy of manners set in Regency England. It follows the turbulent relationship between Elizabeth Bennet, the daughter of a country gentleman, and Fitzwilliam Darcy, a rich aristocratic landowner. They must overcome their titular sins of pride and prejudice in order to find mutual love and understanding. The novel remains one of the most popular and enduring works of English literature, celebrated for its wit, social observation, and sharp character studies.";
-  }
-  if (t.includes("canon of medicine")) {
-    return "The Canon of Medicine (al-Qanun fi al-Tibb) is an encyclopedia of medicine in five books compiled by the Persian philosopher Ibn Sina (Avicenna) and completed in 1025. It presents a clear and organized summary of all the medical and physiological knowledge of the time, serving as an authoritative reference book for medical education in Europe and the Islamic world for centuries. It covers anatomy, general medicine, pharmacology, systemic diseases, and compound drugs.";
-  }
-  if (t.includes("study in scarlet")) {
-    return "A Study in Scarlet is a detective mystery novel written by Sir Arthur Conan Doyle, introducing his famous consulting detective Sherlock Holmes and his friend and biographer Dr. John H. Watson. The story follows their first meeting, their move to 221B Baker Street, and their investigation of a bizarre murder in London involving a mysterious word written in blood on the wall, leading back to a tale of romance and revenge in Utah.";
-  }
-  return "";
 }
 
 function generateFallbackTags(title: string, category: string): string {
@@ -264,17 +232,12 @@ export async function fetchBookMetadata(query: string): Promise<ExternalBookMeta
 
   const title = googleMeta.title || olMeta.title || "";
   const category = cleanCategory(googleMeta.category || olMeta.category || "");
-  const subtitle = googleMeta.subtitle || olMeta.subtitle || getFallbackSubtitle(title);
-  const arabic_title = /[\u0600-\u06FF]/.test(title) ? title : getFallbackArabicTitle(title);
+  const subtitle = googleMeta.subtitle || olMeta.subtitle || "";
+  // Providers only ever return an Arabic title when the book's canonical title is
+  // already in Arabic script \u2014 there is no translation happening here.
+  const arabic_title = /[\u0600-\u06FF]/.test(title) ? title : "";
   const tags = generateFallbackTags(title, category);
-
-  let description = googleMeta.description || olMeta.description || "";
-  if (description.length < 30) {
-    const fallbackDesc = getFallbackDescription(title);
-    if (fallbackDesc) {
-      description = fallbackDesc;
-    }
-  }
+  const description = googleMeta.description || olMeta.description || "";
 
   const finalIsbn10 = googleMeta.isbn10 || olMeta.isbn10 || null;
   const finalIsbn13 = googleMeta.isbn13 || olMeta.isbn13 || null;
@@ -287,6 +250,13 @@ export async function fetchBookMetadata(query: string): Promise<ExternalBookMeta
   if (!cover_url && (finalIsbn13 || finalIsbn10)) {
     cover_url = `https://covers.openlibrary.org/b/isbn/${finalIsbn13 || finalIsbn10}-L.jpg`;
   }
+
+  // Tracked so the UI can show a clear "needs manual entry" hint per field instead of a
+  // silently blank input that looks like the lookup just didn't work this time.
+  const unresolvedFields: ExternalBookMetadata["unresolvedFields"] = [];
+  if (!arabic_title) unresolvedFields.push("arabic_title");
+  if (!subtitle) unresolvedFields.push("subtitle");
+  if (description.length < 30) unresolvedFields.push("description");
 
   return {
     title,
@@ -301,7 +271,8 @@ export async function fetchBookMetadata(query: string): Promise<ExternalBookMeta
     description,
     cover_url,
     isbn10: finalIsbn10,
-    isbn13: finalIsbn13
+    isbn13: finalIsbn13,
+    unresolvedFields
   };
 }
 
@@ -328,7 +299,8 @@ export async function enrichMetadataWithGroq(
       publicationYear: existingMetadata.publicationYear,
       cover_url: existingMetadata.cover_url || null,
       isbn10: existingMetadata.isbn10 || null,
-      isbn13: existingMetadata.isbn13 || null
+      isbn13: existingMetadata.isbn13 || null,
+      unresolvedFields: existingMetadata.unresolvedFields || []
     };
   }
 
@@ -384,20 +356,28 @@ Return ONLY the JSON object. Do not include any explanations, introduction, mark
     const content = data.choices?.[0]?.message?.content;
     if (content) {
       const parsed = JSON.parse(content);
+      const arabic_title = parsed.arabic_title || existingMetadata.arabic_title || "";
+      const subtitle = parsed.subtitle || existingMetadata.subtitle || "";
+      const description = parsed.description || existingMetadata.description || "";
+      const unresolvedFields: ExternalBookMetadata["unresolvedFields"] = [];
+      if (!arabic_title) unresolvedFields.push("arabic_title");
+      if (!subtitle) unresolvedFields.push("subtitle");
+      if (description.length < 30) unresolvedFields.push("description");
       return {
         title: parsed.title || existingMetadata.title || "",
-        subtitle: parsed.subtitle || existingMetadata.subtitle || "",
-        arabic_title: parsed.arabic_title || existingMetadata.arabic_title || "",
+        subtitle,
+        arabic_title,
         tags: parsed.tags || existingMetadata.tags || "",
         author: parsed.author || existingMetadata.author || "",
         publisher: parsed.publisher || existingMetadata.publisher || "",
         category: parsed.category || existingMetadata.category || "",
         language: parsed.language || existingMetadata.language || "English",
-        description: parsed.description || existingMetadata.description || "",
+        description,
         publicationYear: parsed.publicationYear ? Number(parsed.publicationYear) : existingMetadata.publicationYear,
         cover_url: existingMetadata.cover_url || null,
         isbn10: parsed.isbn10 || existingMetadata.isbn10 || null,
-        isbn13: parsed.isbn13 || existingMetadata.isbn13 || null
+        isbn13: parsed.isbn13 || existingMetadata.isbn13 || null,
+        unresolvedFields
       };
     }
   } catch (error) {
@@ -417,6 +397,7 @@ Return ONLY the JSON object. Do not include any explanations, introduction, mark
     publicationYear: existingMetadata.publicationYear,
     cover_url: existingMetadata.cover_url || null,
     isbn10: existingMetadata.isbn10 || null,
-    isbn13: existingMetadata.isbn13 || null
+    isbn13: existingMetadata.isbn13 || null,
+    unresolvedFields: existingMetadata.unresolvedFields || []
   };
 }
