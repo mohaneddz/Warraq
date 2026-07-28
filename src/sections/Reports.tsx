@@ -301,12 +301,7 @@ export function ReportsPage() {
           {/* Chart 3: Holdings Distribution */}
           <ChartWidget title={t("reports.charts.statusDistribution") || "Holding Status Distribution"} icon={Layers}>
             <ResponsiveContainer width="100%" height={200}>
-              <BarChart data={(copyStatusQuery.data || [
-                { status: 'available', count: Math.max(stats.totalCopies - stats.openLoansCount, 0) },
-                { status: 'on-loan', count: stats.openLoansCount },
-                { status: 'repair', count: 3 },
-                { status: 'lost', count: 1 }
-              ]).map(d => ({ ...d, status: translateLabel(d.status) }))} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
+              <BarChart data={(copyStatusQuery.data ?? []).map(d => ({ ...d, status: translateLabel(d.status) }))} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
                 <XAxis dataKey="status" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: 'currentColor' }} />
                 <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: 'currentColor' }} />
                 <Tooltip contentStyle={{ borderRadius: '12px', background: '#122222', color: '#fff', fontSize: '12px' }} />
@@ -318,13 +313,7 @@ export function ReportsPage() {
           {/* Chart 4: Hourly Checkout Rhythm */}
           <ChartWidget title={t("reports.charts.hourlyRhythm") || "Circulation Hourly Rhythm"} icon={Clock} secondaryBadge={t("reports.charts.checkoutsVsReturns") || "Checkouts vs Returns"}>
             <ResponsiveContainer width="100%" height={200}>
-              <BarChart data={dashQuery.data?.circulationRhythm || [
-                { time: '8 AM', checkouts: 4, returns: 2 },
-                { time: '10 AM', checkouts: 12, returns: 8 },
-                { time: '12 PM', checkouts: 19, returns: 14 },
-                { time: '2 PM', checkouts: 15, returns: 11 },
-                { time: '4 PM', checkouts: 9, returns: 7 },
-              ]} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
+              <BarChart data={dashQuery.data?.circulationRhythm ?? []} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
                 <XAxis dataKey="time" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: 'currentColor' }} />
                 <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: 'currentColor' }} />
                 <Tooltip contentStyle={{ borderRadius: '12px', background: '#122222', color: '#fff', fontSize: '12px' }} />
@@ -341,13 +330,7 @@ export function ReportsPage() {
           {/* Chart 1: Hourly Rhythm */}
           <ChartWidget title={t("reports.charts.peakHours") || "Peak Circulation Hours"} icon={Clock}>
             <ResponsiveContainer width="100%" height={230}>
-              <BarChart data={dashQuery.data?.circulationRhythm || [
-                { time: '8 AM', checkouts: 4, returns: 2 },
-                { time: '10 AM', checkouts: 12, returns: 8 },
-                { time: '12 PM', checkouts: 19, returns: 14 },
-                { time: '2 PM', checkouts: 15, returns: 11 },
-                { time: '4 PM', checkouts: 9, returns: 7 },
-              ]} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
+              <BarChart data={dashQuery.data?.circulationRhythm ?? []} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
                 <XAxis dataKey="time" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: 'currentColor' }} />
                 <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: 'currentColor' }} />
                 <Tooltip contentStyle={{ borderRadius: '12px', background: '#122222', color: '#fff' }} />
@@ -360,12 +343,7 @@ export function ReportsPage() {
           {/* Chart 2: Items by Type */}
           <ChartWidget title={t("reports.charts.mediaTypeDist") || "Collection Media Type Distribution"} icon={Bookmark}>
             <ResponsiveContainer width="100%" height={230}>
-              <BarChart data={(itemTypesQuery.data || [
-                { item_type: 'book', count: 48 },
-                { item_type: 'journal', count: 14 },
-                { item_type: 'magazine', count: 9 },
-                { item_type: 'disc', count: 5 }
-              ]).map(d => ({ ...d, item_type: translateLabel(d.item_type) }))} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
+              <BarChart data={(itemTypesQuery.data ?? []).map(d => ({ ...d, item_type: translateLabel(d.item_type) }))} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
                 <XAxis dataKey="item_type" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: 'currentColor' }} />
                 <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: 'currentColor' }} />
                 <Tooltip contentStyle={{ borderRadius: '12px', background: '#122222', color: '#fff' }} />
@@ -415,12 +393,7 @@ export function ReportsPage() {
           {/* Chart 1: Holding Status */}
           <ChartWidget title={t("reports.charts.copyStatusDist") || "Copy Status Distribution"} icon={Layers}>
             <ResponsiveContainer width="100%" height={220}>
-              <BarChart data={(copyStatusQuery.data || [
-                { status: 'available', count: Math.max(stats.totalCopies - stats.openLoansCount, 0) },
-                { status: 'on-loan', count: stats.openLoansCount },
-                { status: 'repair', count: 3 },
-                { status: 'lost', count: 1 }
-              ]).map(d => ({ ...d, status: translateLabel(d.status) }))} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
+              <BarChart data={(copyStatusQuery.data ?? []).map(d => ({ ...d, status: translateLabel(d.status) }))} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
                 <XAxis dataKey="status" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: 'currentColor' }} />
                 <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: 'currentColor' }} />
                 <Tooltip contentStyle={{ borderRadius: '12px', background: '#122222', color: '#fff' }} />
@@ -432,12 +405,7 @@ export function ReportsPage() {
           {/* Chart 2: Item Condition */}
           <ChartWidget title={t("reports.charts.conditionHealth") || "Physical Item Condition Health"} icon={CheckCircle2}>
             <ResponsiveContainer width="100%" height={220}>
-              <BarChart data={(conditionQuery.data || [
-                { condition: 'good', count: 85 },
-                { condition: 'fair', count: 12 },
-                { condition: 'worn', count: 5 },
-                { condition: 'damaged', count: 2 }
-              ]).map(d => ({ ...d, condition: translateLabel(d.condition) }))} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
+              <BarChart data={(conditionQuery.data ?? []).map(d => ({ ...d, condition: translateLabel(d.condition) }))} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
                 <XAxis dataKey="condition" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: 'currentColor' }} />
                 <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: 'currentColor' }} />
                 <Tooltip contentStyle={{ borderRadius: '12px', background: '#122222', color: '#fff' }} />
@@ -461,12 +429,7 @@ export function ReportsPage() {
           {/* Chart 4: Media Format Breakdown */}
           <ChartWidget title={t("reports.charts.formatHoldingsCount") || "Format Holdings Count"} icon={BookOpen}>
             <ResponsiveContainer width="100%" height={200}>
-              <BarChart data={(itemTypesQuery.data || [
-                { item_type: 'book', count: 48 },
-                { item_type: 'journal', count: 14 },
-                { item_type: 'magazine', count: 9 },
-                { item_type: 'disc', count: 5 }
-              ]).map(d => ({ ...d, item_type: translateLabel(d.item_type) }))} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
+              <BarChart data={(itemTypesQuery.data ?? []).map(d => ({ ...d, item_type: translateLabel(d.item_type) }))} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
                 <XAxis dataKey="item_type" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: 'currentColor' }} />
                 <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: 'currentColor' }} />
                 <Tooltip contentStyle={{ borderRadius: '12px', background: '#122222', color: '#fff' }} />
@@ -482,13 +445,7 @@ export function ReportsPage() {
           {/* Chart 1: Members by Academic Role */}
           <ChartWidget title={t("reports.charts.membersByRole") || "Members by Academic Role"} icon={Users}>
             <ResponsiveContainer width="100%" height={220}>
-              <BarChart data={(memberRolesQuery.data || [
-                { role: 'Student', count: 42 },
-                { role: 'Faculty', count: 15 },
-                { role: 'Researcher', count: 12 },
-                { role: 'Doctor', count: 8 },
-                { role: 'Staff', count: 6 },
-              ]).map(d => ({ ...d, role: translateLabel(d.role) }))} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
+              <BarChart data={(memberRolesQuery.data ?? []).map(d => ({ ...d, role: translateLabel(d.role) }))} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
                 <XAxis dataKey="role" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: 'currentColor' }} />
                 <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: 'currentColor' }} />
                 <Tooltip contentStyle={{ borderRadius: '12px', background: '#122222', color: '#fff' }} />
@@ -500,12 +457,7 @@ export function ReportsPage() {
           {/* Chart 2: Most Active Departments */}
           <ChartWidget title={t("reports.charts.activeDepts") || "Most Active Departments"} icon={BarChart2}>
             <ResponsiveContainer width="100%" height={220}>
-              <BarChart data={dashQuery.data?.activeDepartments || [
-                { name: 'Computer Science', count: 28 },
-                { name: 'Radiology', count: 18 },
-                { name: 'Surgery', count: 14 },
-                { name: 'Pediatrics', count: 9 },
-              ]} layout="vertical" margin={{ top: 5, right: 20, left: 20, bottom: 5 }}>
+              <BarChart data={dashQuery.data?.activeDepartments ?? []} layout="vertical" margin={{ top: 5, right: 20, left: 20, bottom: 5 }}>
                 <XAxis type="number" hide />
                 <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: 'currentColor' }} width={120} />
                 <Tooltip contentStyle={{ borderRadius: '12px', background: '#122222', color: '#fff' }} />
