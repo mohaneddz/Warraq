@@ -121,7 +121,13 @@
     "gotoCatalog": "Aller au catalogue",
     "gotoMembers": "Aller aux membres",
     "gotoReservations": "Aller aux réservations",
-    "gotoInventory": "Aller à l'inventaire"
+    "gotoInventory": "Aller à l'inventaire",
+    "addMember": "Ajouter un membre",
+    "addMemberSub": "Créer un profil de membre",
+    "newReservation": "Nouvelle réservation",
+    "newReservationSub": "Réserver un article pour un membre",
+    "addUser": "Ajouter un utilisateur du personnel",
+    "addUserSub": "Créer des identifiants utilisateur"
   },
   "itemTypes": {
     "allItems": "Tous les types d'éléments",
@@ -132,7 +138,8 @@
     "newspaper": "Journal / Presse",
     "disc": "Disque / Média",
     "discs": "Disques",
-    "other": "Autre / Divers"
+    "other": "Autre / Divers",
+    "fyp": "PFE"
   },
   "itemFields": {
     "issueNumber": "Numéro de parution / Volume",
@@ -153,7 +160,10 @@
     "specifications": "Spécifications / Détails",
     "artist": "Artiste / Réalisateur / Créateur",
     "studio": "Studio / Label",
-    "owner": "Propriétaire / Département"
+    "owner": "Propriétaire / Département",
+    "supervisor": "Encadrant",
+    "registrationNumber": "Numéro d'enregistrement",
+    "department": "Département / Spécialité"
   },
   "catalog": {
     "title": "Catalogue",
@@ -226,7 +236,9 @@
       "copyCondition": "État",
       "addCopyBtn": "Ajouter l'exemplaire",
       "byActor": "par {{actor}}",
-      "specifications": "Caractéristiques de l'article"
+      "specifications": "Caractéristiques de l'article",
+      "shelfLabel": "Étagère",
+      "shelfUnassigned": "Non assigné"
     },
     "addModal": {
       "title": "Ajouter un nouveau livre",
@@ -247,7 +259,8 @@
       "descLabel": "Description",
       "cancel": "Annuler",
       "save": "Enregistrer le livre",
-      "isbnLabel": "ISBN"
+      "isbnLabel": "ISBN",
+      "autofillGap": "Non trouvé automatiquement — ajoutez une clé API Groq dans les paramètres pour la traduction automatique, ou remplissez ce champ manuellement."
     },
     "availableNow": "Disponible",
     "outOfStock": "En rupture de stock",
@@ -256,7 +269,8 @@
       "mint": "Comme neuf",
       "good": "Bon",
       "worn": "Usé",
-      "damaged": "Endommagé"
+      "damaged": "Endommagé",
+      "fair": "Correct"
     },
     "alerts": {
       "invalidIsbn": "Entrez un ISBN-10 ou ISBN-13 valide.",
@@ -382,7 +396,8 @@
       "faculty": "Enseignant",
       "doctor": "Médecin",
       "nurse": "Infirmier",
-      "other": "Autre"
+      "other": "Autre",
+      "medic": "Médecin"
     },
     "searchPlaceholder": "Rechercher des membres par nom, e-mail ou ID...",
     "allDepartments": "Tous les départements",
@@ -481,7 +496,9 @@
       "queued": "En attente",
       "cancelled": "Annulé",
       "fulfilled": "Effectué",
-      "expired": "Expiré"
+      "expired": "Expiré",
+      "pending": "En attente d'approbation",
+      "declined": "Refusée"
     },
     "addModal": {
       "title": "Nouvelle réservation",
@@ -535,7 +552,11 @@
       "nextCopy": "Suivant: Sélectionner l'exemplaire",
       "nextDuration": "Suivant: Durée",
       "submit": "Créer la réservation",
-      "submitting": "Création en cours..."
+      "submitting": "Création en cours...",
+      "scopeLabel": "Portée de la réservation",
+      "visitorsInternalOnly": "Les visiteurs ne peuvent réserver des articles que pour un usage interne.",
+      "singleCopyInternalOnly": "Ce titre n'a qu'un seul exemplaire et ne peut être réservé que pour un usage interne.",
+      "approvalHint": "Un administrateur doit accepter cette demande avant qu'elle n'entre dans la file d'attente. La durée du prêt est définie automatiquement selon la portée."
     },
     "alerts": {
       "bulkCancelled": "Réservations sélectionnées annulées.",
@@ -551,7 +572,11 @@
       "extended": "Délai de réservation prolongé de 7 jours.",
       "bulkDeleted": "Réservations sélectionnées supprimées.",
       "bulkReady": "Réservations sélectionnées marquées comme prêtes.",
-      "bulkExtended": "Délais des réservations sélectionnées prolongés."
+      "bulkExtended": "Délais des réservations sélectionnées prolongés.",
+      "accepted": "Réservation acceptée.",
+      "declined": "Réservation refusée.",
+      "banned": "Membre banni de toute nouvelle réservation.",
+      "bulkAccepted": "Réservations sélectionnées acceptées."
     },
     "markReady": "Marquer prêt pour le retrait",
     "extendHold": "Prolonger la réservation (+7 jours)",
@@ -571,7 +596,17 @@
       "selectedCount_other": "{{count}} réservations sélectionnées",
       "markReady": "Marquer prêt",
       "extend7Days": "Prolonger de +7 jours",
-      "deleteSelected": "Supprimer définitivement"
+      "deleteSelected": "Supprimer définitivement",
+      "accept": "Accepter"
+    },
+    "accept": "Accepter",
+    "decline": "Refuser",
+    "declineReasonPrompt": "Motif du refus (facultatif) :",
+    "banMember": "Bannir le membre",
+    "banReasonPrompt": "Motif du bannissement de ce membre :",
+    "scope": {
+      "internal": "Interne — reste à la bibliothèque",
+      "external": "Externe — emporté à domicile"
     }
   },
   "inventory": {
@@ -646,7 +681,28 @@
     "bulk": {
       "selectedCount_one": "{{count}} exemplaire sélectionné",
       "selectedCount_other": "{{count}} exemplaires sélectionnés"
-    }
+    },
+    "rooms": "Salles",
+    "roomDetails": "Détails de la salle",
+    "newRoom": "Nouvelle salle",
+    "newRoomHint": "Crée la salle avec sa disposition fixe d'étagères : six étagères lettrées (A à F) plus une étagère au sol plus grande.",
+    "room": "Salle",
+    "roomName": "Nom de la salle",
+    "notesOptional": "Notes (facultatif)",
+    "totalShelves": "Total des étagères",
+    "totalCapacity": "Capacité totale",
+    "currentlyShelved": "Actuellement rangés",
+    "copiesWord": "exemplaires",
+    "noRooms": "Aucune salle pour l'instant — créez-en une pour commencer.",
+    "noRoomSelected": "Aucune salle sélectionnée",
+    "createRoomHint": "Créez une salle pour obtenir ses six étagères lettrées (A à F) ainsi qu'une étagère au sol.",
+    "floorShelf": "Étagère au sol",
+    "floorShelfHint": "L'étagère au sol surdimensionnée de la bibliothèque — capacité supérieure à celle d'une étagère lettrée.",
+    "shelfLetter": "Étagère {{code}}",
+    "needsRepair": "À réparer",
+    "missing": "Manquant",
+    "shelved": "Rangés",
+    "totalCopies": "Total des exemplaires"
   },
   "reports": {
     "title": "Rapports",
@@ -890,7 +946,11 @@
       "enableGracePeriod": "Activer le délai de grâce",
       "enableGracePeriodDesc": "Accorder une période supplémentaire avant le début des amendes.",
       "gracePeriodLength": "Durée du délai de grâce (jours)",
-      "saveBtn": "Enregistrer les règles de circulation"
+      "saveBtn": "Enregistrer les règles de circulation",
+      "scopeDurationsTitle": "Durées interne / externe",
+      "internalDays": "Durée du prêt interne (jours)",
+      "externalDays": "Durée du prêt externe (jours)",
+      "scopeDurationsHelp": "Les réservations internes restent à la bibliothèque (lecture sur place) ; les réservations externes sont emportées à domicile. Les visiteurs et les titres à exemplaire unique ne peuvent être réservés qu'en interne."
     },
     "fines": {
       "title": "Frais & Amendes",
@@ -958,7 +1018,10 @@
       "importMembersSuccessDb": "Importation réussie de {{count}} nouveaux membres depuis la base de données.",
       "importFailed": "Échec de l'importation: {{error}}",
       "invalidJsonBooks": "JSON invalide: Tableau de livres attendu.",
-      "invalidJsonMembers": "JSON invalide: Tableau de membres attendu."
+      "invalidJsonMembers": "JSON invalide: Tableau de membres attendu.",
+      "supabaseNote": "Les données de Warraq résident désormais dans Supabase, qui gère lui-même les sauvegardes automatiques de la base de données — il n'y a rien à exporter ou restaurer depuis cette application de bureau. Les outils ci-dessous ne servent qu'à importer/exporter les fiches du catalogue/des membres au format JSON.",
+      "importBooksDescJson": "Importer des livres à partir d'un fichier JSON contenant un tableau d'objets livre.",
+      "importMembersDescJson": "Importer des membres de la bibliothèque à partir d'un fichier JSON contenant un tableau d'objets membre."
     },
     "database": {
       "title": "Base de données",

@@ -121,7 +121,13 @@
     "gotoCatalog": "Go to Catalog",
     "gotoMembers": "Go to Members",
     "gotoReservations": "Go to Reservations",
-    "gotoInventory": "Go to Inventory"
+    "gotoInventory": "Go to Inventory",
+    "addMember": "Add Member",
+    "addMemberSub": "Create member profile",
+    "newReservation": "New Reservation",
+    "newReservationSub": "Reserve item for member",
+    "addUser": "Add Staff User",
+    "addUserSub": "Create user credentials"
   },
   "itemTypes": {
     "allItems": "All Item Types",
@@ -132,7 +138,8 @@
     "newspaper": "Newspaper",
     "disc": "Disc / Media",
     "discs": "Discs",
-    "other": "Other / Misc"
+    "other": "Other / Misc",
+    "fyp": "FYP / PFE"
   },
   "itemFields": {
     "issueNumber": "Issue / Volume Number",
@@ -153,7 +160,10 @@
     "specifications": "Specifications / Details",
     "artist": "Artist / Director / Creator",
     "studio": "Studio / Label",
-    "owner": "Owner / Department"
+    "owner": "Owner / Department",
+    "supervisor": "Supervisor",
+    "registrationNumber": "Registration Number",
+    "department": "Department / Specialty"
   },
   "catalog": {
     "title": "Catalog",
@@ -226,7 +236,9 @@
       "copyCondition": "Condition",
       "addCopyBtn": "Add copy",
       "byActor": "by {{actor}}",
-      "specifications": "Item Specifications"
+      "specifications": "Item Specifications",
+      "shelfLabel": "Shelf",
+      "shelfUnassigned": "Unassigned"
     },
     "addModal": {
       "title": "Add New Book",
@@ -247,7 +259,8 @@
       "descLabel": "Description",
       "cancel": "Cancel",
       "save": "Save book",
-      "isbnLabel": "ISBN"
+      "isbnLabel": "ISBN",
+      "autofillGap": "Not found automatically — add a Groq API key in Settings for auto-translation, or fill this in by hand."
     },
     "availableNow": "Available Now",
     "outOfStock": "Out of Stock",
@@ -256,7 +269,8 @@
       "mint": "Mint",
       "good": "Good",
       "worn": "Worn",
-      "damaged": "Damaged"
+      "damaged": "Damaged",
+      "fair": "Fair"
     },
     "alerts": {
       "invalidIsbn": "Enter a valid ISBN-10 or ISBN-13.",
@@ -382,7 +396,8 @@
       "faculty": "Faculty",
       "doctor": "Doctor",
       "nurse": "Nurse",
-      "other": "Other"
+      "other": "Other",
+      "medic": "Medic"
     },
     "searchPlaceholder": "Search members by name, email, or ID...",
     "allDepartments": "All Departments",
@@ -481,7 +496,9 @@
       "queued": "Queued",
       "cancelled": "Cancelled",
       "fulfilled": "Fulfilled",
-      "expired": "Expired"
+      "expired": "Expired",
+      "pending": "Pending Approval",
+      "declined": "Declined"
     },
     "addModal": {
       "title": "New Reservation",
@@ -535,7 +552,11 @@
       "nextCopy": "Next: Select Copy",
       "nextDuration": "Next: Duration",
       "submit": "Create Reservation",
-      "submitting": "Creating..."
+      "submitting": "Creating...",
+      "scopeLabel": "Reservation Scope",
+      "visitorsInternalOnly": "Visitors can only reserve items for internal use.",
+      "singleCopyInternalOnly": "This title has only one copy and can only be reserved for internal use.",
+      "approvalHint": "An admin must accept this request before it enters the queue. Loan duration is set automatically based on scope."
     },
     "alerts": {
       "bulkCancelled": "Selected reservations cancelled.",
@@ -551,7 +572,11 @@
       "extended": "Reservation hold extended by 7 days.",
       "bulkDeleted": "Selected reservations deleted.",
       "bulkReady": "Selected reservations marked ready.",
-      "bulkExtended": "Selected reservation holds extended."
+      "bulkExtended": "Selected reservation holds extended.",
+      "accepted": "Reservation accepted.",
+      "declined": "Reservation declined.",
+      "banned": "Member banned from making further reservations.",
+      "bulkAccepted": "Selected reservations accepted."
     },
     "markReady": "Mark Ready for Pickup",
     "extendHold": "Extend Hold (+7 Days)",
@@ -571,7 +596,17 @@
       "selectedCount_other": "{{count}} reservations selected",
       "markReady": "Mark Ready",
       "extend7Days": "Extend +7 Days",
-      "deleteSelected": "Delete Permanently"
+      "deleteSelected": "Delete Permanently",
+      "accept": "Accept"
+    },
+    "accept": "Accept",
+    "decline": "Decline",
+    "declineReasonPrompt": "Reason for declining (optional):",
+    "banMember": "Ban Member",
+    "banReasonPrompt": "Reason for banning this member:",
+    "scope": {
+      "internal": "Internal — stays in library",
+      "external": "External — taken home"
     }
   },
   "inventory": {
@@ -646,7 +681,28 @@
     "bulk": {
       "selectedCount_one": "{{count}} copy selected",
       "selectedCount_other": "{{count}} copies selected"
-    }
+    },
+    "rooms": "Rooms",
+    "roomDetails": "Room details",
+    "newRoom": "New Room",
+    "newRoomHint": "Creates the room with its fixed shelf layout: six lettered shelves (A–F) plus one larger floor shelf.",
+    "room": "Room",
+    "roomName": "Room name",
+    "notesOptional": "Notes (optional)",
+    "totalShelves": "Total shelves",
+    "totalCapacity": "Total capacity",
+    "currentlyShelved": "Currently shelved",
+    "copiesWord": "copies",
+    "noRooms": "No rooms yet — create one to get started.",
+    "noRoomSelected": "No room selected",
+    "createRoomHint": "Create a room to get its six lettered shelves (A–F) plus one floor shelf.",
+    "floorShelf": "Floor shelf",
+    "floorShelfHint": "The library's oversized floor-level shelf — larger capacity than a lettered shelf.",
+    "shelfLetter": "Shelf {{code}}",
+    "needsRepair": "Needs repair",
+    "missing": "Missing",
+    "shelved": "Shelved",
+    "totalCopies": "Total copies"
   },
   "reports": {
     "title": "Reports",
@@ -890,7 +946,11 @@
       "enableGracePeriod": "Enable grace period",
       "enableGracePeriodDesc": "Allow a short window after the due date before fines begin.",
       "gracePeriodLength": "Grace period length (days)",
-      "saveBtn": "Save circulation rules"
+      "saveBtn": "Save circulation rules",
+      "scopeDurationsTitle": "Internal / External Durations",
+      "internalDays": "Internal loan duration (days)",
+      "externalDays": "External loan duration (days)",
+      "scopeDurationsHelp": "Internal reservations stay in the library (read-in-place); external reservations are taken home. Visitors and single-copy titles can only be reserved internally."
     },
     "fines": {
       "title": "Fines & Fees",
@@ -958,7 +1018,10 @@
       "importMembersSuccessDb": "Successfully imported {{count}} new members from database.",
       "importFailed": "Import failed: {{error}}",
       "invalidJsonBooks": "Invalid JSON: Expected an array of books.",
-      "invalidJsonMembers": "Invalid JSON: Expected an array of members."
+      "invalidJsonMembers": "Invalid JSON: Expected an array of members.",
+      "supabaseNote": "Warraq's data now lives in Supabase, which handles automated database backups on its own — there is nothing to export or restore from this desktop app. The tools below only cover moving catalog/member records in and out as JSON.",
+      "importBooksDescJson": "Import books from a JSON file containing an array of book objects.",
+      "importMembersDescJson": "Import library members from a JSON file containing an array of member objects."
     },
     "database": {
       "title": "Database",
