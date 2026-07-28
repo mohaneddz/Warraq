@@ -4,9 +4,9 @@ import { useNavigate } from "react-router-dom";
 import { useUiStore } from "../../store/uiStore";
 import { useTranslation } from "react-i18next";
 import { 
-  BookOpen, CalendarClock, ClipboardList, Cog, LayoutDashboard, Search, 
-  Users, Warehouse, Moon, Sun, HardDrive, Plus, 
-  Globe, Shield, Database, Zap, BookMarked 
+  BookOpen, CalendarClock, ClipboardList, Cog, LayoutDashboard, Search,
+  Users, Warehouse, Moon, Sun, Plus,
+  Globe, Shield, Database, Zap, BookMarked
 } from "lucide-react";
 
 export function CommandPalette() {
@@ -15,25 +15,6 @@ export function CommandPalette() {
   const { t } = useTranslation();
 
   if (!paletteOpen) return null;
-
-  const handleBackup = async () => {
-    try {
-      const { save } = await import("@tauri-apps/plugin-dialog");
-      const { copyFile } = await import("@tauri-apps/plugin-fs");
-      const { appDataDir } = await import("@tauri-apps/api/path");
-      const dir = await appDataDir();
-      const dest = await save({ 
-        defaultPath: "warraq-backup.db", 
-        filters: [{ name: "Database", extensions: ["db"] }] 
-      });
-      if (dest) {
-        await copyFile(`${dir}/warraq.db`, dest);
-        alert(t("profileCard.backupSuccess") || "Backup saved successfully.");
-      }
-    } catch {
-      alert(t("profileCard.backupError") || "Could not export backup.");
-    }
-  };
 
   const toggleTheme = () => {
     updatePreferences({ theme: preferences.theme === "dark" ? "light" : "dark" });
@@ -69,7 +50,6 @@ export function CommandPalette() {
 
 
     // Native Actions
-    { label: t("commandPalette.actions.backup"), subtitle: t("commandPalette.actions.backupSub"), action: handleBackup, icon: HardDrive },
     { label: t("commandPalette.actions.toggleTheme"), subtitle: t("commandPalette.actions.toggleThemeSub"), action: toggleTheme, icon: preferences.theme === "dark" ? Sun : Moon },
     
     // Language Switches

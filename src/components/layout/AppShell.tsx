@@ -1,4 +1,4 @@
-import { BookOpen, CalendarClock, ChartNoAxesCombined, ClipboardList, Cog, LayoutDashboard, Search, Bell, Minus, Square, Users, Warehouse, X, ChevronDown, Menu, Moon, Sun, HardDrive, Sparkles, RefreshCw, ArrowLeft, ArrowRight, Maximize, LogOut } from "lucide-react";
+import { BookOpen, CalendarClock, ChartNoAxesCombined, ClipboardList, Cog, LayoutDashboard, Search, Bell, Minus, Square, Users, Warehouse, X, ChevronDown, Menu, Moon, Sun, Sparkles, RefreshCw, ArrowLeft, ArrowRight, Maximize, LogOut } from "lucide-react";
 import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useEffect, useState, useRef } from "react";
 
@@ -718,30 +718,7 @@ function ProfileCard({
 }) {
 
   const user = useAuthStore((s) => s.user);
-  const [backingUp, setBackingUp] = useState(false);
   const isRtl = preferences.locale === "ar";
-
-  const handleBackup = async () => {
-    try {
-      setBackingUp(true);
-      const { save } = await import("@tauri-apps/plugin-dialog");
-      const { copyFile } = await import("@tauri-apps/plugin-fs");
-      const { appDataDir } = await import("@tauri-apps/api/path");
-      const dir = await appDataDir();
-      const dest = await save({ 
-        defaultPath: "warraq-backup.db", 
-        filters: [{ name: "Database", extensions: ["db"] }] 
-      });
-      if (dest) {
-        await copyFile(`${dir}/warraq.db`, dest);
-        alert(t("profileCard.backupSuccess") || "Backup saved successfully.");
-      }
-    } catch (err) {
-      alert(t("profileCard.backupError") || "Could not export backup.");
-    } finally {
-      setBackingUp(false);
-    }
-  };
 
   const toggleTheme = () => {
     const nextTheme = preferences.theme === "dark" ? "light" : "dark";
@@ -825,20 +802,6 @@ function ProfileCard({
             <span className="font-semibold text-[13px]">
               {preferences.theme === "dark" ? t("profileCard.themeLight") : t("profileCard.themeDark")}
             </span>
-          </div>
-        </button>
-
-        {/* Database Backup */}
-        <button 
-          onClick={handleBackup}
-          disabled={backingUp}
-          className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-[#122222]/80 dark:text-[#f0ebe1]/80 hover:bg-[#b96f3e]/10 hover:text-[#b96f3e] dark:hover:bg-white/5 dark:hover:text-white transition-all group disabled:opacity-50 ${isRtl ? "text-right flex-row-reverse" : "text-left"}`}
-        >
-          <div className={`flex items-center gap-2.5 ${isRtl ? "flex-row-reverse" : ""}`}>
-            <span className="w-6 h-6 rounded-lg bg-black/5 dark:bg-white/5 flex items-center justify-center text-[#122222]/60 dark:text-white/60 group-hover:bg-[#b96f3e]/20 group-hover:text-[#b96f3e] dark:group-hover:bg-[#b96f3e]/20 dark:group-hover:text-[#b96f3e] transition-colors">
-              <HardDrive size={14} />
-            </span>
-            <span className="font-semibold text-[13px]">{t("profileCard.backup")}</span>
           </div>
         </button>
 
