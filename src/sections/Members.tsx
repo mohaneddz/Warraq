@@ -21,6 +21,7 @@ import { toast } from "sonner";
 import { daysLate, formatDisplayDate, dueDate, today } from "../utils/dates";
 import { queryClient } from "../app/providers";
 import { useUiStore } from "../store/uiStore";
+import { useLibrarySettingsStore } from "../store/librarySettingsStore";
 import { ImageUpload } from "../components/ui/ImageUpload";
 import { cleanPhone, cleanMemberNumber, cleanText, cleanLastName, formatMemberNumber, generateRandomMemberNumber } from "../utils/isbn";
 import { useTranslation } from "react-i18next";
@@ -725,7 +726,7 @@ export function MembersPage() {
 
 function MemberSidebar({ member, onClose, registerClean }: { member: Member; onClose: () => void; registerClean: any }) {
   const { t } = useTranslation();
-  const prefs = useUiStore((state) => state.preferences);
+  const librarySettings = useLibrarySettingsStore((s) => s.settings);
   const [activeTab, setActiveTab] = useState<"profile" | "loans" | "reservations">("profile");
   const [isEditing, setIsEditing] = useState(false);
   const [showIdCard, setShowIdCard] = useState(false);
@@ -810,7 +811,7 @@ function MemberSidebar({ member, onClose, registerClean }: { member: Member; onC
   });
 
   const renewMutation = useMutation({
-    mutationFn: (loanId: string) => renewLoan(loanId, prefs.loanDays),
+    mutationFn: (loanId: string) => renewLoan(loanId, librarySettings.loan_days),
     onSuccess: () => {
       toast.success(t("circulation.alerts.renewSuccess") || "Loan renewed.");
       refetchLoans();
@@ -820,7 +821,7 @@ function MemberSidebar({ member, onClose, registerClean }: { member: Member; onC
   });
 
   const returnMutation = useMutation({
-    mutationFn: (copyIds: string[]) => returnCopies(copyIds, prefs.reservationHoldDays),
+    mutationFn: (copyIds: string[]) => returnCopies(copyIds),
     onSuccess: () => {
       toast.success(t("circulation.alerts.returnSuccess") || "Item returned successfully.");
       refetchLoans();
@@ -1028,7 +1029,7 @@ function MemberSidebar({ member, onClose, registerClean }: { member: Member; onC
             {memberLoans?.length ? (
               memberLoans.map((loan) => {
                 const overdue = daysLate(loan.due_at) > 0;
-                const renewDisabled = loan.renewed_count >= prefs.renewLimit;
+                const renewDisabled = loan.renewed_count >= librarySettings.renew_limit;
 
                 return (
                   <div key={loan.id} className="p-3 bg-[#fcfbf8] dark:bg-[#111d1a] border border-black/5 dark:border-white/5 rounded-xl flex flex-col gap-2">
@@ -1047,13 +1048,13 @@ function MemberSidebar({ member, onClose, registerClean }: { member: Member; onC
                     <div className="flex gap-2 mt-1">
                       <button
                         onClick={() => renewMutation.mutate(loan.id, {
-                          onSuccess: () => setReceipt({ kind: "renew", title: loan.title || "", date: dueDate(prefs.loanDays) })
+                          onSuccess: () => setReceipt({ kind: "renew", title: loan.title || "", date: dueDate(librarySettings.loan_days) })
                         })}
                         disabled={renewMutation.isPending || renewDisabled}
                         className="flex-1 flex items-center justify-center gap-1 py-1 text-[11px] font-semibold text-[#122222]/80 dark:text-white/80 bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 rounded cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                         title={renewDisabled ? t("circulation.alerts.renewLimitReached") || "Renewal limit reached" : undefined}
                       >
-                        {t("circulation.renew") || "Renew"} ({loan.renewed_count}/{prefs.renewLimit})
+                        {t("circulation.renew") || "Renew"} ({loan.renewed_count}/{librarySettings.renew_limit})
                       </button>
                       <button
                         onClick={() => returnMutation.mutate([loan.copy_id], {

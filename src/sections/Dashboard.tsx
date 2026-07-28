@@ -11,6 +11,7 @@ import { dashboard, reservations } from "../data/repositories/library";
 import { daysLate, formatDisplayDate } from "../utils/dates";
 import { useTranslation } from "react-i18next";
 import { useUiStore } from "../store/uiStore";
+import { useLibrarySettingsStore } from "../store/librarySettingsStore";
 import { useAuthStore } from "../store/authStore";
 import { formatDisplayCurrency } from "../utils/currency";
 import { useContextMenu } from "../components/ui/ContextMenu";
@@ -24,6 +25,7 @@ export function DashboardPage() {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const prefs = useUiStore((state) => state.preferences);
+  const librarySettings = useLibrarySettingsStore((s) => s.settings);
   const user = useAuthStore((state) => state.user);
 
   // Queries
@@ -290,9 +292,9 @@ export function DashboardPage() {
               {metrics.overdueLoans.length ? (
                 metrics.overdueLoans.map((loan) => {
                   const overdueDays = daysLate(loan.due_at);
-                  const hasGrace = prefs.gracePeriodEnabled && overdueDays <= prefs.gracePeriodDays;
-                  const fineAmount = (prefs.finesEnabled && !hasGrace)
-                    ? Math.min(overdueDays * prefs.finePerDay, prefs.maxFineAmount)
+                  const hasGrace = librarySettings.grace_period_enabled && overdueDays <= librarySettings.grace_period_days;
+                  const fineAmount = (librarySettings.fines_enabled && !hasGrace)
+                    ? Math.min(overdueDays * librarySettings.fine_per_day, librarySettings.max_fine_amount)
                     : 0;
 
                   return (
