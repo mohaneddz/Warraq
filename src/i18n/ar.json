@@ -779,7 +779,8 @@
       "categoryShare": "حصة التصنيفات في المخزون",
       "formatHoldingsCount": "عدد المقتنيات حسب التنسيق",
       "membersByRole": "الأعضاء حسب الصفة الأكاديمية",
-      "activeDepts": "الأقسام الأكثر نشاطًا"
+      "activeDepts": "الأقسام الأكثر نشاطًا",
+      "vsLastPeriodSuffix": "مقارنة بالفترة السابقة"
     },
     "print": "طباعة",
     "thisMonth": "هذا الشهر",

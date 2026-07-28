@@ -763,7 +763,8 @@
       "categoryShare": "Category Inventory Share",
       "formatHoldingsCount": "Format Holdings Count",
       "membersByRole": "Members by Academic Role",
-      "activeDepts": "Most Active Departments"
+      "activeDepts": "Most Active Departments",
+      "vsLastPeriodSuffix": "vs previous period"
     },
     "print": "Print",
     "thisMonth": "This Month",

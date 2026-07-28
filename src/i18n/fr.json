@@ -763,7 +763,8 @@
       "categoryShare": "Part des catégories dans l'inventaire",
       "formatHoldingsCount": "Nombre d'exemplaires par format",
       "membersByRole": "Membres par rôle académique",
-      "activeDepts": "Départements les plus actifs"
+      "activeDepts": "Départements les plus actifs",
+      "vsLastPeriodSuffix": "par rapport à la période précédente"
     },
     "print": "Imprimer",
     "thisMonth": "Ce Mois",
