@@ -7,6 +7,15 @@
     "password": "Mot de passe",
     "signIn": "Se connecter",
     "signingIn": "Connexion en cours...",
+    "selectAccount": "Sélectionner un compte",
+    "searchAccount": "Rechercher un compte...",
+    "typeManually": "Saisir le nom manuellement",
+    "chooseAccount": "Choisir un compte",
+    "noAccountsFound": "Aucun compte actif trouvé",
+    "titleDisplay": "Affichage des titres",
+    "titleOriginal": "Nom d'origine",
+    "titleArabic": "Nom arabe",
+    "titleToggleToast": "Affichage des titres réglé sur {{mode}}",
     "forcedChangeTitle": "Définir un nouveau mot de passe",
     "forcedChangeSubtitle": "Bienvenue, {{name}}. Votre administrateur a créé ce compte — choisissez un nouveau mot de passe que vous seul connaissez avant de continuer."
   },
@@ -60,8 +69,6 @@
     "operatorName": "Nom du bibliothécaire / opérateur",
     "language": "Langue par défaut du système",
     "theme": "Préférence de thème",
-    "enableFines": "Activer les amendes de circulation facultatives",
-    "enableFinesHelp": "Suivez les frais de retard pour encourager le retour des livres à temps.",
     "start": "Commencer à utiliser Warraq",
     "security": "Vos données de bibliothèque restent sécurisées et privées sur cet appareil.",
     "placeholderLib": "ex. Bibliothèque de l'Hôpital Mustapha Bacha",
@@ -71,8 +78,8 @@
     "title": "Aperçu du tableau de bord",
     "welcome": "Bon retour, {{name}}",
     "subtitle": "Voici ce qui se passe dans votre bibliothèque aujourd'hui.",
-    "quote": "العلم يُؤتى ولا يأتي",
-    "quoteTranslation": "LA CONNAISSANCE S'ACQUIERT, ELLE NE VIENT PAS À VOUS",
+    "quote": "La connaissance s'acquiert, elle ne vient pas à vous",
+    "quoteTranslation": "IMAM MALIK IBN ANAS",
     "metrics": {
       "titles": "Titres totaux",
       "copies": "Exemplaires totaux",
@@ -323,7 +330,6 @@
     "barcode": "Code-barres",
     "due": "Échéance",
     "daysOverdue": "{{count}} jours de retard",
-    "fine": "Amende",
     "renew": "Renouveler",
     "return": "Retourner",
     "renewReceiptTitle": "Reçu de renouvellement",
@@ -862,7 +868,6 @@
       "localization": "Localisation",
       "appearance": "Apparence",
       "rules": "Règles",
-      "finesfees": "Frais & Amendes",
       "notifications": "Notifications",
       "backuprestore": "Sauvegarde & Restauration",
       "database": "Base de données",
@@ -961,31 +966,13 @@
       "allowSelfRenewalDesc": "Les membres peuvent prolonger leurs prêts sans intervention du personnel.",
       "gracePeriodTitle": "Délai de grâce",
       "enableGracePeriod": "Activer le délai de grâce",
-      "enableGracePeriodDesc": "Accorder une période supplémentaire avant le début des amendes.",
+      "enableGracePeriodDesc": "Accorder une période supplémentaire après l'échéance avant le déclenchement des alertes de retard.",
       "gracePeriodLength": "Durée du délai de grâce (jours)",
       "saveBtn": "Enregistrer les règles de circulation",
       "scopeDurationsTitle": "Durées interne / externe",
       "internalDays": "Durée du prêt interne (jours)",
       "externalDays": "Durée du prêt externe (jours)",
       "scopeDurationsHelp": "Les réservations internes restent à la bibliothèque (lecture sur place) ; les réservations externes sont emportées à domicile. Les visiteurs et les titres à exemplaire unique ne peuvent être réservés qu'en interne."
-    },
-    "fines": {
-      "title": "Frais & Amendes",
-      "desc": "Configurez le calcul des frais de retard et les modes de paiement.",
-      "policyTitle": "Politique d'amende",
-      "enableFines": "Activer les amendes de retard",
-      "enableFinesDesc": "Calculer automatiquement des pénalités pour les retours en retard.",
-      "finePerDay": "Amende par jour ({{currency}})",
-      "maxFine": "Amende maximale par prêt ({{currency}})",
-      "currencyLabel": "Devise des amendes",
-      "paymentTitle": "Modes de paiement",
-      "paymentDesc": "Sélectionnez les modes de paiement acceptés pour les amendes.",
-      "paymentCash": "Espèces",
-      "paymentCard": "Carte",
-      "paymentBoth": "Espèces & Carte",
-      "disabledTitle": "Les amendes sont désactivées",
-      "disabledDesc": "Aucun frais de retard ne sera appliqué. Activez l'option ci-dessus pour définir les tarifs.",
-      "saveBtn": "Enregistrer les paramètres de frais"
     },
     "notifications": {
       "title": "Notifications",
@@ -1201,7 +1188,7 @@
         "tips": [
           "L'arabe active automatiquement la disposition RTL",
           "Le format de date affecte tous les affichages",
-          "La devise est utilisée dans les rapports d'amendes"
+          "Le fuseau horaire affecte les calculs de date d'échéance"
         ]
       },
       "appearance": {
@@ -1219,16 +1206,7 @@
         "tips": [
           "La durée par défaut s'applique aux nouveaux prêts",
           "La retenue de réservation évite le retour direct en rayon",
-          "La période de grâce retarde le calcul des amendes"
-        ]
-      },
-      "finesfees": {
-        "title": "Amendes & Frais",
-        "body": "Configure le calcul automatique des amendes pour les documents en retard.",
-        "tips": [
-          "Définir une amende maximale pour plafonner les frais",
-          "La période de grâce (dans Règles) décale le début de l'amende",
-          "Les amendes apparaissent dans le dossier membre"
+          "La période de grâce limite les pénalités de renouvellement"
         ]
       },
       "notifications": {

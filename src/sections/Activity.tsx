@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { 
+import {
   Search, Calendar, Download, RefreshCw, Eye, Tag, User, BookOpen, Clock, Activity, Info, Copy
 } from "lucide-react";
 import { useContextMenu } from "../components/ui/ContextMenu";
@@ -66,7 +66,7 @@ export function ActivityPage() {
     ], { title: `${item.action} (${item.entity_type})` });
   };
 
-  const result = useQuery({ queryKey: ["activity"], queryFn: () => auditLog(500) }); 
+  const result = useQuery({ queryKey: ["activity"], queryFn: () => auditLog(500) });
 
 
   // Dynamic filter dropdown lists
@@ -92,10 +92,10 @@ export function ActivityPage() {
       // Search term matching in basic fields & JSON payload
       if (term.trim()) {
         const q = term.toLowerCase().trim();
-        const matches = 
-          l.action.toLowerCase().includes(q) || 
-          l.actor.toLowerCase().includes(q) || 
-          l.entity_type.toLowerCase().includes(q) || 
+        const matches =
+          l.action.toLowerCase().includes(q) ||
+          l.actor.toLowerCase().includes(q) ||
+          l.entity_type.toLowerCase().includes(q) ||
           l.entity_id.toLowerCase().includes(q) ||
           (l.after_json && l.after_json.toLowerCase().includes(q)) ||
           (l.before_json && l.before_json.toLowerCase().includes(q));
@@ -158,7 +158,7 @@ export function ActivityPage() {
       const csvContent = Papa.unparse(csvData);
       const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
       const url = URL.createObjectURL(blob);
-      
+
       const now = new Date();
       const year = now.getFullYear();
       const month = String(now.getMonth() + 1).padStart(2, "0");
@@ -172,7 +172,7 @@ export function ActivityPage() {
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
-      
+
       toast.success(t("activity.alerts.exportSuccess", { count: filteredLogs.length }) || `Successfully exported ${filteredLogs.length} audit logs as CSV.`);
     } catch (e: any) {
       toast.error(t("activity.alerts.exportFailed", { error: e.message }) || "Failed to export CSV: " + e.message);
@@ -192,7 +192,7 @@ export function ActivityPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <button 
+          <button
             onClick={handleExportCSV}
             className="flex items-center gap-2 bg-white dark:bg-[#1d2926] border border-black/10 dark:border-white/10 text-[#122222] dark:text-white px-4 py-2 rounded-xl font-bold text-[13px] hover:bg-black/5 dark:hover:bg-white/5 transition-colors shadow-card cursor-pointer"
           >
@@ -260,31 +260,31 @@ export function ActivityPage() {
         <div className="p-4 border-b border-black/5 dark:border-white/5 flex items-center gap-3 bg-[#fcfbf8] dark:bg-[#111d1a] flex-wrap">
           <div className="flex-1 max-w-sm relative min-w-[200px]">
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#122222]/40" />
-            <input 
-              type="text" 
-              placeholder={t("activity.searchPlaceholder") || "Search activity logs..."} 
+            <input
+              type="text"
+              placeholder={t("activity.searchPlaceholder") || "Search activity logs..."}
               value={term}
               onChange={(e) => setTerm(e.target.value)}
-              className="w-full bg-white dark:bg-[#1d2926] border border-black/10 dark:border-white/10 rounded-xl py-2 pl-9 pr-3 text-[13px] text-[#122222] dark:text-[#f0ebe1] outline-none focus:border-emerald focus:ring-1 focus:ring-emerald" 
+              className="w-full bg-white dark:bg-[#1d2926] border border-black/10 dark:border-white/10 rounded-xl py-2 pl-9 pr-3 text-[13px] text-[#122222] dark:text-[#f0ebe1] outline-none focus:border-emerald focus:ring-1 focus:ring-emerald"
             />
           </div>
 
           {/* Date Filter */}
           <div className="flex items-center gap-2 bg-white dark:bg-[#1d2926] border border-black/10 dark:border-white/10 rounded-xl py-1.5 px-3">
-             <Calendar size={14} className="text-[#122222]/40" />
-             <input 
-               type="date"
-               value={dateFilter}
-               onChange={(e) => setDateFilter(e.target.value)}
-               className="bg-transparent text-[13px] font-semibold text-[#122222]/70 dark:text-white/70 outline-none cursor-pointer"
-             />
-             {dateFilter && (
-               <button onClick={() => setDateFilter("")} className="text-red-500 hover:text-red-700 ml-1 text-xs cursor-pointer">Clear</button>
-             )}
+            <Calendar size={14} className="text-[#122222]/40" />
+            <input
+              type="date"
+              value={dateFilter}
+              onChange={(e) => setDateFilter(e.target.value)}
+              className="bg-transparent text-[13px] font-semibold text-[#122222]/70 dark:text-white/70 outline-none cursor-pointer"
+            />
+            {dateFilter && (
+              <button onClick={() => setDateFilter("")} className="text-red-500 hover:text-red-700 ml-1 text-xs cursor-pointer">Clear</button>
+            )}
           </div>
 
           {/* Entity Type Filter */}
-          <select 
+          <select
             value={entityFilter}
             onChange={(e) => setEntityFilter(e.target.value)}
             className="bg-white dark:bg-[#1d2926] border border-black/10 dark:border-white/10 rounded-xl py-2 px-3 text-[13px] font-semibold text-[#122222]/70 dark:text-white/70 outline-none cursor-pointer hover:border-emerald/30 transition-colors"
@@ -296,7 +296,7 @@ export function ActivityPage() {
           </select>
 
           {/* User Filter Dropdown */}
-          <select 
+          <select
             value={actorFilter}
             onChange={(e) => setActorFilter(e.target.value)}
             className="bg-white dark:bg-[#1d2926] border border-black/10 dark:border-white/10 rounded-xl py-2 px-3 text-[13px] font-semibold text-[#122222]/70 dark:text-white/70 outline-none cursor-pointer hover:border-emerald/30 transition-colors"
@@ -308,7 +308,7 @@ export function ActivityPage() {
           </select>
 
           {/* Action Filter Dropdown */}
-          <select 
+          <select
             value={actionFilter}
             onChange={(e) => setActionFilter(e.target.value)}
             className="bg-white dark:bg-[#1d2926] border border-black/10 dark:border-white/10 rounded-xl py-2 px-3 text-[13px] font-semibold text-[#122222]/70 dark:text-white/70 outline-none cursor-pointer hover:border-emerald/30 transition-colors"
@@ -342,8 +342,8 @@ export function ActivityPage() {
                 {filteredLogs.map((item) => {
                   const detailsObj = parseJsonDetails(item.after_json);
                   return (
-                    <tr 
-                      key={item.id} 
+                    <tr
+                      key={item.id}
                       onClick={() => setSelectedLog(item)}
                       onContextMenu={(e) => handleActivityContextMenu(e, item)}
                       className="hover:bg-black/5 dark:hover:bg-white/5 transition-colors group cursor-pointer"
@@ -351,7 +351,7 @@ export function ActivityPage() {
 
                       <td className="px-6 py-3">
                         <div className="font-semibold text-[#122222] dark:text-white">
-                          {new Date(item.created_at).toLocaleTimeString(prefs.locale === "ar" ? "ar-DZ" : prefs.locale === "fr" ? "fr-FR" : "en-US", {hour: '2-digit', minute:'2-digit', second: '2-digit'})}
+                          {new Date(item.created_at).toLocaleTimeString(prefs.locale === "ar" ? "ar-DZ" : prefs.locale === "fr" ? "fr-FR" : "en-US", { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                         </div>
                         <div className="text-[11px] text-[#122222]/50 dark:text-white/50 mt-0.5">{formatDisplayDate(item.created_at)}</div>
                       </td>
@@ -382,7 +382,7 @@ export function ActivityPage() {
                         </div>
                       </td>
                       <td className="px-6 py-3 text-right">
-                        <button 
+                        <button
                           onClick={(e) => {
                             e.stopPropagation();
                             setSelectedLog(item);
@@ -398,8 +398,8 @@ export function ActivityPage() {
               </tbody>
             </table>
           ) : (
-             <div className="flex-1 flex flex-col items-center justify-center py-16 opacity-90">
-              <img src={medalSrc} alt="" aria-hidden="true" className="h-32 w-auto object-contain mb-3" />
+            <div className="flex-1 flex flex-col items-center justify-center py-16 opacity-90">
+              <img src={medalSrc} alt="" aria-hidden="true" className="h-84 w-auto object-contain mb-3" />
               <h2 className="text-[20px] font-bold text-[#122222] dark:text-white mb-2">{t("activity.noActivity") || "No Activity Recorded"}</h2>
               <p className="text-[14px] text-[#122222]/60 dark:text-white/60">{t("activity.noActivityHelp") || "Activities will automatically appear here as operations take place."}</p>
             </div>
@@ -408,9 +408,9 @@ export function ActivityPage() {
       </div>
 
       {/* Activity Log Details Inspection Modal */}
-      <ActivityDetailsModal 
-        log={selectedLog} 
-        onClose={() => setSelectedLog(null)} 
+      <ActivityDetailsModal
+        log={selectedLog}
+        onClose={() => setSelectedLog(null)}
       />
     </div>
   );
@@ -419,7 +419,7 @@ export function ActivityPage() {
 function ActionBadge({ action }: { action: string }) {
   let colorClass = "bg-emerald/10 text-emerald dark:bg-emerald-light/20 dark:text-emerald-light border border-emerald/20";
   const act = action.toLowerCase();
-  
+
   if (act.includes("delete") || act.includes("remove") || act.includes("archive") || act.includes("cancel")) {
     colorClass = "bg-red-500/10 text-red-500 border border-red-500/20";
   } else if (act.includes("return") || act.includes("update") || act.includes("renew") || act.includes("extend")) {

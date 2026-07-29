@@ -7,6 +7,15 @@
     "password": "Password",
     "signIn": "Sign in",
     "signingIn": "Signing in...",
+    "selectAccount": "Select Account",
+    "searchAccount": "Search account...",
+    "typeManually": "Type username manually",
+    "chooseAccount": "Choose an account",
+    "noAccountsFound": "No active accounts found",
+    "titleDisplay": "Title Display",
+    "titleOriginal": "Original Name",
+    "titleArabic": "Arabic Name",
+    "titleToggleToast": "Displaying {{mode}} titles",
     "forcedChangeTitle": "Set a new password",
     "forcedChangeSubtitle": "Welcome, {{name}}. Your administrator created this account — choose a new password only you know before continuing."
   },
@@ -60,8 +69,6 @@
     "operatorName": "Librarian / Operator name",
     "language": "Default system language",
     "theme": "Theme preference",
-    "enableFines": "Enable optional circulation fines",
-    "enableFinesHelp": "Track overdue fees to encourage timely book returns.",
     "start": "Start using Warraq",
     "security": "Your library data stays secure and private on this device.",
     "placeholderLib": "e.g. Mustapha Bacha Hospital Library",
@@ -71,8 +78,8 @@
     "title": "Dashboard Overview",
     "welcome": "Welcome back, {{name}}",
     "subtitle": "Here's what's happening in your library today.",
-    "quote": "العلم يُؤتى ولا يأتي",
-    "quoteTranslation": "KNOWLEDGE IS SOUGHT, IT DOES NOT COME TO YOU",
+    "quote": "Knowledge is sought, it does not come to you",
+    "quoteTranslation": "IMAM MALIK IBN ANAS",
     "metrics": {
       "titles": "Total Titles",
       "copies": "Total Copies",
@@ -323,7 +330,6 @@
     "barcode": "Barcode",
     "due": "Due",
     "daysOverdue": "{{count}} days overdue",
-    "fine": "Fine",
     "renew": "Renew",
     "return": "Return",
     "renewReceiptTitle": "Renewal Receipt",
@@ -862,7 +868,6 @@
       "localization": "Localization",
       "appearance": "Appearance",
       "rules": "Rules",
-      "finesfees": "Fines & Fees",
       "notifications": "Notifications",
       "backuprestore": "Backup & Restore",
       "database": "Database",
@@ -961,31 +966,13 @@
       "allowSelfRenewalDesc": "Members can renew their own loans without staff intervention.",
       "gracePeriodTitle": "Grace period",
       "enableGracePeriod": "Enable grace period",
-      "enableGracePeriodDesc": "Allow a short window after the due date before fines begin.",
+      "enableGracePeriodDesc": "Allow a short window after the due date before overdue alerts trigger.",
       "gracePeriodLength": "Grace period length (days)",
       "saveBtn": "Save circulation rules",
       "scopeDurationsTitle": "Internal / External Durations",
       "internalDays": "Internal loan duration (days)",
       "externalDays": "External loan duration (days)",
       "scopeDurationsHelp": "Internal reservations stay in the library (read-in-place); external reservations are taken home. Visitors and single-copy titles can only be reserved internally."
-    },
-    "fines": {
-      "title": "Fines & Fees",
-      "desc": "Configure overdue fine calculations and payment methods.",
-      "policyTitle": "Fine policy",
-      "enableFines": "Enable overdue fines",
-      "enableFinesDesc": "Automatically apply fines to loans returned past their due date.",
-      "finePerDay": "Fine per day ({{currency}})",
-      "maxFine": "Max fine per loan ({{currency}})",
-      "currencyLabel": "Fine currency",
-      "paymentTitle": "Payment method",
-      "paymentDesc": "Select the accepted payment methods for fine collection.",
-      "paymentCash": "Cash",
-      "paymentCard": "Card",
-      "paymentBoth": "Cash & Card",
-      "disabledTitle": "Fines are disabled",
-      "disabledDesc": "No fines will be applied to overdue loans. Enable the toggle above to configure fine rates.",
-      "saveBtn": "Save fines settings"
     },
     "notifications": {
       "title": "Notifications",
@@ -1201,7 +1188,7 @@
         "tips": [
           "Arabic enables RTL layout automatically",
           "Date format affects all date displays",
-          "Currency is used in fine reports"
+          "Timezone affects due date calculations"
         ]
       },
       "appearance": {
@@ -1219,16 +1206,7 @@
         "tips": [
           "Default loan period applies to new loans",
           "Reservation hold prevents items going back to shelf",
-          "Grace period delays fine accrual"
-        ]
-      },
-      "finesfees": {
-        "title": "Fines & Fees",
-        "body": "Configure automatic fine calculation for overdue materials.",
-        "tips": [
-          "Set a max fine to cap charges",
-          "Grace period (in Rules) delays fine start",
-          "Fines appear in member records"
+          "Grace period prevents late-renewal penalties"
         ]
       },
       "notifications": {

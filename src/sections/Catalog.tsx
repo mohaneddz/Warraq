@@ -32,6 +32,7 @@ import { ImageUpload } from "../components/ui/ImageUpload";
 import { useTranslation } from "react-i18next";
 import { formatDisplayDate } from "../utils/dates";
 import { useThemedAsset } from "../utils/useThemedAsset";
+import { getDisplayTitle } from "../utils/titles";
 
 const invalidate = () => queryClient.invalidateQueries();
 
@@ -374,6 +375,7 @@ export function CatalogPage() {
   const [typeFilter, setTypeFilter] = useState("All Items");
   const [page, setPage] = useState(1);
   const itemsPerPage = useUiStore((state) => state.preferences.pageSize) || 10;
+  const titlePreference = useUiStore((state) => state.preferences.titlePreference);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   // Handle query parameters
@@ -868,7 +870,9 @@ export function CatalogPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-black/5 dark:divide-white/5">
-                  {paginatedBooks.map((book) => (
+                  {paginatedBooks.map((book) => {
+                    const displayTitle = getDisplayTitle(book, titlePreference);
+                    return (
                     <tr
                       key={book.id}
                       onClick={() => setSelectedBook(book)}
@@ -906,8 +910,8 @@ export function CatalogPage() {
                             </div>
                           )}
                           <div className="min-w-0 flex-1">
-                            <div className="font-bold text-[#122222] dark:text-white line-clamp-2" title={book.title}>{book.title}</div>
-                            {book.subtitle && <div className="text-[11px] text-[#122222]/50 dark:text-white/50 font-arabic mt-0.5 line-clamp-2" title={book.subtitle}>{book.subtitle}</div>}
+                            <div className="font-bold text-[#122222] dark:text-white line-clamp-2" title={displayTitle.main}>{displayTitle.main}</div>
+                            {displayTitle.sub && <div className="text-[11px] text-[#122222]/50 dark:text-white/50 mt-0.5 line-clamp-2" title={displayTitle.sub}>{displayTitle.sub}</div>}
                           </div>
                         </div>
                       </td>
@@ -933,7 +937,8 @@ export function CatalogPage() {
                       </td>
                       <td className="px-4 py-3 text-[#122222]/40 hover:text-[#122222]"><MoreHorizontal size={16} /></td>
                     </tr>
-                  ))}
+                  );
+                })}
                 </tbody>
               </table>
             ) : (
@@ -1316,9 +1321,16 @@ function BookSidebar({ book, onClose, registerClean }: { book: Book; onClose: ()
         {activeTab === "details" && (
           <div className="w-full space-y-4">
             <div>
-              <h2 className="text-[18px] font-bold text-[#122222] dark:text-white leading-tight mb-1">{book.title}</h2>
-              {book.subtitle && <p className="text-[13px] text-[#122222]/60 dark:text-white/60 mb-1">{book.subtitle}</p>}
-              {book.arabic_title && <p className="text-[13px] font-arabic text-[#122222]/60 dark:text-white/60 mb-2 font-medium">{book.arabic_title}</p>}
+              {(() => {
+                const titlePreference = useUiStore.getState().preferences.titlePreference;
+                const displayTitle = getDisplayTitle(book, titlePreference);
+                return (
+                  <>
+                    <h2 className="text-[18px] font-bold text-[#122222] dark:text-white leading-tight mb-1">{displayTitle.main}</h2>
+                    {displayTitle.sub && <p className="text-[13px] text-[#122222]/60 dark:text-white/60 mb-2 font-medium">{displayTitle.sub}</p>}
+                  </>
+                );
+              })()}
               {book.tags && (
                 <div className="flex flex-wrap gap-1 mt-2 mb-2">
                   {book.tags.split(",").map((t, idx) => (
