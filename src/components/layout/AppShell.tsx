@@ -339,12 +339,12 @@ export function AppShell() {
         {/* Sidebar */}
         <aside className={(sidebarOpen ? "" : "w-[80px]") + " relative shrink-0 text-white flex flex-col z-40 overflow-hidden " + (isDragging ? "" : "transition-[width]")} style={{ width: sidebarOpen ? `${sidebarWidth}px` : "80px", background: '#122222' }}>
 
-          {/* Decorative geometric watermark, anchored to the sidebar's leading top corner */}
+          {/* Decorative geometric watermark, anchored to the sidebar's bottom corner */}
           <img
             src="/assets/warraq-sidebar-pattern-dark.png"
             alt=""
             aria-hidden="true"
-            className={`absolute top-0 w-full h-auto opacity-[0.16] mix-blend-screen pointer-events-none select-none ${preferences.locale === "ar" ? "right-0 scale-x-[-1]" : "left-0"}`}
+            className={`absolute bottom-0 w-full h-auto opacity-[0.16] mix-blend-screen pointer-events-none select-none ${preferences.locale === "ar" ? "right-0 scale-x-[-1]" : "left-0"}`}
           />
 
           {/* Decorative Book Spine Pattern */}
@@ -664,6 +664,7 @@ export function AppShell() {
                   />
                 )}
               </div>
+
 
               {/* Language Selector Overlay Dropdown */}
               <div className="relative flex items-center gap-1.5 bg-black/5 dark:bg-white/5 px-2.5 py-1.5 rounded-md hover:bg-black/10 transition-colors cursor-pointer">

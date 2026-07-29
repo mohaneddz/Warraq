@@ -118,6 +118,7 @@ pub fn run() {
             validate_provider_url,
             application_diagnostics,
             set_close_to_tray,
+            admin::get_login_accounts,
             admin::admin_bootstrap_if_needed,
             admin::admin_create_staff,
             admin::admin_reset_password,

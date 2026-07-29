@@ -109,6 +109,122 @@ pub struct CreatedStaff {
     username: String,
 }
 
+#[derive(Serialize, Deserialize)]
+pub struct LoginAccount {
+    pub username: String,
+    pub full_name: String,
+    pub role: String,
+    pub avatar_path: Option<String>,
+}
+
+/// Retrieves list of active staff/admin accounts for the login screen selector.
+#[tauri::command]
+pub async fn get_login_accounts() -> Result<Vec<LoginAccount>, String> {
+    let url = supabase_url()?;
+    let service = service_key()?;
+    let client = reqwest::Client::new();
+
+    let res = client
+        .get(format!("{url}/rest/v1/profiles?status=eq.active&select=username,full_name,role,avatar_path&order=full_name.asc"))
+        .header("apikey", &service)
+        .header("Authorization", format!("Bearer {service}"))
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    if !res.status().is_success() {
+        return Err(format!("Failed to fetch login accounts: {}", res.text().await.unwrap_or_default()));
+    }
+
+    let accounts: Vec<LoginAccount> = res.json().await.map_err(|e| e.to_string())?;
+    Ok(accounts)
+}
+
+/// Creates the one administrator account from WARRAQ_ADMIN_USERNAME / WARRAQ_ADMIN_PASSWORD
+/// (and optional WARRAQ_ADMIN_EMAIL) the first time the app runs against an empty
+/// `profiles` table. Returns Ok(true) if an admin was just created, Ok(false) if one
+/// already exists. Uses the service-role key directly (there is no admin yet to hold a
+/// token), exactly like the previous SQLite bootstrap only ever ran once.
+fn parse_auth_error(body: &str) -> String {
+    if let Ok(val) = serde_json::from_str::<serde_json::Value>(body) {
+        let code = val.get("code").and_then(|c| c.as_str()).unwrap_or("");
+        let msg = val
+            .get("message")
+            .or_else(|| val.get("msg"))
+            .or_else(|| val.get("error_description"))
+            .and_then(|m| m.as_str())
+            .unwrap_or("");
+        let detail = val.get("detail").and_then(|d| d.as_str()).unwrap_or("");
+
+        if code == "23505"
+            || msg.contains("users_email_partial_key")
+            || detail.contains("users_email_partial_key")
+            || msg.contains("already exists")
+            || msg.contains("already been registered")
+        {
+            if !detail.is_empty() {
+                if let Some(start) = detail.find("(email)=(") {
+                    let rest = &detail[start + 9..];
+                    if let Some(end) = rest.find(')') {
+                        let email = &rest[..end];
+                        return format!("An account with the email or username '{email}' already exists.");
+                    }
+                }
+            }
+            return "An account with this email address or username already exists.".to_string();
+        }
+
+        if !msg.is_empty() {
+            return msg.to_string();
+        }
+    }
+    if body.trim().is_empty() {
+        "Unknown error occurred.".to_string()
+    } else {
+        body.to_string()
+    }
+}
+
+async fn find_auth_user_by_email(
+    client: &reqwest::Client,
+    url: &str,
+    service: &str,
+    target_email: &str,
+) -> Result<Option<String>, String> {
+    let res = client
+        .get(format!("{url}/auth/v1/admin/users"))
+        .header("apikey", service)
+        .header("Authorization", format!("Bearer {service}"))
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    if !res.status().is_success() {
+        return Ok(None);
+    }
+
+    let val: serde_json::Value = res.json().await.map_err(|e| e.to_string())?;
+    let empty_vec = vec![];
+    let users_list = if let Some(arr) = val.get("users").and_then(|v| v.as_array()) {
+        arr
+    } else if let Some(arr) = val.as_array() {
+        arr
+    } else {
+        &empty_vec
+    };
+
+    for u in users_list {
+        if let Some(email) = u.get("email").and_then(|e| e.as_str()) {
+            if email.eq_ignore_ascii_case(target_email) {
+                if let Some(id) = u.get("id").and_then(|i| i.as_str()) {
+                    return Ok(Some(id.to_string()));
+                }
+            }
+        }
+    }
+    Ok(None)
+}
+
 /// Creates the one administrator account from WARRAQ_ADMIN_USERNAME / WARRAQ_ADMIN_PASSWORD
 /// (and optional WARRAQ_ADMIN_EMAIL) the first time the app runs against an empty
 /// `profiles` table. Returns Ok(true) if an admin was just created, Ok(false) if one
@@ -143,16 +259,35 @@ pub async fn admin_bootstrap_if_needed() -> Result<bool, String> {
     let email_env = std::env::var("WARRAQ_ADMIN_EMAIL").ok();
     let email = identity_email(&username, email_env.as_deref());
 
-    let created = create_auth_user(&client, &url, &service, &email, &password).await?;
+    let user_id = match create_auth_user(&client, &url, &service, &email, &password).await {
+        Ok(created) => created.id,
+        Err(err) => {
+            // If the user already exists in auth.users (e.g. profiles table was reset/cleared),
+            // recover by finding the existing auth user and updating their password.
+            if let Ok(Some(existing_id)) = find_auth_user_by_email(&client, &url, &service, &email).await {
+                let _ = client
+                    .put(format!("{url}/auth/v1/admin/users/{existing_id}"))
+                    .header("apikey", &service)
+                    .header("Authorization", format!("Bearer {service}"))
+                    .header("Content-Type", "application/json")
+                    .json(&json!({ "password": password }))
+                    .send()
+                    .await;
+                existing_id
+            } else {
+                return Err(err);
+            }
+        }
+    };
 
     let insert = client
         .post(format!("{url}/rest/v1/profiles"))
         .header("apikey", &service)
         .header("Authorization", format!("Bearer {service}"))
         .header("Content-Type", "application/json")
-        .header("Prefer", "return=minimal")
+        .header("Prefer", "resolution=merge-duplicates,return=minimal")
         .json(&json!({
-            "id": created.id,
+            "id": user_id,
             "username": username,
             "full_name": "Administrator",
             "email": email,
@@ -185,7 +320,8 @@ async fn create_auth_user(
         .await
         .map_err(|e| e.to_string())?;
     if !res.status().is_success() {
-        return Err(format!("Could not create the account: {}", res.text().await.unwrap_or_default()));
+        let body = res.text().await.unwrap_or_default();
+        return Err(format!("Could not create the account: {}", parse_auth_error(&body)));
     }
     res.json().await.map_err(|e| e.to_string())
 }

@@ -30,6 +30,33 @@ function toPublicUser(row: ProfileRow): PublicUser {
   };
 }
 
+export interface LoginAccount {
+  username: string;
+  full_name: string;
+  role: UserRole;
+  avatar_path: string | null;
+}
+
+export async function getLoginAccounts(): Promise<LoginAccount[]> {
+  try {
+    const res = await invoke<LoginAccount[]>("get_login_accounts");
+    if (res && res.length > 0) return res;
+  } catch {
+    // Fall back to Supabase RPC
+  }
+
+  try {
+    const { data, error } = await supabase.rpc("list_login_accounts");
+    if (!error && data) {
+      return data as LoginAccount[];
+    }
+  } catch {
+    // Ignore fallback failure
+  }
+
+  return [];
+}
+
 /** Creates the one administrator account from WARRAQ_ADMIN_USERNAME/PASSWORD if no staff profiles exist yet. */
 export async function bootstrapAdminIfNeeded(): Promise<boolean> {
   return invoke<boolean>("admin_bootstrap_if_needed");
