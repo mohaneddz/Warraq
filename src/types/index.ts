@@ -84,8 +84,10 @@ export interface Reservation {
   copy_condition?: string | null;
 }
 export interface Room { id: string; name: string; notes?: string | null; }
+export interface Column { id: string; room_id: string; number: number; }
 export interface Shelf {
-  id: string; room_id: string; room?: string; shelf_type: ShelfType; code: string; capacity: number;
+  id: string; column_id: string; room_id?: string; room?: string; column_number?: number;
+  shelf_type: ShelfType; code: string; capacity: number;
   notes?: string | null; copy_count?: number;
 }
 export interface DashboardMetrics {
@@ -121,11 +123,6 @@ export interface LibrarySettings {
   self_renewal_allowed: boolean;
   grace_period_enabled: boolean;
   grace_period_days: number;
-  fines_enabled: boolean;
-  fine_per_day: number;
-  max_fine_amount: number;
-  fine_currency: string;
-  fines_payment_method: "cash" | "card" | "both";
   notify_overdue: boolean;
   notify_due_soon: boolean;
   notify_due_soon_days: number;
@@ -151,4 +148,5 @@ export interface Preferences {
   autosaveEnabled: boolean;
   autosaveInterval: number;
   pageSize: number;
+  titlePreference: "original" | "arabic";
 }

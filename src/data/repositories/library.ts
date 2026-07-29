@@ -1,6 +1,6 @@
 import { supabase, unwrap } from "../supabaseClient";
 import { currentActor } from "../../store/authStore";
-import type { Book, Copy, DashboardMetrics, Loan, Member, Reservation, Room, Shelf, ReservationScope } from "../../types";
+import type { Book, Copy, DashboardMetrics, Loan, Member, Reservation, Room, Column, Shelf, ReservationScope } from "../../types";
 import {
   normalizeIsbn, cleanBarcode, cleanAccession,
   cleanPhone, cleanText, cleanMemberNumber, generateRandomMemberNumber
@@ -412,7 +412,6 @@ export async function getRooms(): Promise<Room[]> {
 
 export async function createRoom(name: string, notes?: string | null): Promise<Room> {
   const room = unwrap(await supabase.from("rooms").insert({ name: cleanText(name), notes: notes ? cleanText(notes) : null }).select().single()) as Room;
-  unwrap(await supabase.rpc("provision_room_shelves", { p_room_id: room.id }));
   await audit("create_room", "room", room.id, { name });
   return room;
 }
@@ -424,16 +423,41 @@ export async function renameRoom(roomId: string, newName: string): Promise<void>
 }
 
 export async function deleteRoom(roomId: string): Promise<void> {
-  const { count } = await supabase.from("copies").select("id, shelves!inner(room_id)", { count: "exact", head: true }).eq("shelves.room_id", roomId).neq("status", "archived");
-  if ((count ?? 0) > 0) {
-    throw new Error("Cannot delete this room because it still has shelved copies. Relocate or archive the copies first.");
+  const shelfIds = (unwrap(await supabase.from("shelf_overview").select("id").eq("room_id", roomId)) as { id: string }[]).map(s => s.id);
+  if (shelfIds.length > 0) {
+    const { count } = await supabase.from("copies").select("id", { count: "exact", head: true }).in("shelf_id", shelfIds).neq("status", "archived");
+    if ((count ?? 0) > 0) {
+      throw new Error("Cannot delete this room because it still has shelved copies. Relocate or archive the copies first.");
+    }
   }
   await supabase.from("rooms").delete().eq("id", roomId);
   await audit("delete_room", "room", roomId, {});
 }
 
+export async function getColumns(): Promise<Column[]> {
+  return unwrap(await supabase.from("columns").select("*").order("room_id").order("number")) as Column[];
+}
+
+export async function createColumn(roomId: string, rows: string[]): Promise<string> {
+  const columnId = unwrap(await supabase.rpc("create_column", { p_room_id: roomId, p_rows: rows })) as string;
+  await audit("create_column", "column", columnId, { room_id: roomId, rows });
+  return columnId;
+}
+
+export async function deleteColumn(columnId: string): Promise<void> {
+  const shelfIds = (unwrap(await supabase.from("shelves").select("id").eq("column_id", columnId)) as { id: string }[]).map(s => s.id);
+  if (shelfIds.length > 0) {
+    const { count } = await supabase.from("copies").select("id", { count: "exact", head: true }).in("shelf_id", shelfIds).neq("status", "archived");
+    if ((count ?? 0) > 0) {
+      throw new Error("Cannot delete this column because it still has shelved copies. Relocate or archive the copies first.");
+    }
+  }
+  await supabase.from("columns").delete().eq("id", columnId);
+  await audit("delete_column", "column", columnId, {});
+}
+
 export async function getShelves(): Promise<Shelf[]> {
-  return unwrap(await supabase.from("shelf_overview").select("*").order("room").order("shelf_type", { ascending: false }).order("code")) as Shelf[];
+  return unwrap(await supabase.from("shelf_overview").select("*").order("room").order("column_number").order("shelf_type", { ascending: false }).order("code")) as Shelf[];
 }
 
 export async function updateShelf(shelfId: string, updates: { capacity?: number; notes?: string | null }): Promise<void> {
