@@ -14,10 +14,9 @@ export function OnboardingPage() {
   const [libName, setLibName] = useState("Mustapha Bacha Hospital Library");
   const [locale, setLocale] = useState<"en" | "fr" | "ar">("en");
   const [theme, setTheme] = useState<"light" | "dark" | "system">("light");
-  const [finesEnabled, setFinesEnabled] = useState(false);
 
   const handleComplete = async () => {
-    await updateLibrarySettings({ library_name: libName.trim(), fines_enabled: finesEnabled });
+    await updateLibrarySettings({ library_name: libName.trim() });
     updatePreferences({ onboardingComplete: true, locale, theme });
 
     // Set system language and directionality
@@ -107,21 +106,6 @@ export function OnboardingPage() {
                 </button>
               </div>
             </div>
-          </div>
-
-          <div className="pt-2">
-            <label className="flex items-start gap-3 cursor-pointer select-none p-4 rounded-xl border border-black/5 dark:border-white/5 bg-[#fcfbf8] dark:bg-[#111d1a] hover:bg-black/5 dark:hover:bg-white/5 transition-colors font-semibold">
-              <input 
-                type="checkbox" 
-                checked={finesEnabled} 
-                onChange={(e) => setFinesEnabled(e.target.checked)}
-                className="mt-0.5 shrink-0"
-              />
-              <div>
-                <strong className="block text-[13px] text-[#122222] dark:text-white font-bold">{t("onboarding.enableFines")}</strong>
-                <small className="block text-[11px] text-[#122222]/50 dark:text-white/50 mt-0.5 font-normal">{t("onboarding.enableFinesHelp")}</small>
-              </div>
-            </label>
           </div>
         </div>
 

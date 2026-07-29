@@ -2,8 +2,8 @@ import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
-import { 
-  ArrowRight, BookOpen, Clock3, AlertTriangle, Bookmark, 
+import {
+  ArrowRight, BookOpen, Clock3, AlertTriangle, Bookmark,
   ScanLine, BookCopy, UsersRound, Warehouse, CalendarClock, RotateCcw,
   RefreshCw, Plus, UserPlus
 } from "lucide-react";
@@ -11,9 +11,7 @@ import { dashboard, reservations } from "../data/repositories/library";
 import { daysLate, formatDisplayDate } from "../utils/dates";
 import { useTranslation } from "react-i18next";
 import { useUiStore } from "../store/uiStore";
-import { useLibrarySettingsStore } from "../store/librarySettingsStore";
 import { useAuthStore } from "../store/authStore";
-import { formatDisplayCurrency } from "../utils/currency";
 import { useContextMenu } from "../components/ui/ContextMenu";
 import { queryClient } from "../app/providers";
 import { toast } from "sonner";
@@ -25,7 +23,6 @@ export function DashboardPage() {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const prefs = useUiStore((state) => state.preferences);
-  const librarySettings = useLibrarySettingsStore((s) => s.settings);
   const user = useAuthStore((state) => state.user);
 
   // Queries
@@ -129,44 +126,44 @@ export function DashboardPage() {
 
   return (
     <div onContextMenu={handleDashboardContextMenu} className="flex flex-col gap-6 w-full">
-
       {/* Top Header & Greeting Row */}
-      <div className="flex flex-col md:flex-row gap-6 justify-between items-start md:items-center">
-        <div>
+      <div className="flex flex-col lg:flex-row gap-6 justify-between items-start lg:items-center bg-white dark:bg-[#1d2926] p-6 rounded-2xl border border-black/5 dark:border-white/5 shadow-card relative overflow-hidden">
+        {/* Ambient background decoration */}
+        <img
+          src={heroSrc}
+          alt=""
+          aria-hidden="true"
+          className={cn(
+            "absolute top-1/2 -translate-y-1/2 h-[160%] w-auto opacity-15 dark:opacity-25 pointer-events-none select-none",
+            isRtl ? "left-0 scale-x-[-1]" : "right-0"
+          )}
+        />
+
+        <div className="relative z-10 max-w-xl">
           <h1 className="font-display text-[26px] font-bold text-[#122222] dark:text-white leading-tight">
             {t("dashboard.welcome", { name: user?.full_name || "Librarian" })}
           </h1>
           <p className="text-[14px] text-[#122222]/60 dark:text-white/60 mt-1">{t("dashboard.subtitle")}</p>
         </div>
 
-        {/* Hero illustration: the quote sits in the illustration's own empty margin, so the
-            image is never stretched or cropped away from its authored 1774x887 proportions. */}
-        <div className="relative w-full md:w-auto md:max-w-[460px] aspect-[1774/887] shrink-0">
-          <img
-            src={heroSrc}
-            alt=""
-            aria-hidden="true"
-            className={cn("absolute inset-0 h-full w-full object-contain", isRtl && "scale-x-[-1]")}
-          />
-          <div
-            className={cn(
-              "absolute inset-y-[10%] w-[28%] flex flex-col justify-center text-center",
-              isRtl ? "left-[14%]" : "right-[14%]"
-            )}
-          >
-            <h2 className="text-[18px] leading-tight font-arabic font-bold text-emerald dark:text-emerald-light mb-1">{t("dashboard.quote")}</h2>
-            <p className="text-[8px] font-bold tracking-[0.1em] text-[#122222]/50 dark:text-white/60 uppercase">{t("dashboard.quoteTranslation")}</p>
-          </div>
+        {/* Quote Card */}
+        <div className="relative z-10  dark:border-emerald/25 px-5 py-3.5 max-w-md shrink-0">
+          <h2 className={cn("text-[15px] sm:text-[16px] font-bold text-emerald dark:text-emerald-light leading-snug mb-1", isRtl ? "font-arabic" : "font-display")}>
+            “{t("dashboard.quote")}”
+          </h2>
+          <p className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 uppercase tracking-wider">
+            — {t("dashboard.quoteTranslation")}
+          </p>
         </div>
       </div>
 
       {/* Full-width Stats Grid */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4 w-full">
-        <MetricCard icon={<BookOpen size={24} className="text-emerald"/>} value={metrics.titles.toLocaleString(prefs.locale)} label={t("dashboard.metrics.titles")} trend={t("dashboard.metrics.registered")} />
-        <MetricCard icon={<BookCopy size={24} className="text-copper"/>} value={metrics.copies.toLocaleString(prefs.locale)} label={t("dashboard.metrics.copies")} trend={t("dashboard.metrics.physical")} />
-        <MetricCard icon={<RotateCcw size={24} className="text-copper"/>} value={metrics.onLoan.toLocaleString(prefs.locale)} label={t("dashboard.metrics.borrowed")} trend={t("dashboard.metrics.activeLoans")} />
-        <MetricCard icon={<UsersRound size={24} className="text-emerald"/>} value={metrics.members.toLocaleString(prefs.locale)} label={t("dashboard.metrics.members")} trend={t("dashboard.metrics.activeAccounts")} />
-        <MetricCard icon={<Clock3 size={24} className="text-copper"/>} value={metrics.overdue.toLocaleString(prefs.locale)} label={t("dashboard.metrics.overdue")} trend={t("dashboard.metrics.attention")} isDanger={metrics.overdue > 0} />
+        <MetricCard icon={<BookOpen size={24} className="text-emerald" />} value={metrics.titles.toLocaleString(prefs.locale)} label={t("dashboard.metrics.titles")} trend={t("dashboard.metrics.registered")} />
+        <MetricCard icon={<BookCopy size={24} className="text-copper" />} value={metrics.copies.toLocaleString(prefs.locale)} label={t("dashboard.metrics.copies")} trend={t("dashboard.metrics.physical")} />
+        <MetricCard icon={<RotateCcw size={24} className="text-copper" />} value={metrics.onLoan.toLocaleString(prefs.locale)} label={t("dashboard.metrics.borrowed")} trend={t("dashboard.metrics.activeLoans")} />
+        <MetricCard icon={<UsersRound size={24} className="text-emerald" />} value={metrics.members.toLocaleString(prefs.locale)} label={t("dashboard.metrics.members")} trend={t("dashboard.metrics.activeAccounts")} />
+        <MetricCard icon={<Clock3 size={24} className="text-copper" />} value={metrics.overdue.toLocaleString(prefs.locale)} label={t("dashboard.metrics.overdue")} trend={t("dashboard.metrics.attention")} isDanger={metrics.overdue > 0} />
       </div>
 
       {/* Grid Layout for Panels */}
@@ -177,18 +174,18 @@ export function DashboardPage() {
             <h3 className="font-bold text-[14px] text-[#122222] dark:text-white">{t("dashboard.circulationRhythm")}</h3>
             <p className="text-[11px] text-[#122222]/50 dark:text-white/50 mt-0.5">{t("dashboard.rhythmHelp")}</p>
           </div>
-          
+
           <div className="flex-1 min-h-0 -mx-4">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={circulationRhythm} margin={{ top: 5, right: 5, left: -25, bottom: 0 }}>
                 <defs>
                   <linearGradient id="colorCheckouts" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#1a4d40" stopOpacity={0.2}/>
-                    <stop offset="95%" stopColor="#1a4d40" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="#1a4d40" stopOpacity={0.2} />
+                    <stop offset="95%" stopColor="#1a4d40" stopOpacity={0} />
                   </linearGradient>
                   <linearGradient id="colorReturns" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#b96f3e" stopOpacity={0.2}/>
-                    <stop offset="95%" stopColor="#b96f3e" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="#b96f3e" stopOpacity={0.2} />
+                    <stop offset="95%" stopColor="#b96f3e" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <XAxis dataKey="time" axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: '#122222', opacity: 0.5 }} />
@@ -199,18 +196,18 @@ export function DashboardPage() {
               </AreaChart>
             </ResponsiveContainer>
           </div>
-          
+
           <div className="flex justify-center gap-6 mt-4 text-[11px] font-semibold text-[#122222]/60 dark:text-white/60">
-            <div className="flex items-center gap-2"><div className="w-3 h-1 bg-emerald rounded-full"/>{t("dashboard.checkouts")}</div>
-            <div className="flex items-center gap-2"><div className="w-3 h-1 bg-copper rounded-full"/>{t("dashboard.returns")}</div>
+            <div className="flex items-center gap-2"><div className="w-3 h-1 bg-emerald rounded-full" />{t("dashboard.checkouts")}</div>
+            <div className="flex items-center gap-2"><div className="w-3 h-1 bg-copper rounded-full" />{t("dashboard.returns")}</div>
           </div>
         </div>
 
         {/* Recent borrowings */}
-        <Panel 
-          title={t("dashboard.recentBorrowings")} 
-          subtitle={t("dashboard.latestTransactions")} 
-          actionText={t("dashboard.viewAll")} 
+        <Panel
+          title={t("dashboard.recentBorrowings")}
+          subtitle={t("dashboard.latestTransactions")}
+          actionText={t("dashboard.viewAll")}
           onActionClick={() => navigate("/members")}
           className="xl:col-span-1"
         >
@@ -250,22 +247,18 @@ export function DashboardPage() {
         </Panel>
 
         {/* Overdue priority queue */}
-        <Panel 
-          title={t("dashboard.overdueQueue")} 
-          subtitle={t("dashboard.itemsOverdue", { count: metrics.overdue })} 
-          actionText={t("dashboard.viewAll")} 
+        <Panel
+          title={t("dashboard.overdueQueue")}
+          subtitle={t("dashboard.itemsOverdue", { count: metrics.overdue })}
+          actionText={t("dashboard.viewAll")}
           onActionClick={() => navigate("/members")}
           className="xl:col-span-1"
         >
-           <div className="flex flex-col flex-1 min-h-0">
+          <div className="flex flex-col flex-1 min-h-0">
             <div className="flex-1 overflow-auto space-y-4 pr-2 no-scrollbar">
               {metrics.overdueLoans.length ? (
                 metrics.overdueLoans.map((loan) => {
                   const overdueDays = daysLate(loan.due_at);
-                  const hasGrace = librarySettings.grace_period_enabled && overdueDays <= librarySettings.grace_period_days;
-                  const fineAmount = (librarySettings.fines_enabled && !hasGrace)
-                    ? Math.min(overdueDays * librarySettings.fine_per_day, librarySettings.max_fine_amount)
-                    : 0;
 
                   return (
                     <div key={loan.id} className="flex gap-3 items-center group cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 p-2 -mx-2 rounded-lg transition-colors" onClick={() => navigate("/members")}>
@@ -282,7 +275,6 @@ export function DashboardPage() {
                           <p className="text-[12px] font-semibold text-[#122222] dark:text-white truncate max-w-[80px]">{loan.member_name}</p>
                           <p className="text-[10px] text-red-500 font-bold">
                             {t("dashboard.daysLate", { count: overdueDays })}
-                            {fineAmount > 0 && ` (${formatDisplayCurrency(fineAmount)})`}
                           </p>
                         </div>
                         <AlertTriangle size={16} className="text-red-500 shrink-0" />
@@ -305,10 +297,10 @@ export function DashboardPage() {
         </Panel>
 
         {/* Reservations ready */}
-        <Panel 
-          title={t("dashboard.reservationsReady")} 
-          subtitle={t("dashboard.holdsReady", { count: metrics.readyReservations })} 
-          actionText={t("dashboard.viewAll")} 
+        <Panel
+          title={t("dashboard.reservationsReady")}
+          subtitle={t("dashboard.holdsReady", { count: metrics.readyReservations })}
+          actionText={t("dashboard.viewAll")}
           onActionClick={() => navigate("/reservations")}
           className="xl:col-span-1"
         >
@@ -345,13 +337,13 @@ export function DashboardPage() {
 
         {/* Activity Overview */}
         <Panel title={<div className="flex items-center gap-2"><div className="w-4 h-4 rounded bg-[#b96f3e] flex items-center justify-center text-white text-[10px]">U</div> {t("dashboard.activityOverview")}</div>} className="xl:col-span-2">
-           <div className="flex-1 min-h-[150px] -mx-4">
+          <div className="flex-1 min-h-[150px] -mx-4">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={activityData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
                 <defs>
                   <linearGradient id="colorActivity" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#1a4d40" stopOpacity={0.2}/>
-                    <stop offset="95%" stopColor="#1a4d40" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="#1a4d40" stopOpacity={0.2} />
+                    <stop offset="95%" stopColor="#1a4d40" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#122222', opacity: 0.5 }} dy={10} />
@@ -390,15 +382,15 @@ export function DashboardPage() {
             />
             <h3 className="relative font-bold text-[14px] text-[#122222] dark:text-white mb-4">{t("dashboard.quickActions")}</h3>
             <div className="relative grid grid-cols-2 gap-3 flex-1">
-              <ActionCard icon={<ScanLine size={20}/>} title={t("dashboard.scanIsbn") || "Scan ISBN"} subtitle={t("dashboard.addBook") || "Add new book"} onClick={() => navigate("/catalog?action=add-book")} />
-              <ActionCard icon={<UsersRound size={20}/>} title={t("dashboard.addMember") || "Add Member"} subtitle={t("dashboard.addMemberSub") || "Create member profile"} onClick={() => navigate("/members?action=add-member")} />
-              <ActionCard icon={<CalendarClock size={20}/>} title={t("dashboard.newReservation") || "New Reservation"} subtitle={t("dashboard.newReservationSub") || "Reserve item for member"} onClick={() => navigate("/reservations?action=new-reservation")} />
-              <ActionCard icon={<UserPlus size={20}/>} title={t("dashboard.addUser") || "Add Staff User"} subtitle={t("dashboard.addUserSub") || "Create user credentials"} onClick={() => navigate("/settings?tab=users&action=add-user")} />
+              <ActionCard icon={<ScanLine size={20} />} title={t("dashboard.scanIsbn") || "Scan ISBN"} subtitle={t("dashboard.addBook") || "Add new book"} onClick={() => navigate("/catalog?action=add-book")} />
+              <ActionCard icon={<UsersRound size={20} />} title={t("dashboard.addMember") || "Add Member"} subtitle={t("dashboard.addMemberSub") || "Create member profile"} onClick={() => navigate("/members?action=add-member")} />
+              <ActionCard icon={<CalendarClock size={20} />} title={t("dashboard.newReservation") || "New Reservation"} subtitle={t("dashboard.newReservationSub") || "Reserve item for member"} onClick={() => navigate("/reservations?action=new-reservation")} />
+              <ActionCard icon={<UserPlus size={20} />} title={t("dashboard.addUser") || "Add Staff User"} subtitle={t("dashboard.addUserSub") || "Create user credentials"} onClick={() => navigate("/settings?tab=users&action=add-user")} />
             </div>
+          </div>
+        </div>
       </div>
     </div>
-  </div>
-</div>
   );
 }
 

@@ -6,7 +6,7 @@ import {
   HardDrive, Info, Zap, Key, RefreshCw, Trash2, Download, Upload,
   Eye, EyeOff, Copy, Check, AlertTriangle, Clock, MapPin,
   FileText, Palette, Type, BookMarked,
-  DollarSign, Server, Cpu, FolderOpen, ExternalLink, Wifi, WifiOff,
+  Server, Cpu, FolderOpen, ExternalLink, Wifi, WifiOff,
   LayoutGrid, Save, Users as UsersIcon, Plus, ShieldCheck, Ban, KeyRound, Pencil
 } from "lucide-react";
 import { useUiStore } from "../store/uiStore";
@@ -24,7 +24,7 @@ import { toast } from "sonner";
 // ─── Types ────────────────────────────────────────────────────────────────────
 type Tab =
   | "General" | "Library Profile" | "Localization" | "Appearance"
-  | "Rules" | "Fines & Fees" | "Notifications"
+  | "Rules" | "Notifications"
   | "Backup & Restore" | "Database" | "Integrations & AI" | "Secrets & Keys" | "Users"
   | "Desktop & Data" | "About";
 
@@ -34,7 +34,6 @@ const tabIcons: Record<Tab, React.ComponentType<{ size?: number; className?: str
   "Localization": Globe,
   "Appearance": Palette,
   "Rules": BookMarked,
-  "Fines & Fees": DollarSign,
   "Notifications": Bell,
   "Backup & Restore": HardDrive,
   "Database": Database,
@@ -65,7 +64,6 @@ export function SettingsPage() {
         localization: "Localization",
         appearance: "Appearance",
         rules: "Rules",
-        fines: "Fines & Fees",
         notifications: "Notifications",
         backup: "Backup & Restore",
         database: "Database",
@@ -84,7 +82,7 @@ export function SettingsPage() {
 
   const allTabs: { group: string; items: Tab[] }[] = [
     { group: "General", items: ["General", "Library Profile", "Localization", "Appearance"] },
-    { group: "Circulation", items: ["Rules", "Fines & Fees", "Notifications"] },
+    { group: "Circulation", items: ["Rules", "Notifications"] },
     { group: "Data & Security", items: ["Backup & Restore", "Database", "Integrations & AI", "Secrets & Keys", ...(isAdmin ? (["Users"] as Tab[]) : [])] },
     { group: "System", items: ["Desktop & Data", "About"] },
   ];
@@ -182,7 +180,7 @@ export function SettingsPage() {
           {activeTab === "Localization" && <LocalizationTab prefs={librarySettings} update={updateLibrarySettings} localPrefs={preferences} updateLocal={updatePreferences} />}
           {activeTab === "Appearance" && <AppearanceTab prefs={preferences} update={updatePreferences} />}
           {activeTab === "Rules" && <RulesTab prefs={librarySettings} update={updateLibrarySettings} />}
-          {activeTab === "Fines & Fees" && <FinesTab prefs={librarySettings} update={updateLibrarySettings} />}
+
           {activeTab === "Notifications" && <NotificationsTab prefs={librarySettings} update={updateLibrarySettings} />}
           {activeTab === "Backup & Restore" && <BackupTab />}
           {activeTab === "Database" && <DatabaseTab />}
@@ -440,6 +438,7 @@ function LocalizationTab({ prefs, update, localPrefs, updateLocal }: LibraryTabP
         )}
       </Card>
 
+
       <Card title={t("settings.localization.formatsTitle")} icon={<Clock size={16} className="text-[#b96f3e]" />}>
         <div className="grid grid-cols-2 gap-4 mb-4">
           <Field label={t("settings.localization.timezone")}>
@@ -616,89 +615,6 @@ function RulesTab({ prefs, update }: LibraryTabProps) {
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// 6. FINES & FEES TAB
-// ═══════════════════════════════════════════════════════════════════════════════
-function FinesTab({ prefs, update }: LibraryTabProps) {
-  const { t } = useTranslation();
-  return (
-    <div className="max-w-2xl">
-      <PageHeader title={t("settings.fines.title")} desc={t("settings.fines.desc")} />
-
-      <Card title={t("settings.fines.policyTitle")} icon={<DollarSign size={16} className="text-[#1a4d40]" />}>
-        <ToggleRow
-          label={t("settings.fines.enableFines")}
-          desc={t("settings.fines.enableFinesDesc")}
-          checked={prefs.fines_enabled}
-          onChange={v => update({ fines_enabled: v })}
-        />
-        {prefs.fines_enabled && (
-          <div className="mt-4 pt-4 border-t border-black/5 dark:border-white/5 space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <Field label={t("settings.fines.fine_per_day", { currency: prefs.fine_currency })}>
-                <input
-                  type="number"
-                  min={0}
-                  step={0.5}
-                  defaultValue={prefs.fine_per_day}
-                  onBlur={e => update({ fine_per_day: Number(e.target.value) })}
-                  className={inputCls}
-                />
-              </Field>
-              <Field label={t("settings.fines.maxFine", { currency: prefs.fine_currency })}>
-                <input
-                  type="number"
-                  min={0}
-                  defaultValue={prefs.max_fine_amount}
-                  onBlur={e => update({ max_fine_amount: Number(e.target.value) })}
-                  className={inputCls}
-                />
-              </Field>
-            </div>
-            <Field label={t("settings.fines.currencyLabel")}>
-              <select value={prefs.fine_currency} onChange={e => update({ fine_currency: e.target.value })} className={selectCls}>
-                {["DZD", "EUR", "USD", "GBP", "MAD", "TND"].map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
-            </Field>
-          </div>
-        )}
-      </Card>
-
-      {prefs.fines_enabled && (
-        <Card title={t("settings.fines.paymentTitle")} icon={<DollarSign size={16} className="text-[#b96f3e]" />}>
-          <p className="text-[12px] text-[#122222]/60 dark:text-white/60 mb-4">{t("settings.fines.paymentDesc")}</p>
-          <div className="grid grid-cols-3 gap-3">
-            {(["cash", "card", "both"] as const).map(method => (
-              <button
-                key={method}
-                onClick={() => update({ fines_payment_method: method })}
-                className={`py-3 px-4 rounded-xl border-2 border-solid font-semibold text-[13px] capitalize transition-all cursor-pointer ${
-                  prefs.fines_payment_method === method 
-                    ? "border-[#b96f3e] bg-[#b96f3e]/5 text-[#b96f3e] scale-[1.02]" 
-                    : "border-transparent bg-[#122222]/[0.03] dark:bg-[#ffffff]/[0.03] text-[#122222]/70 dark:text-white/70"
-                } hover:brightness-90 hover:scale-[0.98] active:scale-[1.02] active:brightness-110`}
-              >
-                {method === "both" ? t("settings.fines.paymentBoth") : method === "cash" ? t("settings.fines.paymentCash") : t("settings.fines.paymentCard")}
-              </button>
-            ))}
-          </div>
-        </Card>
-      )}
-
-      {!prefs.fines_enabled && (
-        <div className="bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-700/30 rounded-2xl p-5 flex items-start gap-3">
-          <AlertTriangle size={16} className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
-          <div>
-            <p className="font-bold text-[13px] text-amber-700 dark:text-amber-400">{t("settings.fines.disabledTitle")}</p>
-            <p className="text-[12px] text-amber-600/80 dark:text-amber-400/80 mt-1">{t("settings.fines.disabledDesc")}</p>
-          </div>
-        </div>
-      )}
-
-      <SaveButton label={t("settings.fines.saveBtn")} />
-    </div>
-  );
-}
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // 7. NOTIFICATIONS TAB
@@ -1803,7 +1719,6 @@ function RightHelp({ tab }: { tab: Tab }) {
     "Localization": <Globe size={16} className="text-[#b96f3e]" />,
     "Appearance": <Palette size={16} className="text-[#b96f3e]" />,
     "Rules": <BookMarked size={16} className="text-[#1a4d40]" />,
-    "Fines & Fees": <DollarSign size={16} className="text-[#b96f3e]" />,
     "Notifications": <Bell size={16} className="text-[#1a4d40]" />,
     "Backup & Restore": <HardDrive size={16} className="text-[#b96f3e]" />,
     "Database": <Database size={16} className="text-[#1a4d40]" />,

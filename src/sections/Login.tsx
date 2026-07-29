@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { ShieldCheck, LogIn, KeyRound } from "lucide-react";
-import { login as loginRequest, changeOwnPassword } from "../data/auth";
+import { ShieldCheck, LogIn, KeyRound, ChevronDown, User, Check, Search } from "lucide-react";
+import { login as loginRequest, changeOwnPassword, getLoginAccounts, type LoginAccount } from "../data/auth";
 import { useAuthStore } from "../store/authStore";
 import { Button, Input } from "../components/ui/primitives";
 
@@ -76,12 +76,65 @@ export function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  const [accounts, setAccounts] = useState<LoginAccount[]>([]);
+  const [selectedAccount, setSelectedAccount] = useState<LoginAccount | null>(null);
+  const [showSelector, setShowSelector] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [loadingAccounts, setLoadingAccounts] = useState(true);
+
+  const selectorRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    getLoginAccounts()
+      .then((list) => {
+        if (!mounted) return;
+        setAccounts(list);
+        if (list.length > 0) {
+          setSelectedAccount(list[0]);
+          setUsername(list[0].username);
+        }
+        setLoadingAccounts(false);
+      })
+      .catch(() => {
+        if (mounted) setLoadingAccounts(false);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (selectorRef.current && !selectorRef.current.contains(e.target as Node)) {
+        setShowSelector(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleSelectAccount = (acc: LoginAccount) => {
+    setSelectedAccount(acc);
+    setUsername(acc.username);
+    setShowSelector(false);
+    setError(null);
+    setTimeout(() => {
+      document.getElementById("password-input")?.focus();
+    }, 50);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    const targetUsername = selectedAccount?.username || username;
+    if (!targetUsername.trim()) {
+      setError(t("auth.selectAccount") + " is required.");
+      return;
+    }
     setSubmitting(true);
     try {
-      const user = await loginRequest(username, password);
+      const user = await loginRequest(targetUsername, password);
       setUser(user);
     } catch (err: any) {
       setError(err.message || String(err));
@@ -90,28 +143,148 @@ export function LoginPage() {
     }
   };
 
+  const filteredAccounts = accounts.filter(
+    (acc) =>
+      acc.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      acc.username.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   return (
     <Shell>
       <div className="mb-6">
-        <h1 className="font-display text-[24px] font-bold text-[#122222] dark:text-white leading-tight">{t("auth.signInTitle")}</h1>
-        <p className="text-[13px] text-[#122222]/60 dark:text-white/60 mt-1">{t("auth.signInSubtitle")}</p>
+        <h1 className="font-display text-[24px] font-bold text-[#122222] dark:text-white leading-tight">
+          {t("auth.signInTitle")}
+        </h1>
+        <p className="text-[13px] text-[#122222]/60 dark:text-white/60 mt-1">
+          {t("auth.signInSubtitle")}
+        </p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        <label className="text-[11px] font-bold text-[#122222]/60 dark:text-white/60 uppercase tracking-wider block font-semibold">
-          <span>{t("auth.username")}</span>
-          <Input
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            autoFocus
-            autoComplete="username"
-            required
-            className="mt-1.5"
-          />
-        </label>
+        {/* Account Selector Only */}
+        <div className="space-y-1.5" ref={selectorRef}>
+          <span className="text-[11px] font-bold text-[#122222]/60 dark:text-white/60 uppercase tracking-wider block font-semibold">
+            {t("auth.selectAccount")}
+          </span>
+
+          <div className="relative">
+            {/* Selected account trigger card */}
+            <button
+              type="button"
+              disabled={loadingAccounts || accounts.length === 0}
+              onClick={() => setShowSelector(!showSelector)}
+              className="w-full flex items-center justify-between p-3 bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 border border-black/10 dark:border-white/10 rounded-2xl transition-all text-left focus:outline-none focus:ring-2 focus:ring-emerald-500/50 disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {selectedAccount ? (
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-600 to-teal-700 text-white font-bold text-[15px] flex items-center justify-center shadow-sm shrink-0 uppercase">
+                    {selectedAccount.full_name.charAt(0)}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-[14px] text-[#122222] dark:text-white truncate">
+                        {selectedAccount.full_name}
+                      </span>
+                      <span
+                        className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md uppercase tracking-wider ${
+                          selectedAccount.role === "admin"
+                            ? "bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/20"
+                            : "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+                        }`}
+                      >
+                        {selectedAccount.role}
+                      </span>
+                    </div>
+                    <span className="text-[11px] text-[#122222]/50 dark:text-white/50 block truncate font-mono">
+                      @{selectedAccount.username}
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2.5 text-[#122222]/60 dark:text-white/60 text-[13px] py-1">
+                  <User size={18} />
+                  <span>{loadingAccounts ? "Loading accounts..." : t("auth.chooseAccount")}</span>
+                </div>
+              )}
+              <ChevronDown
+                size={18}
+                className={`text-[#122222]/50 dark:text-white/50 transition-transform duration-200 shrink-0 ${
+                  showSelector ? "rotate-180" : ""
+                }`}
+              />
+            </button>
+
+            {/* Account selection dropdown menu */}
+            {showSelector && (
+              <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-[#23322e] border border-black/10 dark:border-white/10 rounded-2xl shadow-2xl p-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                {accounts.length > 3 && (
+                  <div className="relative mb-2 px-1">
+                    <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#122222]/40 dark:text-white/40" />
+                    <input
+                      type="text"
+                      placeholder={t("auth.searchAccount")}
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full pl-8 pr-3 py-1.5 text-[12px] bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 text-[#122222] dark:text-white"
+                      autoFocus
+                    />
+                  </div>
+                )}
+
+                <div className="max-h-52 overflow-y-auto space-y-1 pr-1 custom-scrollbar">
+                  {filteredAccounts.length > 0 ? (
+                    filteredAccounts.map((acc) => {
+                      const isSelected = selectedAccount?.username === acc.username;
+                      return (
+                        <button
+                          key={acc.username}
+                          type="button"
+                          onClick={() => handleSelectAccount(acc)}
+                          className={`w-full flex items-center justify-between p-2.5 rounded-xl transition-all text-left ${
+                            isSelected
+                              ? "bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-semibold"
+                              : "hover:bg-black/5 dark:hover:bg-white/5 text-[#122222] dark:text-white"
+                          }`}
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <div
+                              className={`w-8 h-8 rounded-lg font-bold text-[13px] flex items-center justify-center shrink-0 uppercase ${
+                                isSelected
+                                  ? "bg-emerald-600 text-white"
+                                  : "bg-black/10 dark:bg-white/10 text-[#122222] dark:text-white"
+                              }`}
+                            >
+                              {acc.full_name.charAt(0)}
+                            </div>
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-[13px] font-medium truncate">{acc.full_name}</span>
+                                <span className="text-[8px] uppercase tracking-wider px-1 py-0.2 rounded bg-black/5 dark:bg-white/10 opacity-70">
+                                  {acc.role}
+                                </span>
+                              </div>
+                              <span className="text-[10px] opacity-60 block font-mono">@{acc.username}</span>
+                            </div>
+                          </div>
+                          {isSelected && <Check size={16} className="text-emerald-600 dark:text-emerald-400 shrink-0" />}
+                        </button>
+                      );
+                    })
+                  ) : (
+                    <p className="text-[12px] text-center text-[#122222]/50 dark:text-white/50 py-3">
+                      {t("auth.noAccountsFound")}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
         <label className="text-[11px] font-bold text-[#122222]/60 dark:text-white/60 uppercase tracking-wider block font-semibold">
           <span>{t("auth.password")}</span>
           <Input
+            id="password-input"
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
