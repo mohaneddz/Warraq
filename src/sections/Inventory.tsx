@@ -5,12 +5,13 @@ import {
   copies, updateCopy, deleteCopy,
   getShelves, updateShelf,
   getRooms, createRoom, renameRoom, deleteRoom,
+  getColumns, createColumn, deleteColumn,
 } from "../data/repositories/library";
 import { Modal, Input, Button, StatusBadge, ItemTypeBadge } from "../components/ui/primitives";
 import { toast } from "sonner";
 import { queryClient } from "../app/providers";
 import type { Copy, Room, Shelf } from "../types";
-import { FLOOR_SHELF_CODE } from "../types";
+import { FLOOR_SHELF_CODE, TOP_SHELF_CODES } from "../types";
 import { useTranslation } from "react-i18next";
 import { cleanBarcode, cleanText } from "../utils/isbn";
 import { useUiStore } from "../store/uiStore";
@@ -134,8 +135,9 @@ export function InventoryPage() {
   const itemsPerPage = useUiStore(s => s.preferences.pageSize) || 15;
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
-  const [newRoomOpen, setNewRoomOpen] = useState(false);
   const [manageRoomsOpen, setManageRoomsOpen] = useState(false);
+  const [newColumnOpen, setNewColumnOpen] = useState(false);
+  const [newColumnRows, setNewColumnRows] = useState<string[]>([...TOP_SHELF_CODES]);
   const [editingShelf, setEditingShelf] = useState<Shelf | null>(null);
 
   const [scanInitOpen, setScanInitOpen] = useState(false);
@@ -158,7 +160,6 @@ export function InventoryPage() {
     setBrowseModalOpen(true);
   };
 
-  const newRoomForm = useForm({ defaultValues: { name: "", notes: "" } });
   const editShelfForm = useForm({ defaultValues: { capacity: 40, notes: "" } });
 
   const result = useQuery({ queryKey: ["copies", "inventory"], queryFn: () => copies() });
@@ -166,6 +167,9 @@ export function InventoryPage() {
 
   const roomsQuery = useQuery({ queryKey: ["rooms"], queryFn: () => getRooms() });
   const rooms = roomsQuery.data ?? [];
+
+  const columnsQuery = useQuery({ queryKey: ["columns"], queryFn: () => getColumns() });
+  const allColumns = columnsQuery.data ?? [];
 
   const shelvesQuery = useQuery({ queryKey: ["shelves", "inventory"], queryFn: () => getShelves() });
   const allShelves = shelvesQuery.data ?? [];
@@ -185,6 +189,11 @@ export function InventoryPage() {
   const roomShelves = useMemo(
     () => shelvesWithCopies.filter(s => s.room_id === selectedRoomId).sort((a, b) => a.shelf_type === b.shelf_type ? a.code.localeCompare(b.code) : a.shelf_type === "floor" ? 1 : -1),
     [shelvesWithCopies, selectedRoomId]
+  );
+
+  const roomColumns = useMemo(
+    () => allColumns.filter(c => c.room_id === selectedRoomId).sort((a, b) => a.number - b.number),
+    [allColumns, selectedRoomId]
   );
 
   const filteredBrowseCopies = useMemo(() => {
@@ -228,7 +237,19 @@ export function InventoryPage() {
 
   const createRoomMutation = useMutation({
     mutationFn: (v: { name: string; notes?: string }) => createRoom(v.name, v.notes || null),
-    onSuccess: (room) => { toast.success("Room created with its A–F and floor shelves."); setNewRoomOpen(false); newRoomForm.reset(); setSelectedRoomId(room.id); roomsQuery.refetch(); shelvesQuery.refetch(); },
+    onSuccess: (room) => { toast.success(t("inventory.roomCreated", "Room created.")); setSelectedRoomId(room.id); roomsQuery.refetch(); },
+    onError: (err: any) => toast.error(err.message),
+  });
+
+  const createColumnMutation = useMutation({
+    mutationFn: (v: { roomId: string; rows: string[] }) => createColumn(v.roomId, v.rows),
+    onSuccess: () => { toast.success(t("inventory.columnCreated", "Column added.")); setNewColumnOpen(false); setNewColumnRows([...TOP_SHELF_CODES]); columnsQuery.refetch(); shelvesQuery.refetch(); },
+    onError: (err: any) => toast.error(err.message),
+  });
+
+  const deleteColumnMutation = useMutation({
+    mutationFn: (id: string) => deleteColumn(id),
+    onSuccess: () => { toast.success(t("inventory.columnDeleted", "Column removed.")); setSelectedShelfId(null); columnsQuery.refetch(); shelvesQuery.refetch(); },
     onError: (err: any) => toast.error(err.message),
   });
 
@@ -320,11 +341,11 @@ export function InventoryPage() {
           <p className="text-[13px] text-[#122222]/60 dark:text-white/60 mt-0.5">{t("inventory.subtitle", "Review copy condition and status before running a shelf-scanning session.")}</p>
         </div>
         <div className="flex items-center gap-2.5">
-          <button onClick={() => { result.refetch(); shelvesQuery.refetch(); roomsQuery.refetch(); }} className="w-8 h-8 flex items-center justify-center bg-white dark:bg-[#1d2926] border border-black/8 dark:border-white/8 text-[#122222]/70 dark:text-white/70 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition-colors cursor-pointer">
+          <button onClick={() => { result.refetch(); shelvesQuery.refetch(); roomsQuery.refetch(); columnsQuery.refetch(); }} className="w-8 h-8 flex items-center justify-center bg-white dark:bg-[#1d2926] border border-black/8 dark:border-white/8 text-[#122222]/70 dark:text-white/70 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition-colors cursor-pointer">
             <RefreshCw size={13} className={result.isFetching || shelvesQuery.isFetching ? "animate-spin" : ""} />
           </button>
-          <button onClick={() => setNewRoomOpen(true)} className="flex items-center gap-1 bg-emerald text-white px-4 py-2 rounded-lg font-bold text-[12px] hover:bg-emerald/90 transition-all shadow-sm cursor-pointer">
-            <PlusCircle size={14} /> {t("inventory.newRoom", "New Room")}
+          <button onClick={() => setNewColumnOpen(true)} disabled={!selectedRoomId} title={!selectedRoomId ? (t("inventory.selectRoomFirst", "Select or create a room first") as string) : ""} className="flex items-center gap-1 bg-emerald text-white px-4 py-2 rounded-lg font-bold text-[12px] hover:bg-emerald/90 transition-all shadow-sm cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed">
+            <PlusCircle size={14} /> {t("inventory.addColumn", "Add Column")}
           </button>
         </div>
       </div>
@@ -409,50 +430,79 @@ export function InventoryPage() {
                 <div className="flex flex-col items-center justify-center py-20 text-center text-[#122222]/40 dark:text-white/40">
                   <Library size={36} className="text-[#b96f3e] mb-3" />
                   <h3 className="text-sm font-bold">{t("inventory.noRoomSelected", "No room selected")}</h3>
-                  <p className="text-[11px] max-w-sm mt-1 mb-4 leading-normal">{t("inventory.createRoomHint", "Create a room to get its six lettered shelves (A–F) plus one floor shelf.")}</p>
-                  <button type="button" onClick={() => setNewRoomOpen(true)} className="bg-emerald text-white px-4 py-2 rounded-lg font-bold text-[12px] hover:bg-emerald/90 transition-all shadow-sm cursor-pointer">+ {t("inventory.newRoom", "New Room")}</button>
+                  <p className="text-[11px] max-w-sm mt-1 mb-4 leading-normal">{t("inventory.createRoomHint", "Create a room in Manage Rooms, then add columns to give it shelves.")}</p>
+                  <button type="button" onClick={() => setManageRoomsOpen(true)} className="bg-emerald text-white px-4 py-2 rounded-lg font-bold text-[12px] hover:bg-emerald/90 transition-all shadow-sm cursor-pointer">{t("inventory.manageRooms", "Manage Rooms")}</button>
+                </div>
+              ) : roomColumns.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-20 text-center text-[#122222]/40 dark:text-white/40">
+                  <Library size={36} className="text-[#b96f3e] mb-3" />
+                  <h3 className="text-sm font-bold">{t("inventory.noColumns", "No columns yet")}</h3>
+                  <p className="text-[11px] max-w-sm mt-1 mb-4 leading-normal">{t("inventory.noColumnsHint", "Add a column to give this room its first shelves.")}</p>
+                  <button type="button" onClick={() => setNewColumnOpen(true)} className="bg-emerald text-white px-4 py-2 rounded-lg font-bold text-[12px] hover:bg-emerald/90 transition-all shadow-sm cursor-pointer">+ {t("inventory.addColumn", "Add Column")}</button>
                 </div>
               ) : (
-                <>
-                  <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
-                    {roomShelves.filter(s => s.shelf_type === "top").map(shelf => {
-                      const isSelected = selectedShelfId === shelf.id;
-                      const occupancy = shelf.capacity > 0 ? shelf.copiesList.length / shelf.capacity : 0;
-                      return (
-                        <div key={shelf.id} onClick={() => setSelectedShelfId(isSelected ? null : shelf.id)}
-                          className={`relative bg-white dark:bg-[#1d2926] border rounded-lg pt-1.5 px-1.5 pb-1.5 text-center flex flex-col items-center justify-between transition-all cursor-pointer hover:shadow-md hover:scale-[1.02] ${isSelected ? "ring-2 ring-[#b96f3e] border-[#b96f3e]/30 scale-[1.03] shadow-md" : "border-black/8 dark:border-white/8"}`}>
-                          <div className="w-full"><ShelfSvgVisual copiesList={shelf.copiesList} capacity={shelf.capacity} /></div>
-                          <div className="font-bold text-[12px] mt-1 text-[#122222] dark:text-white tracking-wide">{t("inventory.shelfLetter", "Shelf {{code}}", { code: shelf.code })}</div>
-                          <div className="flex items-center gap-1 mt-0.5 justify-center">
-                            <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: occupancyColor(occupancy) }} />
-                            <span className="text-[9px] text-[#122222]/50 dark:text-white/50 font-bold">{shelf.copiesList.length}/{shelf.capacity}</span>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                  {roomShelves.filter(s => s.shelf_type === "floor").map(shelf => {
-                    const isSelected = selectedShelfId === shelf.id;
-                    const occupancy = shelf.capacity > 0 ? shelf.copiesList.length / shelf.capacity : 0;
+                <div className="space-y-5">
+                  {roomColumns.map(column => {
+                    const columnShelves = roomShelves.filter(s => s.column_id === column.id);
+                    const topShelves = columnShelves.filter(s => s.shelf_type === "top");
+                    const floorShelf = columnShelves.find(s => s.shelf_type === "floor");
+                    const columnEmpty = columnShelves.every(s => s.copiesList.length === 0);
                     return (
-                      <div key={shelf.id} onClick={() => setSelectedShelfId(isSelected ? null : shelf.id)}
-                        className={`mt-4 relative bg-[#f4ebdd]/40 dark:bg-[#1a2522] border-2 rounded-xl p-4 flex items-center gap-4 cursor-pointer transition-all hover:shadow-md ${isSelected ? "ring-2 ring-[#b96f3e] border-[#b96f3e]/40" : "border-black/10 dark:border-white/10"}`}>
-                        <div className="w-20 shrink-0"><ShelfSvgVisual copiesList={shelf.copiesList} capacity={shelf.capacity} /></div>
-                        <div className="flex-1">
-                          <div className="font-bold text-[14px] flex items-center gap-2">
-                            <span className="text-[18px] leading-none">{FLOOR_SHELF_CODE}</span> {t("inventory.floorShelf", "Floor shelf")}
+                      <div key={column.id} className="border border-black/8 dark:border-white/8 rounded-xl p-3.5">
+                        <div className="flex items-center justify-between mb-3">
+                          <span className="text-[11px] font-bold uppercase tracking-wider text-[#122222]/50 dark:text-white/50">{t("inventory.columnLabel", "Column {{number}}", { number: column.number })}</span>
+                          {columnEmpty && (
+                            <button type="button" title={t("inventory.deleteColumn", "Delete Column") as string}
+                              onClick={() => { if (confirm(t("inventory.confirmDeleteColumn", "Delete this column and its shelves?") as string)) deleteColumnMutation.mutate(column.id); }}
+                              className="p-1 rounded-md hover:bg-red-50 dark:hover:bg-red-500/10 text-[#122222]/30 dark:text-white/30 hover:text-red-500 transition-colors cursor-pointer">
+                              <Trash2 size={12} />
+                            </button>
+                          )}
+                        </div>
+                        {topShelves.length > 0 && (
+                          <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
+                            {topShelves.map(shelf => {
+                              const isSelected = selectedShelfId === shelf.id;
+                              const occupancy = shelf.capacity > 0 ? shelf.copiesList.length / shelf.capacity : 0;
+                              return (
+                                <div key={shelf.id} onClick={() => setSelectedShelfId(isSelected ? null : shelf.id)}
+                                  className={`relative bg-white dark:bg-[#1d2926] border rounded-lg pt-1.5 px-1.5 pb-1.5 text-center flex flex-col items-center justify-between transition-all cursor-pointer hover:shadow-md hover:scale-[1.02] ${isSelected ? "ring-2 ring-[#b96f3e] border-[#b96f3e]/30 scale-[1.03] shadow-md" : "border-black/8 dark:border-white/8"}`}>
+                                  <div className="w-full"><ShelfSvgVisual copiesList={shelf.copiesList} capacity={shelf.capacity} /></div>
+                                  <div className="font-bold text-[12px] mt-1 text-[#122222] dark:text-white tracking-wide">{t("inventory.shelfLetter", "Shelf {{code}}", { code: shelf.code })}</div>
+                                  <div className="flex items-center gap-1 mt-0.5 justify-center">
+                                    <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: occupancyColor(occupancy) }} />
+                                    <span className="text-[9px] text-[#122222]/50 dark:text-white/50 font-bold">{shelf.copiesList.length}/{shelf.capacity}</span>
+                                  </div>
+                                </div>
+                              );
+                            })}
                           </div>
-                          <div className="text-[11px] text-[#122222]/50 dark:text-white/50 mt-0.5">{t("inventory.floorShelfHint", "The library's oversized floor-level shelf — larger capacity than a lettered shelf.")}</div>
-                        </div>
-                        <div className="flex items-center gap-1.5 shrink-0">
-                          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: occupancyColor(occupancy) }} />
-                          <span className="text-[12px] font-bold text-[#122222]/60 dark:text-white/60">{shelf.copiesList.length}/{shelf.capacity}</span>
-                        </div>
+                        )}
+
+                        {floorShelf && (() => {
+                          const isSelected = selectedShelfId === floorShelf.id;
+                          const occupancy = floorShelf.capacity > 0 ? floorShelf.copiesList.length / floorShelf.capacity : 0;
+                          return (
+                            <div onClick={() => setSelectedShelfId(isSelected ? null : floorShelf.id)}
+                              className={`mt-3 relative bg-[#f4ebdd]/40 dark:bg-[#1a2522] border-2 rounded-xl p-4 flex items-center gap-4 cursor-pointer transition-all hover:shadow-md ${isSelected ? "ring-2 ring-[#b96f3e] border-[#b96f3e]/40" : "border-black/10 dark:border-white/10"}`}>
+                              <div className="w-20 shrink-0"><ShelfSvgVisual copiesList={floorShelf.copiesList} capacity={floorShelf.capacity} /></div>
+                              <div className="flex-1">
+                                <div className="font-bold text-[14px] flex items-center gap-2">
+                                  <span className="text-[18px] leading-none">{FLOOR_SHELF_CODE}</span> {t("inventory.floorShelf", "Floor shelf")}
+                                </div>
+                                <div className="text-[11px] text-[#122222]/50 dark:text-white/50 mt-0.5">{t("inventory.floorShelfHint", "The library's oversized floor-level shelf — larger capacity than a lettered shelf.")}</div>
+                              </div>
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: occupancyColor(occupancy) }} />
+                                <span className="text-[12px] font-bold text-[#122222]/60 dark:text-white/60">{floorShelf.copiesList.length}/{floorShelf.capacity}</span>
+                              </div>
+                            </div>
+                          );
+                        })()}
                       </div>
                     );
                   })}
-                </>
+                </div>
               )}
             </div>
           )}
@@ -609,15 +659,27 @@ export function InventoryPage() {
         </div>
       </Modal>
 
-      {newRoomOpen && (
-        <Modal isOpen={newRoomOpen} onClose={() => setNewRoomOpen(false)} title={t("inventory.newRoom", "New Room")}>
-          <form onSubmit={newRoomForm.handleSubmit(v => createRoomMutation.mutate(v))} className="space-y-4 text-[13px]">
-            <p className="text-[12px] text-[#122222]/60">{t("inventory.newRoomHint", "Creates the room with its fixed shelf layout: six lettered shelves (A–F) plus one larger floor shelf.")}</p>
-            <label className="text-[11px] font-semibold text-[#122222]/60 block">{t("inventory.roomName", "Room name")}<Input {...newRoomForm.register("name")} required className="mt-1" /></label>
-            <label className="text-[11px] font-semibold text-[#122222]/60 block">{t("inventory.notesOptional", "Notes (optional)")}<Input {...newRoomForm.register("notes")} className="mt-1" /></label>
+      {newColumnOpen && selectedRoomId && (
+        <Modal isOpen={newColumnOpen} onClose={() => setNewColumnOpen(false)} title={t("inventory.addColumn", "Add Column")}>
+          <form onSubmit={e => { e.preventDefault(); if (newColumnRows.length === 0) { toast.warning(t("inventory.selectRowsWarning", "Select at least one row.") as string); return; } createColumnMutation.mutate({ roomId: selectedRoomId, rows: newColumnRows }); }} className="space-y-4 text-[13px]">
+            <p className="text-[12px] text-[#122222]/60">{t("inventory.addColumnHint", "Adds a new bookshelf column to {{room}} with a floor shelf plus the rows you choose.", { room: selectedRoom?.name })}</p>
+            <div>
+              <label className="text-[11px] font-bold text-[#122222]/60 uppercase block mb-2">{t("inventory.columnRows", "Shelf rows (A–F)")}</label>
+              <div className="flex flex-wrap gap-2">
+                {TOP_SHELF_CODES.map(row => {
+                  const checked = newColumnRows.includes(row);
+                  return (
+                    <button key={row} type="button" onClick={() => setNewColumnRows(prev => checked ? prev.filter(r => r !== row) : [...prev, row].sort())}
+                      className={`w-9 h-9 rounded-lg border font-bold text-xs transition-all cursor-pointer ${checked ? "bg-emerald text-white border-emerald" : "bg-white dark:bg-[#1d2926] text-[#122222]/50 border-black/10 hover:border-[#b96f3e]"}`}>
+                      {row}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
             <div className="flex gap-2 justify-end pt-4 border-t border-black/5">
-              <Button type="button" variant="ghost" onClick={() => setNewRoomOpen(false)}>Cancel</Button>
-              <Button type="submit" disabled={createRoomMutation.isPending}>{createRoomMutation.isPending ? "Creating..." : "Create Room"}</Button>
+              <Button type="button" variant="ghost" onClick={() => setNewColumnOpen(false)}>Cancel</Button>
+              <Button type="submit" disabled={createColumnMutation.isPending}>{createColumnMutation.isPending ? t("inventory.creatingColumn", "Creating...") : t("inventory.createColumn", "Create Column")}</Button>
             </div>
           </form>
         </Modal>
@@ -646,7 +708,7 @@ export function InventoryPage() {
                 <p className="text-[11px] font-bold text-[#122222]/50 uppercase mb-2">Or click to select a shelf:</p>
                 <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
                   {allShelves.map((b) => (
-                    <button key={b.id} type="button" onClick={() => setTargetShelf(b.code)} className={`px-3 py-1.5 rounded-lg text-[12px] font-bold border border-solid cursor-pointer transition-all ${targetShelf.toUpperCase() === b.code.toUpperCase() ? "border-emerald bg-emerald/10 text-emerald" : "border-transparent bg-[#122222]/[0.03] dark:bg-white/[0.03] text-[#122222]/70 dark:text-white/70 hover:bg-[#122222]/[0.06]"}`}>{b.code} <span className="opacity-50">({b.room})</span></button>
+                    <button key={b.id} type="button" onClick={() => setTargetShelf(b.code)} className={`px-3 py-1.5 rounded-lg text-[12px] font-bold border border-solid cursor-pointer transition-all ${targetShelf.toUpperCase() === b.code.toUpperCase() ? "border-emerald bg-emerald/10 text-emerald" : "border-transparent bg-[#122222]/[0.03] dark:bg-white/[0.03] text-[#122222]/70 dark:text-white/70 hover:bg-[#122222]/[0.06]"}`}>{b.code} <span className="opacity-50">({b.room} · Col {b.column_number})</span></button>
                   ))}
                 </div>
               </div>
@@ -660,6 +722,8 @@ export function InventoryPage() {
         <ManageRoomsModal rooms={rooms} onClose={() => setManageRoomsOpen(false)}
           onRename={(id, name) => renameRoomMutation.mutate({ id, name })}
           onDelete={(id) => { if (confirm("Delete this room? This only works if it has no shelved copies.")) deleteRoomMutation.mutate(id); }}
+          onCreate={(name, notes) => createRoomMutation.mutate({ name, notes })}
+          creating={createRoomMutation.isPending}
         />
       )}
 
@@ -692,7 +756,7 @@ function CopyEditModal({ copy, onClose, shelves }: { copy: Copy & { title: strin
         <label className="text-[11px] font-semibold text-[#122222]/60 block">Shelf
           <select {...form.register("shelfId")} className="field-select text-[13px] py-2 px-3 mt-1 font-semibold w-full bg-white dark:bg-[#1d2926] border border-black/10 rounded-lg outline-none">
             <option value="">None (Unassigned)</option>
-            {shelves.map(s => <option key={s.id} value={s.id}>{s.room} — {s.shelf_type === "floor" ? `${FLOOR_SHELF_CODE} Floor` : `Shelf ${s.code}`}</option>)}
+            {shelves.map(s => <option key={s.id} value={s.id}>{s.room} · Col {s.column_number} — {s.shelf_type === "floor" ? `${FLOOR_SHELF_CODE} Floor` : `Shelf ${s.code}`}</option>)}
           </select>
         </label>
         <label className="text-[11px] font-semibold text-[#122222]/60 block">Condition
@@ -711,12 +775,18 @@ function CopyEditModal({ copy, onClose, shelves }: { copy: Copy & { title: strin
   );
 }
 
-function ManageRoomsModal({ rooms, onClose, onRename, onDelete }: { rooms: Room[]; onClose: () => void; onRename: (id: string, name: string) => void; onDelete: (id: string) => void }) {
+function ManageRoomsModal({ rooms, onClose, onRename, onDelete, onCreate, creating }: {
+  rooms: Room[]; onClose: () => void; onRename: (id: string, name: string) => void; onDelete: (id: string) => void;
+  onCreate: (name: string, notes?: string) => void; creating: boolean;
+}) {
+  const { t } = useTranslation();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [nameInput, setNameInput] = useState("");
+  const [adding, setAdding] = useState(false);
+  const [newName, setNewName] = useState("");
 
   return (
-    <Modal isOpen={true} onClose={onClose} title="Manage Rooms">
+    <Modal isOpen={true} onClose={onClose} title={t("inventory.manageRooms", "Manage Rooms")}>
       <div className="space-y-1.5 min-h-[200px] text-[13px]">
         {rooms.map(room => (
           <div key={room.id} className="group flex items-center gap-2 px-2.5 py-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
@@ -735,7 +805,19 @@ function ManageRoomsModal({ rooms, onClose, onRename, onDelete }: { rooms: Room[
             )}
           </div>
         ))}
-        {rooms.length === 0 && <p className="text-[12px] text-[#122222]/40 italic px-2 py-4 text-center">No rooms yet.</p>}
+        {rooms.length === 0 && !adding && <p className="text-[12px] text-[#122222]/40 italic px-2 py-4 text-center">{t("inventory.noRooms", "No rooms yet — create one to get started.")}</p>}
+
+        {adding ? (
+          <form onSubmit={e => { e.preventDefault(); if (newName.trim()) { onCreate(newName.trim()); setNewName(""); setAdding(false); } }} className="flex items-center gap-1 px-2.5 py-1">
+            <input autoFocus placeholder={t("inventory.roomName", "Room name") as string} value={newName} onChange={e => setNewName(e.target.value)} className="flex-1 bg-white dark:bg-[#111d1a] border border-emerald rounded px-2 py-1 text-[12px] outline-none" onKeyDown={e => e.key === "Escape" && setAdding(false)} />
+            <button type="submit" disabled={creating} className="text-emerald cursor-pointer"><Check size={13} /></button>
+            <button type="button" onClick={() => setAdding(false)} className="text-[#122222]/40 cursor-pointer"><X size={13} /></button>
+          </form>
+        ) : (
+          <button onClick={() => setAdding(true)} className="flex items-center gap-1.5 px-2.5 py-2 rounded-lg text-[12px] font-bold text-emerald hover:bg-emerald/5 transition-colors cursor-pointer w-full">
+            <Plus size={13} /> {t("inventory.addRoom", "Add Room")}
+          </button>
+        )}
       </div>
       <div className="flex justify-end pt-4 mt-2 border-t border-black/5"><Button variant="ghost" onClick={onClose}>Close</Button></div>
     </Modal>
