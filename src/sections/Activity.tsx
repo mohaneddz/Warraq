@@ -399,7 +399,7 @@ export function ActivityPage() {
             </table>
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center py-16 opacity-90">
-              <img src={medalSrc} alt="" aria-hidden="true" className="h-84 w-auto object-contain mb-3" />
+              <img src={medalSrc} alt="" aria-hidden="true" className="h-92 w-auto object-contain mb-3" />
               <h2 className="text-[20px] font-bold text-[#122222] dark:text-white mb-2">{t("activity.noActivity") || "No Activity Recorded"}</h2>
               <p className="text-[14px] text-[#122222]/60 dark:text-white/60">{t("activity.noActivityHelp") || "Activities will automatically appear here as operations take place."}</p>
             </div>

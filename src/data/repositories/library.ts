@@ -387,6 +387,15 @@ export async function extendReservation(reservationId: string, days = 7): Promis
   await audit("extend_reservation", "reservation", reservationId, { extended_days: days, new_expires: newExpires });
 }
 
+export async function updateReservation(reservationId: string, patch: { expiresAt?: string | null; scope?: ReservationScope }): Promise<void> {
+  const update: Record<string, unknown> = {};
+  if (patch.expiresAt !== undefined) update.expires_at = patch.expiresAt;
+  if (patch.scope !== undefined) update.scope = patch.scope;
+  if (Object.keys(update).length === 0) return;
+  await supabase.from("reservations").update(update).eq("id", reservationId);
+  await audit("update_reservation", "reservation", reservationId, update);
+}
+
 export async function reservations(): Promise<Reservation[]> {
   return unwrap(await supabase.from("reservation_details").select("*").order("requested_at", { ascending: false })) as Reservation[];
 }

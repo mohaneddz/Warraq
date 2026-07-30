@@ -234,7 +234,7 @@ export function DashboardPage() {
                 ))
               ) : (
                 <div className="flex flex-col items-center justify-center py-6 opacity-70">
-                  <img src={recentBooksSrc} alt="" aria-hidden="true" className="h-16 w-auto object-contain mb-1" />
+                  <img src={recentBooksSrc} alt="" aria-hidden="true" className="h-32 w-auto object-contain mb-1" />
                   <span className="text-xs">{t("dashboard.noActiveLoans")}</span>
                 </div>
               )}
@@ -283,8 +283,8 @@ export function DashboardPage() {
                   );
                 })
               ) : (
-                <div className="flex flex-col items-center justify-center py-6 opacity-80">
-                  <img src={medalSrc} alt="" aria-hidden="true" className="h-16 w-auto object-contain mb-1" />
+                <div className="flex flex-col items-center justify-center py-6 opacity-40">
+                  <img src={medalSrc} alt="" aria-hidden="true" className="h-32 w-auto object-contain mb-1" />
                   <span className="text-xs">{t("dashboard.noOverdueLoans")}</span>
                 </div>
               )}
@@ -323,7 +323,7 @@ export function DashboardPage() {
                 ))
               ) : (
                 <div className="flex flex-col items-center justify-center py-6 opacity-70">
-                  <img src={clockSrc} alt="" aria-hidden="true" className="h-16 w-auto object-contain mb-1" />
+                  <img src={clockSrc} alt="" aria-hidden="true" className="h-32 w-auto object-contain mb-1" />
                   <span className="text-xs">{t("dashboard.noHoldsReady")}</span>
                 </div>
               )}

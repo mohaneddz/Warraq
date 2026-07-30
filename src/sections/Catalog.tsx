@@ -19,9 +19,9 @@ import type { Book } from "../types";
 import { FLOOR_SHELF_CODE } from "../types";
 import { Modal, Input, Button, StatusBadge, ItemTypeBadge, ItemTypeSelect } from "../components/ui/primitives";
 import { toast } from "sonner";
-import { 
-  isValidIsbn, normalizeIsbn, cleanBarcode, 
-  cleanAccession, cleanText, formatIsbn 
+import {
+  isValidIsbn, normalizeIsbn, cleanBarcode,
+  cleanAccession, cleanText, formatIsbn
 } from "../utils/isbn";
 import { queryClient } from "../app/providers";
 import { fetchBookMetadata, enrichMetadataWithGroq } from "../utils/metadata";
@@ -802,19 +802,17 @@ export function CatalogPage() {
                 <button
                   key={tab.id}
                   onClick={() => { setSavedView(tab.id); setPage(1); }}
-                  className={`px-3 py-1.5 text-[12px] font-bold rounded-md transition-all flex items-center gap-1.5 shrink-0 whitespace-nowrap cursor-pointer ${
-                    isActive
-                      ? "bg-emerald text-white shadow-sm"
-                      : "text-[#122222]/60 dark:text-white/60 hover:bg-black/5 dark:hover:bg-white/5"
-                  }`}
+                  className={`px-3 py-1.5 text-[12px] font-bold rounded-md transition-all flex items-center gap-1.5 shrink-0 whitespace-nowrap cursor-pointer ${isActive
+                    ? "bg-emerald text-white shadow-sm"
+                    : "text-[#122222]/60 dark:text-white/60 hover:bg-black/5 dark:hover:bg-white/5"
+                    }`}
                 >
                   <span>{tab.label}</span>
                   <span
-                    className={`text-[10px] px-1.5 py-0.5 rounded-full font-extrabold transition-colors ${
-                      isActive
-                        ? "bg-white/20 text-white"
-                        : "bg-black/5 dark:bg-white/10 text-[#122222]/70 dark:text-white/70"
-                    }`}
+                    className={`text-[10px] px-1.5 py-0.5 rounded-full font-extrabold transition-colors ${isActive
+                      ? "bg-white/20 text-white"
+                      : "bg-black/5 dark:bg-white/10 text-[#122222]/70 dark:text-white/70"
+                      }`}
                   >
                     {tab.count}
                   </span>
@@ -873,77 +871,74 @@ export function CatalogPage() {
                   {paginatedBooks.map((book) => {
                     const displayTitle = getDisplayTitle(book, titlePreference);
                     return (
-                    <tr
-                      key={book.id}
-                      onClick={() => setSelectedBook(book)}
-                      onContextMenu={(e) => handleBookContextMenu(e, book)}
-                      className={`cursor-pointer transition-colors ${
-
-                        selectedIds.includes(book.id) 
-                          ? 'bg-emerald/5 dark:bg-emerald-light/5' 
-                          : selectedBook?.id === book.id 
-                            ? 'bg-black/5 dark:bg-white/5' 
+                      <tr
+                        key={book.id}
+                        onClick={() => setSelectedBook(book)}
+                        onContextMenu={(e) => handleBookContextMenu(e, book)}
+                        className={`cursor-pointer transition-colors ${selectedIds.includes(book.id)
+                          ? 'bg-emerald/5 dark:bg-emerald-light/5'
+                          : selectedBook?.id === book.id
+                            ? 'bg-black/5 dark:bg-white/5'
                             : 'hover:bg-black/5 dark:hover:bg-white/5'
-                      }`}
-                    >
-                      <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
-                        <input
-                          type="checkbox"
-                          checked={selectedIds.includes(book.id)}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setSelectedIds(prev => [...prev, book.id]);
-                            } else {
-                              setSelectedIds(prev => prev.filter(id => id !== book.id));
-                            }
-                          }}
-                          className="cursor-pointer rounded border-black/25 dark:border-white/25 text-emerald focus:ring-emerald h-4 w-4"
-                        />
-                      </td>
-                      <td className="px-4 py-3 font-semibold text-[#122222] dark:text-white">
-                        <div className="flex items-center gap-3">
-                          {book.cover_path ? (
-                            <img src={book.cover_path} alt="" className="w-8 h-12 rounded object-cover shadow-sm border border-black/10 shrink-0" />
-                          ) : (
-                            <div className="w-8 h-12 bg-[#f4ebdd] dark:bg-[#1a2522] rounded border border-black/10 flex items-center justify-center shrink-0 text-[10px] font-bold text-[#122222]/40 dark:text-white/40 uppercase">
-                              {book.item_type ? book.item_type.slice(0, 3) : "doc"}
+                          }`}
+                      >
+                        <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                          <input
+                            type="checkbox"
+                            checked={selectedIds.includes(book.id)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedIds(prev => [...prev, book.id]);
+                              } else {
+                                setSelectedIds(prev => prev.filter(id => id !== book.id));
+                              }
+                            }}
+                            className="cursor-pointer rounded border-black/25 dark:border-white/25 text-emerald focus:ring-emerald h-4 w-4"
+                          />
+                        </td>
+                        <td className="px-4 py-3 font-semibold text-[#122222] dark:text-white">
+                          <div className="flex items-center gap-3">
+                            {book.cover_path ? (
+                              <img src={book.cover_path} alt="" className="w-8 h-12 rounded object-cover shadow-sm border border-black/10 shrink-0" />
+                            ) : (
+                              <div className="w-8 h-12 bg-[#f4ebdd] dark:bg-[#1a2522] rounded border border-black/10 flex items-center justify-center shrink-0 text-[10px] font-bold text-[#122222]/40 dark:text-white/40 uppercase">
+                                {book.item_type ? book.item_type.slice(0, 3) : "doc"}
+                              </div>
+                            )}
+                            <div className="min-w-0 flex-1">
+                              <div className="font-bold text-[#122222] dark:text-white line-clamp-2" title={displayTitle.main}>{displayTitle.main}</div>
+                              {displayTitle.sub && <div className="text-[11px] text-[#122222]/50 dark:text-white/50 mt-0.5 line-clamp-2" title={displayTitle.sub}>{displayTitle.sub}</div>}
                             </div>
-                          )}
-                          <div className="min-w-0 flex-1">
-                            <div className="font-bold text-[#122222] dark:text-white line-clamp-2" title={displayTitle.main}>{displayTitle.main}</div>
-                            {displayTitle.sub && <div className="text-[11px] text-[#122222]/50 dark:text-white/50 mt-0.5 line-clamp-2" title={displayTitle.sub}>{displayTitle.sub}</div>}
                           </div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap">
-                        <ItemTypeBadge type={book.item_type} />
-                      </td>
-                      <td className="px-4 py-3 text-[#122222]/70 dark:text-white/70">
-                        <div className="line-clamp-2" title={book.author || ""}>{book.author || "—"}</div>
-                      </td>
-                      <td className="px-4 py-3 text-[#122222]/70 dark:text-white/70">
-                        <div className="line-clamp-2" title={book.category || ""}>{book.category || t("catalog.uncategorized") || "Uncategorized"}</div>
-                      </td>
-                      <td className="px-4 py-3 text-[#122222]/70 dark:text-white/70 font-mono text-[12px] whitespace-nowrap">{formatIsbn(book.isbn13 || book.isbn10) || "—"}</td>
-                      <td className="px-4 py-3 text-[#122222]/70 dark:text-white/70 whitespace-nowrap">{formatDisplayDate(book.created_at)}</td>
-                      <td className="px-4 py-3 text-[#122222]/70 dark:text-white/70 whitespace-nowrap">
-                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold ${
-                          (book.available_copies ?? 0) > 0 
-                            ? 'bg-emerald/10 text-emerald dark:text-emerald-light' 
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          <ItemTypeBadge type={book.item_type} />
+                        </td>
+                        <td className="px-4 py-3 text-[#122222]/70 dark:text-white/70">
+                          <div className="line-clamp-2" title={book.author || ""}>{book.author || "—"}</div>
+                        </td>
+                        <td className="px-4 py-3 text-[#122222]/70 dark:text-white/70">
+                          <div className="line-clamp-2" title={book.category || ""}>{book.category || t("catalog.uncategorized") || "Uncategorized"}</div>
+                        </td>
+                        <td className="px-4 py-3 text-[#122222]/70 dark:text-white/70 font-mono text-[12px] whitespace-nowrap">{formatIsbn(book.isbn13 || book.isbn10) || "—"}</td>
+                        <td className="px-4 py-3 text-[#122222]/70 dark:text-white/70 whitespace-nowrap">{formatDisplayDate(book.created_at)}</td>
+                        <td className="px-4 py-3 text-[#122222]/70 dark:text-white/70 whitespace-nowrap">
+                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold ${(book.available_copies ?? 0) > 0
+                            ? 'bg-emerald/10 text-emerald dark:text-emerald-light'
                             : 'bg-red-500/10 text-red-500'
-                        }`}>
-                          {book.available_copies ?? 0} / {book.total_copies ?? 0}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-[#122222]/40 hover:text-[#122222]"><MoreHorizontal size={16} /></td>
-                    </tr>
-                  );
-                })}
+                            }`}>
+                            {book.available_copies ?? 0} / {book.total_copies ?? 0}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-[#122222]/40 hover:text-[#122222]"><MoreHorizontal size={16} /></td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             ) : (
               <div className="flex flex-col items-center justify-center py-16 text-[#122222]/50 dark:text-white/50">
-                <img src={catalogLibrarySrc} alt="" aria-hidden="true" className="h-36 w-auto object-contain mb-2 opacity-90" />
+                <img src={catalogLibrarySrc} alt="" aria-hidden="true" className="h-92 w-auto object-contain mb-2 opacity-90" />
                 <p className="text-[14px]">{t("catalog.noBooks")}</p>
               </div>
             )}
@@ -1304,14 +1299,14 @@ function BookSidebar({ book, onClose, registerClean }: { book: Book; onClose: ()
         <div className="flex w-full border-b border-black/5 dark:border-white/5 shrink-0">
           <button
             onClick={() => { setActiveTab("details"); setIsEditing(false); }}
-            className={`flex-1 pb-2 text-[12px] font-bold border-b-2 text-center transition-all cursor-pointer ${activeTab === "details" ? "border-emerald text-emerald dark:border-emerald-light dark:text-emerald-light" : "border-transparent text-[#122222]/50 dark:text-white/50"
+            className={`flex-1 pb-2 text-[12px] font-bold border-b-2 text-center transition-all cursor-pointer whitespace-nowrap px-1 ${activeTab === "details" ? "border-emerald text-emerald dark:border-emerald-light dark:text-emerald-light" : "border-transparent text-[#122222]/50 dark:text-white/50"
               }`}
           >
             {t("catalog.details.title")}
           </button>
           <button
             onClick={() => setActiveTab("copies")}
-            className={`flex-1 pb-2 text-[12px] font-bold border-b-2 text-center transition-all cursor-pointer ${activeTab === "copies" ? "border-emerald text-emerald dark:border-emerald-light dark:text-emerald-light" : "border-transparent text-[#122222]/50 dark:text-white/50"
+            className={`flex-1 pb-2 text-[12px] font-bold border-b-2 text-center transition-all cursor-pointer whitespace-nowrap px-1 ${activeTab === "copies" ? "border-emerald text-emerald dark:border-emerald-light dark:text-emerald-light" : "border-transparent text-[#122222]/50 dark:text-white/50"
               }`}
           >
             {t("catalog.details.copies", { count: copiesList?.length ?? 0 })}
@@ -1508,65 +1503,65 @@ function BookSidebar({ book, onClose, registerClean }: { book: Book; onClose: ()
           </div>
         )}
 
-      {/* Edit Item Modal */}
-      {isEditing && (
-        <Modal isOpen={isEditing} onClose={() => setIsEditing(false)} title={t("catalog.addModal.editTitle") || "Edit Item"}>
-          <form onSubmit={editForm.handleSubmit((v) => updateBookMutation.mutate(v))} className="grid gap-4 md:grid-cols-2 text-[13px]">
-            <div className="md:col-span-2 flex justify-center py-1">
-              <ImageUpload
-                value={editForm.watch("cover_path")}
-                onChange={(val) => editForm.setValue("cover_path", val || "")}
-                shape="cover"
-                label={t("catalog.addModal.cover")}
-              />
-            </div>
-            <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 md:col-span-2">{t("catalog.itemType", "Item Type")}
-              <ItemTypeSelect
-                value={editForm.watch("item_type") || "book"}
-                onChange={(v) => editForm.setValue("item_type", v)}
-                className="mt-1"
-              />
-            </label>
-            <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 md:col-span-2">{t("catalog.addModal.titleLabel")}
-              <Input {...registerClean(editForm, "title", cleanText)} />
-            </label>
+        {/* Edit Item Modal */}
+        {isEditing && (
+          <Modal isOpen={isEditing} onClose={() => setIsEditing(false)} title={t("catalog.addModal.editTitle") || "Edit Item"}>
+            <form onSubmit={editForm.handleSubmit((v) => updateBookMutation.mutate(v))} className="grid gap-4 md:grid-cols-2 text-[13px]">
+              <div className="md:col-span-2 flex justify-center py-1">
+                <ImageUpload
+                  value={editForm.watch("cover_path")}
+                  onChange={(val) => editForm.setValue("cover_path", val || "")}
+                  shape="cover"
+                  label={t("catalog.addModal.cover")}
+                />
+              </div>
+              <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 md:col-span-2">{t("catalog.itemType", "Item Type")}
+                <ItemTypeSelect
+                  value={editForm.watch("item_type") || "book"}
+                  onChange={(v) => editForm.setValue("item_type", v)}
+                  className="mt-1"
+                />
+              </label>
+              <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 md:col-span-2">{t("catalog.addModal.titleLabel")}
+                <Input {...registerClean(editForm, "title", cleanText)} />
+              </label>
 
-            <TypeSpecificFields
-              itemType={editForm.watch("item_type") || "book"}
-              form={editForm}
-              registerClean={registerClean}
-              t={t}
-            />
-
-            <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 md:col-span-2 block font-semibold">{t("catalog.addModal.tagsLabel")}
-              <Input {...registerClean(editForm, "tags", cleanText)} />
-              {watchedEditTags && (
-                <div className="flex flex-wrap gap-1 mt-1.5">
-                  {watchedEditTags.split(",").map((t, idx) => {
-                    const clean = t.trim();
-                    if (!clean) return null;
-                    return (
-                      <span key={idx} className="px-2 py-0.5 bg-emerald/10 dark:bg-emerald-light/20 text-emerald dark:text-emerald-light rounded text-[10px] font-bold">
-                        {clean}
-                      </span>
-                    );
-                  })}
-                </div>
-              )}
-            </label>
-            <label className="md:col-span-2 text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">{t("catalog.addModal.descLabel")}
-              <textarea
-                {...registerClean(editForm, "description", cleanText)}
-                className="w-full bg-[#fcfbf8] dark:bg-[#111d1a] border border-black/10 dark:border-white/10 rounded-lg py-2 px-3 text-[13px] text-[#122222] dark:text-white outline-none focus:border-emerald min-h-[60px] mt-1"
+              <TypeSpecificFields
+                itemType={editForm.watch("item_type") || "book"}
+                form={editForm}
+                registerClean={registerClean}
+                t={t}
               />
-            </label>
-            <div className="md:col-span-2 flex gap-2 justify-end pt-4 border-t border-black/5 dark:border-white/5">
-              <Button type="button" variant="ghost" onClick={() => setIsEditing(false)}>{t("catalog.addModal.cancel")}</Button>
-              <Button type="submit" disabled={updateBookMutation.isPending}>{updateBookMutation.isPending ? "Saving..." : t("save")}</Button>
-            </div>
-          </form>
-        </Modal>
-      )}
+
+              <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 md:col-span-2 block font-semibold">{t("catalog.addModal.tagsLabel")}
+                <Input {...registerClean(editForm, "tags", cleanText)} />
+                {watchedEditTags && (
+                  <div className="flex flex-wrap gap-1 mt-1.5">
+                    {watchedEditTags.split(",").map((t, idx) => {
+                      const clean = t.trim();
+                      if (!clean) return null;
+                      return (
+                        <span key={idx} className="px-2 py-0.5 bg-emerald/10 dark:bg-emerald-light/20 text-emerald dark:text-emerald-light rounded text-[10px] font-bold">
+                          {clean}
+                        </span>
+                      );
+                    })}
+                  </div>
+                )}
+              </label>
+              <label className="md:col-span-2 text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">{t("catalog.addModal.descLabel")}
+                <textarea
+                  {...registerClean(editForm, "description", cleanText)}
+                  className="w-full bg-[#fcfbf8] dark:bg-[#111d1a] border border-black/10 dark:border-white/10 rounded-lg py-2 px-3 text-[13px] text-[#122222] dark:text-white outline-none focus:border-emerald min-h-[60px] mt-1"
+                />
+              </label>
+              <div className="md:col-span-2 flex gap-2 justify-end pt-4 border-t border-black/5 dark:border-white/5">
+                <Button type="button" variant="ghost" onClick={() => setIsEditing(false)}>{t("catalog.addModal.cancel")}</Button>
+                <Button type="submit" disabled={updateBookMutation.isPending}>{updateBookMutation.isPending ? "Saving..." : t("save")}</Button>
+              </div>
+            </form>
+          </Modal>
+        )}
       </div>
     </div>
   );
