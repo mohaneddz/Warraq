@@ -147,7 +147,7 @@ export function Modal({ isOpen, onClose, title, children, size = "lg", className
             <X size={18} />
           </button>
         </header>
-        <div className="flex-1 min-h-0 overflow-y-auto pr-2">
+        <div className="flex-1 min-h-0 flex flex-col overflow-y-auto px-3 py-2">
           {children}
         </div>
       </div>

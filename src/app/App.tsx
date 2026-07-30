@@ -23,7 +23,7 @@ import { LoginPage, ForcedPasswordChangePage } from "../sections/Login";
 
 import { listen } from "@tauri-apps/api/event";
 
-function Home() { const complete = useUiStore((state) => state.preferences.onboardingComplete); return <Navigate to={complete ? "/dashboard" : "/onboarding"} replace/>; }
+function Home() { const complete = useUiStore((state) => state.preferences.onboardingComplete); return <Navigate to={complete ? "/dashboard" : "/onboarding"} replace />; }
 function Failure({ error }: { error: unknown }) {
   const [copied, setCopied] = useState(false);
   const handleCopy = () => {
@@ -38,14 +38,14 @@ function Failure({ error }: { error: unknown }) {
         <p className="mt-3 text-sm">Warraq could not reach its Supabase database. Check your internet connection, confirm the VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY settings, and try again.</p>
         <pre className="mt-4 overflow-auto rounded-lg bg-black/5 p-3 text-xs font-mono">{String(error)}</pre>
         <div className="flex items-center gap-3 mt-5">
-          <button 
-            className="rounded-xl bg-emerald px-4 py-2.5 text-sm font-bold text-white hover:bg-emerald/90 transition-colors cursor-pointer" 
+          <button
+            className="rounded-xl bg-emerald px-4 py-2.5 text-sm font-bold text-white hover:bg-emerald/90 transition-colors cursor-pointer"
             onClick={() => location.reload()}
           >
             Retry
           </button>
-          <button 
-            className="rounded-xl bg-black/5 hover:bg-black/10 px-4 py-2.5 text-sm font-bold text-[#122222] transition-colors cursor-pointer" 
+          <button
+            className="rounded-xl bg-black/5 hover:bg-black/10 px-4 py-2.5 text-sm font-bold text-[#122222] transition-colors cursor-pointer"
             onClick={handleCopy}
           >
             {copied ? "Copied!" : "Copy Error"}
@@ -100,7 +100,7 @@ function Boot() {
         setLoadingStep(0);
         setProgress(15);
         await new Promise(r => setTimeout(r, 450));
-        
+
         await initializeDatabase();
         await bootstrapAdminIfNeeded();
         const session = await currentSession();
@@ -116,7 +116,7 @@ function Boot() {
           await useLibrarySettingsStore.getState().load();
         }
         setProgress(85);
-        
+
         // Step 3: Loading preferences & indexing
         setLoadingStep(2);
         setProgress(95);
@@ -135,22 +135,22 @@ function Boot() {
           console.warn("Failed to sync close-to-tray preference on boot:", e);
         }
         await new Promise(r => setTimeout(r, 400));
-        
+
         // Step 4: Finishing up
         setLoadingStep(3);
         setProgress(100);
         await new Promise(r => setTimeout(r, 350));
-        
+
         setReady(true);
       } catch (err) {
         setError(err);
       }
     };
-    
+
     runInit();
   }, []);
 
-  if (error) return <Failure error={error}/>;
+  if (error) return <Failure error={error} />;
 
   if (!ready) {
     return (
@@ -159,23 +159,23 @@ function Boot() {
         <div className="bg-paper-texture-overlay" />
 
         {/* Soft radial background glow */}
-        <div 
+        <div
           className="absolute inset-0 pointer-events-none opacity-50"
           style={{
             background: "radial-gradient(circle at center, rgba(27, 146, 119, 0.15) 0%, rgba(13, 22, 20, 0) 70%)"
           }}
         />
-        
+
         {/* Glassmorphic Card */}
-        <div className="relative bg-[#122222]/40 backdrop-blur-xl border border-white/5 rounded-3xl p-8 w-[380px] text-center shadow-2xl flex flex-col items-center z-10 transition-all">
+        <div className="relative p-8 w-[380px] text-center flex flex-col items-center z-10 transition-all">
           {/* Logo container with background glow */}
           <div className="relative w-20 h-20 mb-6 flex items-center justify-center">
-            <div className="absolute inset-0 bg-[#b96f3e]/25 rounded-2xl blur-lg animate-pulse" />
-            <div className="relative w-full h-full bg-[#122222]/80 border border-white/10 rounded-2xl flex items-center justify-center p-3.5 shadow-inner">
-              <img 
-                src="/brand/warraq-symbol-cream.png" 
-                className="max-w-full max-h-full object-contain" 
-                alt="App Logo" 
+            <div className="absolute inset-0 rounded-2xl blur-lg animate-pulse" />
+            <div className="relative w-full h-full border border-white/10 rounded-2xl flex items-center justify-center p-3.5 shadow-inner">
+              <img
+                src="/brand/warraq-symbol-cream.png"
+                className="max-w-full max-h-full object-contain"
+                alt="App Logo"
               />
             </div>
           </div>
@@ -190,7 +190,7 @@ function Boot() {
 
           {/* Progress Bar Container */}
           <div className="w-full bg-[#122222]/80 rounded-full h-1.5 mt-8 overflow-hidden border border-white/5 shadow-inner">
-            <div 
+            <div
               className="bg-gradient-to-r from-[#1b9277] to-[#b96f3e] h-full rounded-full transition-all duration-300 ease-out"
               style={{ width: `${progress}%` }}
             />
@@ -233,5 +233,5 @@ function Boot() {
     </HashRouter>
   );
 }
-export function App() { return <ErrorBoundary FallbackComponent={Failure}><Providers><Boot/></Providers></ErrorBoundary>; }
+export function App() { return <ErrorBoundary FallbackComponent={Failure}><Providers><Boot /></Providers></ErrorBoundary>; }
 
