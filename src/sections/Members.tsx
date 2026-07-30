@@ -29,6 +29,41 @@ import { useThemedAsset } from "../utils/useThemedAsset";
 
 const invalidate = () => queryClient.invalidateQueries();
 
+export function MemberStatusBadge({ status, showLabel = false, className }: { status: string; showLabel?: boolean; className?: string }) {
+  const { t } = useTranslation();
+  const normalized = (status || "active").toLowerCase();
+  const label = t(`members.${normalized}`, normalized);
+
+  const statusConfig: Record<string, { icon: React.ElementType; style: string }> = {
+    active: { icon: UserCheck, style: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-light border-emerald-500/20" },
+    suspended: { icon: UserX, style: "bg-red-500/15 text-red-500 dark:text-red-400 border-red-500/20" },
+    expired: { icon: Clock, style: "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/20" },
+    archived: { icon: Archive, style: "bg-slate-500/15 text-slate-500 dark:text-slate-400 border-slate-500/20" },
+  };
+
+  const config = statusConfig[normalized] || statusConfig.active;
+  const Icon = config.icon;
+
+  if (!showLabel) {
+    return (
+      <span 
+        title={label}
+        className={`inline-flex items-center justify-center p-1 rounded-full border shadow-2xs transition-all hover:scale-105 ${config.style} ${className || ""}`}
+        aria-label={label}
+      >
+        <Icon size={12} />
+      </span>
+    );
+  }
+
+  return (
+    <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${config.style} ${className || ""}`}>
+      <Icon size={12} />
+      {label}
+    </span>
+  );
+}
+
 export function splitFullName(fullName?: string | null) {
   if (!fullName) return { first_name: "", last_name: "" };
   const parts = fullName.trim().split(/\s+/);
@@ -71,6 +106,7 @@ type MemberValues = z.infer<typeof memberSchema>;
 
 export function MembersPage() {
   const { t } = useTranslation();
+  const noMembersSrc = useThemedAsset("no-members");
 
   const [term, setTerm] = useState("");
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
@@ -502,13 +538,7 @@ export function MembersPage() {
                       </div>
 
                       {/* Status Badge (Top Right) */}
-                      <span className={`absolute top-2.5 right-2.5 z-10 text-[8px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wider ${
-                        member.status === 'active' 
-                          ? 'bg-emerald-500/10 text-emerald-600' 
-                          : 'bg-red-500/10 text-red-500'
-                      }`}>
-                        {t("members." + member.status)}
-                      </span>
+                      <MemberStatusBadge status={member.status} className="absolute top-2.5 right-2.5 z-10" />
 
                       {/* Circular Avatar Container */}
                       <div className="absolute -top-7 left-1/2 -translate-x-1/2 w-14 h-14 rounded-full border-3 border-white dark:border-[#1d2926] shadow-md overflow-hidden bg-white dark:bg-[#1d2926] shrink-0 z-10 flex items-center justify-center">
@@ -556,9 +586,9 @@ export function MembersPage() {
                 })}
               </div>
             ) : (
-              <div className="flex flex-col items-center justify-center py-20 text-[#122222]/50">
-                <IdCard size={48} className="mb-4 text-[#122222]/30" />
-                <p className="text-[14px]">{t("members.noMembers")}</p>
+              <div className="flex flex-col items-center justify-center py-16 text-[#122222]/50 dark:text-white/50 text-center">
+                <img src={noMembersSrc} alt="" aria-hidden="true" className="h-72 w-auto object-contain mb-3 opacity-90" />
+                <p className="text-[14px] font-bold">{t("members.noMembers")}</p>
               </div>
             )}
           </div>
@@ -862,18 +892,14 @@ function MemberSidebar({ member, onClose, registerClean }: { member: Member; onC
             <p className="text-[12px] font-semibold text-[#122222]/60 dark:text-white/60 mt-0.5">{formatMemberShortName(member.full_name)}</p>
             <p className="text-[11px] font-mono text-[#122222]/50 mt-1">{formatMemberNumber(member.member_number)}</p>
           </div>
-          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${
-            member.status === 'active' ? 'bg-emerald-500/10 text-emerald-600' : 'bg-red-500/10 text-red-500'
-          }`}>
-            {t("members." + member.status)}
-          </span>
+          <MemberStatusBadge status={member.status} showLabel={true} />
         </div>
 
         {/* Tab Selection */}
         <div className="flex w-full border-b border-black/5 dark:border-white/5 shrink-0">
           <button 
             onClick={() => setActiveTab("profile")}
-            className={`flex-1 pb-2 text-[12px] font-bold border-b-2 text-center transition-all cursor-pointer ${
+            className={`flex-1 pb-2 text-[11px] font-bold border-b-2 text-center transition-all cursor-pointer whitespace-nowrap px-1 ${
               activeTab === "profile" ? "border-emerald text-emerald dark:border-emerald-light dark:text-emerald-light" : "border-transparent text-[#122222]/50 dark:text-white/50"
             }`}
           >
@@ -881,7 +907,7 @@ function MemberSidebar({ member, onClose, registerClean }: { member: Member; onC
           </button>
           <button 
             onClick={() => setActiveTab("loans")}
-            className={`flex-1 pb-2 text-[12px] font-bold border-b-2 text-center transition-all cursor-pointer ${
+            className={`flex-1 pb-2 text-[11px] font-bold border-b-2 text-center transition-all cursor-pointer whitespace-nowrap px-1 ${
               activeTab === "loans" ? "border-emerald text-emerald dark:border-emerald-light dark:text-emerald-light" : "border-transparent text-[#122222]/50 dark:text-white/50"
             }`}
           >
@@ -889,7 +915,7 @@ function MemberSidebar({ member, onClose, registerClean }: { member: Member; onC
           </button>
           <button 
             onClick={() => setActiveTab("reservations")}
-            className={`flex-1 pb-2 text-[12px] font-bold border-b-2 text-center transition-all cursor-pointer ${
+            className={`flex-1 pb-2 text-[11px] font-bold border-b-2 text-center transition-all cursor-pointer whitespace-nowrap px-1 ${
               activeTab === "reservations" ? "border-emerald text-emerald dark:border-emerald-light dark:text-emerald-light" : "border-transparent text-[#122222]/50 dark:text-white/50"
             }`}
           >

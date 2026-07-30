@@ -2,16 +2,17 @@ import { useState, useMemo, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import {
-  Search, Bookmark, Clock, Trash2, Plus,
+  Search, Clock, Trash2, Plus,
   UserCheck, UserPlus, BookOpen, Calendar, CheckCircle2, ChevronRight,
-  Layers, Tag, MapPin, Hash, XCircle, Eye, Copy as CopyIcon, Ban, Globe, Building2
+  Layers, Tag, MapPin, Hash, XCircle, Eye, Copy as CopyIcon, Ban, Globe, Building2,
+  Pencil, Check, X as XIcon
 } from "lucide-react";
 import { useContextMenu } from "../components/ui/ContextMenu";
 
 
 import {
   reservations, cancelReservation, deleteReservation, acceptReservation, declineReservation, extendReservation,
-  members, books, addReservation, saveMember, getCopiesForBook, banMember
+  members, books, addReservation, saveMember, getCopiesForBook, banMember, updateReservation
 } from "../data/repositories/library";
 import { queryClient } from "../app/providers";
 import { toast } from "sonner";
@@ -19,11 +20,13 @@ import { useTranslation } from "react-i18next";
 import { formatDisplayDate } from "../utils/dates";
 import { Modal, Input, Button, ItemTypeBadge, StatusBadge } from "../components/ui/primitives";
 import type { Book, Member, Copy, Reservation, ReservationScope } from "../types";
+import { useThemedAsset } from "../utils/useThemedAsset";
 
 const invalidate = () => queryClient.invalidateQueries();
 
 export function ReservationsPage() {
   const { t } = useTranslation();
+  const noReservationsSrc = useThemedAsset("no-reservations");
   const location = useLocation();
   const [term, setTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -128,6 +131,15 @@ export function ReservationsPage() {
       toast.success(t("reservations.alerts.extended") || "Reservation hold extended by 7 days.");
     },
     onError: (err: any) => toast.error(err.message)
+  });
+
+  const editMutation = useMutation({
+    mutationFn: ({ id, expiresAt }: { id: string; expiresAt: string | null }) => updateReservation(id, { expiresAt }),
+    onSuccess: () => {
+      invalidate();
+      toast.success(t("reservations.alerts.updated") || "Reservation updated.");
+    },
+    onError: (err: any) => toast.error(err.message || "Failed to update reservation.")
   });
 
   const bulkCancelMutation = useMutation({
@@ -593,10 +605,8 @@ export function ReservationsPage() {
               </tbody>
             </table>
           ) : (
-            <div className="flex-1 flex flex-col items-center justify-center py-20 opacity-60">
-              <div className="w-24 h-24 bg-black/5 dark:bg-white/5 rounded-full flex items-center justify-center text-[#122222]/40 dark:text-white/40 mb-6">
-                <Bookmark size={40} />
-              </div>
+            <div className="flex-1 flex flex-col items-center justify-center py-16 text-center">
+              <img src={noReservationsSrc} alt="" aria-hidden="true" className="h-72 w-auto object-contain mb-3 opacity-90" />
               <h2 className="text-[20px] font-bold text-[#122222] dark:text-white mb-2">{t("reservations.noReservations")}</h2>
               <p className="text-[14px] text-[#122222]/60 dark:text-white/60">{t("reservations.noReservationsHelp")}</p>
             </div>
@@ -691,6 +701,8 @@ export function ReservationsPage() {
         onDecline={(id) => declineMutation.mutate({ id })}
         onBan={(memberId, reason) => banMutation.mutate({ memberId, reason })}
         onExtend={(id) => extendMutation.mutate(id)}
+        onSaveExpiry={(id, expiresAt) => editMutation.mutate({ id, expiresAt })}
+        isSaving={editMutation.isPending}
       />
 
       {/* New Reservation Modal */}
@@ -700,7 +712,9 @@ export function ReservationsPage() {
       />
     </div>
   );
-}function ReservationDetailsModal({
+}
+
+function ReservationDetailsModal({
   reservation,
   onClose,
   onCancel,
@@ -708,7 +722,9 @@ export function ReservationsPage() {
   onAccept,
   onDecline,
   onBan,
-  onExtend
+  onExtend,
+  onSaveExpiry,
+  isSaving
 }: {
   reservation: Reservation | null;
   onClose: () => void;
@@ -718,9 +734,44 @@ export function ReservationsPage() {
   onDecline: (id: string) => void;
   onBan: (memberId: string, reason: string) => void;
   onExtend: (id: string) => void;
+  onSaveExpiry: (id: string, expiresAt: string | null) => void;
+  isSaving: boolean;
 }) {
   const { t } = useTranslation();
+  const [isEditingExpiry, setIsEditingExpiry] = useState(false);
+  const [expiryDraft, setExpiryDraft] = useState("");
+
+  // Reset local edit state whenever a different reservation is opened / the modal closes
+  useEffect(() => {
+    setIsEditingExpiry(false);
+    setExpiryDraft(reservation?.expires_at ? reservation.expires_at.slice(0, 10) : "");
+  }, [reservation?.id]);
+
   if (!reservation) return null;
+
+  const statusStyles: Record<string, string> = {
+    ready: "bg-emerald/10 text-emerald dark:bg-emerald-light/20 dark:text-emerald-light",
+    queued: "bg-copper/10 text-copper",
+    pending: "bg-amber-500/10 text-amber-600",
+    declined: "bg-red-500/10 text-red-500",
+  };
+  const statusLabels: Record<string, string> = {
+    ready: t("reservations.status.ready") || "Ready for Pickup",
+    queued: t("reservations.status.queued") || "Queued in Line",
+    pending: t("reservations.status.pending") || "Pending Approval",
+    declined: t("reservations.status.declined") || "Declined",
+  };
+
+  const startEditingExpiry = () => {
+    setExpiryDraft(reservation.expires_at ? reservation.expires_at.slice(0, 10) : "");
+    setIsEditingExpiry(true);
+  };
+
+  const saveExpiry = () => {
+    const iso = expiryDraft ? new Date(`${expiryDraft}T23:59:59`).toISOString() : null;
+    onSaveExpiry(reservation.id, iso);
+    setIsEditingExpiry(false);
+  };
 
   return (
     <Modal
@@ -728,140 +779,171 @@ export function ReservationsPage() {
       onClose={onClose}
       title={t("reservations.detailsModal.title") || "Reservation Details"}
       size="lg"
-      className="max-h-[85vh] overflow-y-auto"
+      className="max-h-[85vh]"
     >
-      <div className="space-y-5">
-        {/* Header Status & Queue Banner */}
-        <div className="bg-[#fcfbf8] dark:bg-[#111d1a] border border-black/10 dark:border-white/10 p-4 rounded-2xl flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <span className={`px-3 py-1.5 rounded-full text-[12px] font-bold ${
-              reservation.status === 'ready'
-                ? 'bg-emerald/10 text-emerald dark:bg-emerald-light/20 dark:text-emerald-light'
-                : reservation.status === 'queued'
-                ? 'bg-copper/10 text-copper'
-                : reservation.status === 'pending'
-                ? 'bg-amber-500/10 text-amber-600'
-                : reservation.status === 'declined'
-                ? 'bg-red-500/10 text-red-500'
-                : 'bg-gray-500/10 text-gray-500'
-            }`}>
-              {reservation.status === 'ready'
-                ? t("reservations.status.ready") || "Ready for Pickup"
-                : reservation.status === 'queued'
-                ? t("reservations.status.queued") || "Queued in Line"
-                : reservation.status === 'pending'
-                ? t("reservations.status.pending") || "Pending Approval"
-                : reservation.status === 'declined'
-                ? t("reservations.status.declined") || "Declined"
-                : reservation.status}
-            </span>
-            <span className="text-[11px] font-bold text-[#122222]/70 dark:text-white/70 bg-black/5 dark:bg-white/5 px-2.5 py-1 rounded-lg uppercase flex items-center gap-1">
-              {reservation.scope === "external" ? <Globe size={11} /> : <Building2 size={11} />}
-              {reservation.scope === "external" ? t("reservations.scope.external", "External") : t("reservations.scope.internal", "Internal")}
-            </span>
-            {reservation.status === "queued" && (
-              <span className="text-[12px] font-bold text-[#122222]/70 dark:text-white/70 bg-black/5 dark:bg-white/5 px-2.5 py-1 rounded-lg">
-                Queue Position #{reservation.position || 1}
+      <div className="flex flex-col h-full">
+        <div className="flex-1 min-h-0 overflow-y-auto space-y-5 pr-1">
+          {/* Header Status & Queue Banner */}
+          <div className="bg-[#fcfbf8] dark:bg-[#111d1a] border border-black/10 dark:border-white/10 p-4 rounded-2xl flex items-center justify-between flex-wrap gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className={`px-3 py-1.5 rounded-full text-[12px] font-bold ${statusStyles[reservation.status] || "bg-gray-500/10 text-gray-500"}`}>
+                {statusLabels[reservation.status] || reservation.status}
               </span>
-            )}
+              <span className="text-[11px] font-bold text-[#122222]/70 dark:text-white/70 bg-black/5 dark:bg-white/5 px-2.5 py-1 rounded-lg uppercase flex items-center gap-1">
+                {reservation.scope === "external" ? <Globe size={11} /> : <Building2 size={11} />}
+                {reservation.scope === "external" ? t("reservations.scope.external", "External") : t("reservations.scope.internal", "Internal")}
+              </span>
+              {reservation.status === "queued" && (
+                <span className="text-[12px] font-bold text-[#122222]/70 dark:text-white/70 bg-black/5 dark:bg-white/5 px-2.5 py-1 rounded-lg">
+                  {t("reservations.queuePosition", { position: reservation.position || 1 }) || `Queue Position #${reservation.position || 1}`}
+                </span>
+              )}
+            </div>
+
+            <div className="text-[11px] font-mono text-[#122222]/50 dark:text-white/50 shrink-0">
+              ID: {reservation.id.slice(0, 8)}
+            </div>
           </div>
 
-          <div className="text-[11px] font-mono text-[#122222]/50 dark:text-white/50">
-            ID: {reservation.id.slice(0, 8)}
+          {/* 2-Column Details Layout */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 items-stretch">
+            {/* Left Column: Book / Title Information */}
+            <div className="border border-black/10 dark:border-white/10 rounded-2xl p-4 space-y-4 bg-white dark:bg-[#1d2926] flex flex-col">
+              <h4 className="text-[11px] font-bold uppercase tracking-wider text-[#122222]/60 dark:text-white/60 flex items-center gap-2 shrink-0">
+                <BookOpen size={15} className="text-emerald" />
+                {t("reservations.addModal.summaryItem") || "Book / Item Information"}
+              </h4>
+
+              <div className="flex gap-4">
+                {reservation.cover_path ? (
+                  <img
+                    src={reservation.cover_path}
+                    alt={reservation.title || ""}
+                    className="w-20 h-28 object-cover rounded-xl shadow border border-black/10 dark:border-white/10 shrink-0"
+                  />
+                ) : (
+                  <div className="w-20 h-28 bg-black/5 dark:bg-white/5 rounded-xl border border-black/10 dark:border-white/10 flex items-center justify-center text-[#122222]/40 shrink-0">
+                    <BookOpen size={32} />
+                  </div>
+                )}
+
+                <div className="space-y-1.5 flex-1 min-w-0">
+                  <h3 className="font-bold text-[15px] text-[#122222] dark:text-white leading-snug line-clamp-2">
+                    {reservation.title}
+                  </h3>
+                  {reservation.subtitle && (
+                    <p className="text-[12px] text-[#122222]/70 dark:text-white/70 line-clamp-1">
+                      {reservation.subtitle}
+                    </p>
+                  )}
+                  {reservation.author && (
+                    <p className="text-[12px] font-semibold text-emerald dark:text-emerald-light truncate">
+                      {reservation.author}
+                    </p>
+                  )}
+
+                  <div className="flex flex-wrap gap-1.5 pt-1">
+                    {reservation.item_type && <ItemTypeBadge type={reservation.item_type} />}
+                  </div>
+                </div>
+              </div>
+
+              {reservation.copy_barcode && (
+                <div className="mt-auto pt-3 border-t border-black/5 dark:border-white/5 text-[11px] text-[#122222]/60 dark:text-white/60 flex items-center gap-2">
+                  <MapPin size={13} className="text-emerald shrink-0" />
+                  <span className="truncate">
+                    {reservation.copy_shelf ? `Shelf: ${reservation.copy_shelf}` : "Unassigned shelf"} · {reservation.copy_barcode}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Right Column: Member & Hold Information */}
+            <div className="border border-black/10 dark:border-white/10 rounded-2xl p-4 space-y-4 bg-white dark:bg-[#1d2926] flex flex-col">
+              <h4 className="text-[11px] font-bold uppercase tracking-wider text-[#122222]/60 dark:text-white/60 flex items-center gap-2 shrink-0">
+                <UserCheck size={15} className="text-emerald" />
+                {t("reservations.addModal.summaryMember") || "Borrower / Member"}
+              </h4>
+
+              <div className="flex items-center gap-3">
+                {reservation.member_avatar ? (
+                  <img src={reservation.member_avatar} alt="" className="w-10 h-10 rounded-full object-cover shadow-sm border border-black/10 dark:border-white/10 shrink-0" />
+                ) : (
+                  <div className="w-10 h-10 rounded-full bg-emerald/10 text-emerald dark:bg-emerald-light/10 dark:text-emerald-light font-bold text-[14px] flex items-center justify-center shrink-0">
+                    {reservation.member_name?.charAt(0).toUpperCase() || "M"}
+                  </div>
+                )}
+                <div className="min-w-0">
+                  <div className="font-bold text-[14px] text-[#122222] dark:text-white truncate">{reservation.member_name}</div>
+                  {reservation.member_number && (
+                    <div className="text-[12px] font-mono text-[#122222]/50 dark:text-white/50">{reservation.member_number}</div>
+                  )}
+                </div>
+              </div>
+
+              {/* Hold Dates Card */}
+              <div className="border border-black/10 dark:border-white/10 rounded-xl p-3 space-y-2 bg-[#fcfbf8] dark:bg-[#111d1a] text-[12px] mt-auto">
+                <div className="flex items-center justify-between">
+                  <span className="text-[#122222]/60 dark:text-white/60 flex items-center gap-1.5">
+                    <Clock size={14} /> {t("reservations.detailsModal.requestDate", "Request Date:")}
+                  </span>
+                  <span className="font-semibold text-[#122222] dark:text-white">
+                    {formatDisplayDate(reservation.reserved_at)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[#122222]/60 dark:text-white/60 flex items-center gap-1.5 shrink-0">
+                    <Calendar size={14} /> {t("reservations.detailsModal.expiresOn", "Hold Expires On:")}
+                  </span>
+                  {isEditingExpiry ? (
+                    <div className="flex items-center gap-1.5">
+                      <input
+                        type="date"
+                        value={expiryDraft}
+                        onChange={(e) => setExpiryDraft(e.target.value)}
+                        className="text-[11px] font-semibold bg-white dark:bg-[#1d2926] border border-black/15 dark:border-white/15 rounded-control px-1.5 py-0.5 outline-none focus:border-emerald"
+                      />
+                      <button
+                        type="button"
+                        onClick={saveExpiry}
+                        disabled={isSaving}
+                        aria-label={t("common.save", "Save") as string}
+                        className="p-1 rounded-control bg-emerald text-white hover:bg-emerald/90 cursor-pointer disabled:opacity-50"
+                      >
+                        <Check size={12} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setIsEditingExpiry(false)}
+                        aria-label={t("common.cancel", "Cancel") as string}
+                        className="p-1 rounded-control bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20 cursor-pointer"
+                      >
+                        <XIcon size={12} />
+                      </button>
+                    </div>
+                  ) : (
+                    <span className="flex items-center gap-1.5">
+                      <span className="font-semibold text-amber-600 dark:text-amber-400">
+                        {reservation.expires_at ? formatDisplayDate(reservation.expires_at) : "—"}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={startEditingExpiry}
+                        aria-label={t("common.edit", "Edit") as string}
+                        className="p-1 rounded-control text-[#122222]/50 dark:text-white/50 hover:bg-black/5 dark:hover:bg-white/10 hover:text-emerald cursor-pointer"
+                      >
+                        <Pencil size={12} />
+                      </button>
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* 2-Column Details Layout */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          {/* Left Column: Book / Title Information */}
-          <div className="border border-black/10 dark:border-white/10 rounded-2xl p-4 space-y-4 bg-white dark:bg-[#1d2926]">
-            <h4 className="text-[12px] font-bold uppercase tracking-wider text-[#122222]/60 dark:text-white/60 flex items-center gap-2">
-              <BookOpen size={16} className="text-emerald" />
-              {t("reservations.addModal.summaryItem") || "Book / Item Information"}
-            </h4>
-
-            <div className="flex gap-4">
-              {reservation.cover_path ? (
-                <img 
-                  src={reservation.cover_path} 
-                  alt={reservation.title || ""} 
-                  className="w-20 h-28 object-cover rounded-xl shadow border border-black/10 dark:border-white/10 shrink-0" 
-                />
-              ) : (
-                <div className="w-20 h-28 bg-black/5 dark:bg-white/5 rounded-xl border border-black/10 dark:border-white/10 flex items-center justify-center text-[#122222]/40 shrink-0">
-                  <BookOpen size={32} />
-                </div>
-              )}
-
-              <div className="space-y-1.5 flex-1 min-w-0">
-                <h3 className="font-bold text-[15px] text-[#122222] dark:text-white leading-snug line-clamp-2">
-                  {reservation.title}
-                </h3>
-                {reservation.subtitle && (
-                  <p className="text-[12px] text-[#122222]/70 dark:text-white/70 line-clamp-1">
-                    {reservation.subtitle}
-                  </p>
-                )}
-                {reservation.author && (
-                  <p className="text-[12px] font-semibold text-emerald dark:text-emerald-light">
-                    {reservation.author}
-                  </p>
-                )}
-
-                <div className="flex flex-wrap gap-1.5 pt-1">
-                  {reservation.item_type && <ItemTypeBadge type={reservation.item_type} />}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Right Column: Member & Copy Information */}
-          <div className="border border-black/10 dark:border-white/10 rounded-2xl p-4 space-y-4 bg-white dark:bg-[#1d2926]">
-            <h4 className="text-[12px] font-bold uppercase tracking-wider text-[#122222]/60 dark:text-white/60 flex items-center gap-2">
-              <UserCheck size={16} className="text-emerald" />
-              {t("reservations.addModal.summaryMember") || "Borrower / Member"}
-            </h4>
-
-            <div className="flex items-center gap-3">
-              {reservation.member_avatar ? (
-                <img src={reservation.member_avatar} alt="" className="w-10 h-10 rounded-full object-cover shadow-sm border border-black/10 dark:border-white/10" />
-              ) : (
-                <div className="w-10 h-10 rounded-full bg-emerald/10 text-emerald dark:bg-emerald-light/10 dark:text-emerald-light font-bold text-[14px] flex items-center justify-center shrink-0">
-                  {reservation.member_name?.charAt(0).toUpperCase() || "M"}
-                </div>
-              )}
-              <div>
-                <div className="font-bold text-[14px] text-[#122222] dark:text-white">{reservation.member_name}</div>
-                {reservation.member_number && (
-                  <div className="text-[12px] font-mono text-[#122222]/50 dark:text-white/50">{reservation.member_number}</div>
-                )}
-              </div>
-            </div>
-
-            {/* Hold Dates Card */}
-            <div className="border border-black/10 dark:border-white/10 rounded-xl p-3 space-y-2 bg-[#fcfbf8] dark:bg-[#111d1a] text-[12px]">
-              <div className="flex items-center justify-between">
-                <span className="text-[#122222]/60 dark:text-white/60 flex items-center gap-1.5">
-                  <Clock size={14} /> Request Date:
-                </span>
-                <span className="font-semibold text-[#122222] dark:text-white">
-                  {formatDisplayDate(reservation.reserved_at)}
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-[#122222]/60 dark:text-white/60 flex items-center gap-1.5">
-                  <Calendar size={14} /> Hold Expires On:
-                </span>
-                <span className="font-semibold text-amber-600 dark:text-amber-400">
-                  {reservation.expires_at ? formatDisplayDate(reservation.expires_at) : "—"}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Footer Actions */}
-        <div className="pt-4 border-t border-black/10 dark:border-white/10 flex items-center justify-between flex-wrap gap-2">
+        {/* Footer Actions (fixed, same position across all reservation states) */}
+        <div className="pt-4 mt-4 border-t border-black/10 dark:border-white/10 flex items-center justify-between flex-wrap gap-3 shrink-0">
           <div className="flex items-center gap-2 flex-wrap">
             {reservation.status === 'pending' && (
               <>
@@ -885,6 +967,31 @@ export function ReservationsPage() {
               </>
             )}
 
+            {(reservation.status === 'ready' || reservation.status === 'queued') && (
+              <Button
+                type="button"
+                variant="secondary"
+                className="text-amber-700 border-amber-300 hover:bg-amber-50 text-[12px] flex items-center gap-1.5 cursor-pointer"
+                onClick={() => onExtend(reservation.id)}
+              >
+                <Calendar size={14} />
+                {t("reservations.extendHold", "Extend Hold (+7 Days)")}
+              </Button>
+            )}
+
+            {(reservation.status === 'queued' || reservation.status === 'ready') && (
+              <Button
+                type="button"
+                variant="secondary"
+                className="text-orange-600 hover:text-orange-700 border-orange-200 hover:border-orange-300 text-[12px] cursor-pointer"
+                onClick={() => { onCancel(reservation.id); onClose(); }}
+              >
+                {t("reservations.cancelReservation", "Cancel Reservation")}
+              </Button>
+            )}
+
+            <div className="w-px h-6 bg-black/10 dark:bg-white/10 mx-1" />
+
             <Button
               type="button"
               variant="secondary"
@@ -898,51 +1005,19 @@ export function ReservationsPage() {
               {t("reservations.banMember", "Ban Member")}
             </Button>
 
-            {(reservation.status === 'ready' || reservation.status === 'queued') && (
-              <Button
-                type="button"
-                variant="secondary"
-                className="text-amber-700 border-amber-300 hover:bg-amber-50 text-[12px] flex items-center gap-1.5 cursor-pointer"
-                onClick={() => {
-                  onExtend(reservation.id);
-                  onClose();
-                }}
-              >
-                <Calendar size={14} />
-                Extend Hold (+7 Days)
-              </Button>
-            )}
-
-            {(reservation.status === 'queued' || reservation.status === 'ready') && (
-              <Button
-                type="button"
-                variant="secondary"
-                className="text-orange-600 hover:text-orange-700 border-orange-200 hover:border-orange-300 text-[12px] cursor-pointer"
-                onClick={() => {
-                  onCancel(reservation.id);
-                  onClose();
-                }}
-              >
-                Cancel Reservation
-              </Button>
-            )}
-
             <Button
               type="button"
               variant="secondary"
               className="text-red-600 hover:text-red-700 border-red-200 hover:border-red-300 text-[12px] flex items-center gap-1.5 cursor-pointer"
-              onClick={() => {
-                onDelete(reservation.id);
-                onClose();
-              }}
+              onClick={() => { onDelete(reservation.id); onClose(); }}
             >
               <Trash2 size={14} />
-              Delete Permanently
+              {t("reservations.deletePermanently", "Delete Permanently")}
             </Button>
           </div>
 
           <Button type="button" onClick={onClose}>
-            Close
+            {t("common.close", "Close")}
           </Button>
         </div>
       </div>
@@ -1154,7 +1229,7 @@ function NewReservationModal({ isOpen, onClose }: NewReservationModalProps) {
       onClose={handleClose}
       title={t("reservations.addModal.title") || "New Reservation"}
       size="xl"
-      className="h-[84vh] min-h-[580px] max-h-[820px]"
+      className="h-[84vh] min-h-[min(580px,88vh)] max-h-[min(820px,88vh)]"
     >
       {/* Stepper Header (Fixed at top of modal body) */}
       <div className="flex items-center justify-between border-b border-black/10 dark:border-white/10 pb-3 mb-4 text-[12px] font-bold shrink-0">
@@ -1181,7 +1256,7 @@ function NewReservationModal({ isOpen, onClose }: NewReservationModalProps) {
 
       {/* Step 1: Member or Visitor */}
       {step === 1 && (
-        <div className="flex-1 min-h-0 flex flex-col justify-between">
+        <div className="flex-1 min-h-0 flex flex-col">
           <div className="flex-1 min-h-0 flex flex-col space-y-3">
             {/* Mode Switcher Tabs */}
             <div className="grid grid-cols-2 p-1 bg-black/5 dark:bg-white/5 rounded-xl text-[13px] font-semibold shrink-0">
@@ -1267,11 +1342,11 @@ function NewReservationModal({ isOpen, onClose }: NewReservationModalProps) {
                         <div
                           key={mem.id}
                           onClick={() => setSelectedMember(mem)}
-                          className={`p-3 flex items-center justify-between cursor-pointer transition-colors ${
+                          className={`p-3 flex items-center justify-between gap-3 cursor-pointer transition-colors ${
                             isSelected ? "bg-emerald/10 dark:bg-emerald/20 border-l-4 border-emerald" : "hover:bg-black/5 dark:hover:bg-white/5"
                           }`}
                         >
-                          <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-3 min-w-0 flex-1">
                             {mem.avatar_path ? (
                               <img src={mem.avatar_path} alt="" className="w-9 h-9 rounded-full object-cover shadow-sm shrink-0 border border-black/10 dark:border-white/10" />
                             ) : (
@@ -1279,19 +1354,19 @@ function NewReservationModal({ isOpen, onClose }: NewReservationModalProps) {
                                 {mem.full_name.charAt(0).toUpperCase()}
                               </div>
                             )}
-                            <div>
-                              <div className="text-[13px] font-bold text-[#122222] dark:text-white flex items-center gap-2">
-                                {mem.full_name}
-                                <span className="text-[11px] font-mono font-medium text-[#122222]/50 dark:text-white/50">({mem.member_number})</span>
+                            <div className="min-w-0 flex-1">
+                              <div className="text-[13px] font-bold text-[#122222] dark:text-white flex items-center gap-2 min-w-0">
+                                <span className="truncate">{mem.full_name}</span>
+                                <span className="text-[11px] font-mono font-medium text-[#122222]/50 dark:text-white/50 shrink-0">({mem.member_number})</span>
                               </div>
-                              <div className="text-[11px] text-[#122222]/60 dark:text-white/60 flex items-center gap-3 mt-0.5">
-                                <span>{mem.department || "General"}</span>
-                                <span>•</span>
-                                <span>{mem.role || "Member"}</span>
+                              <div className="text-[11px] text-[#122222]/60 dark:text-white/60 flex items-center gap-2 mt-0.5 min-w-0">
+                                <span className="shrink-0">{mem.department || "General"}</span>
+                                <span className="shrink-0">•</span>
+                                <span className="shrink-0">{mem.role || "Member"}</span>
                                 {mem.email && (
                                   <>
-                                    <span>•</span>
-                                    <span className="opacity-80">{mem.email}</span>
+                                    <span className="shrink-0">•</span>
+                                    <span className="opacity-80 truncate">{mem.email}</span>
                                   </>
                                 )}
                               </div>
@@ -1299,7 +1374,7 @@ function NewReservationModal({ isOpen, onClose }: NewReservationModalProps) {
                           </div>
 
                           {isSelected && (
-                            <div className="flex items-center gap-1.5 text-emerald dark:text-emerald-light font-bold text-[12px]">
+                            <div className="flex items-center gap-1.5 text-emerald dark:text-emerald-light font-bold text-[12px] shrink-0">
                               <CheckCircle2 size={18} />
                             </div>
                           )}
@@ -1315,7 +1390,7 @@ function NewReservationModal({ isOpen, onClose }: NewReservationModalProps) {
               </div>
             ) : (
               /* Visitor / Guest Form Content */
-              <div className="space-y-3 bg-[#fcfbf8] dark:bg-[#111d1a] p-4 rounded-2xl border border-black/5 dark:border-white/5 overflow-y-auto">
+              <div className="flex-1 min-h-0 overflow-y-auto space-y-3 bg-[#fcfbf8] dark:bg-[#111d1a] p-4 rounded-2xl border border-black/5 dark:border-white/5">
                 <div className="p-2.5 rounded-xl bg-emerald/10 text-emerald dark:text-emerald-light text-[12px] font-semibold flex items-center gap-2">
                   <UserPlus size={16} />
                   {t("reservations.addModal.visitorNotice") || "A guest/visitor profile will be automatically linked for this reservation."}
@@ -1386,9 +1461,9 @@ function NewReservationModal({ isOpen, onClose }: NewReservationModalProps) {
         </div>
       )}
 
-      {/* Step 2: Book / Item Selection (Full Vertical Height) */}
+      {/* Step 2: Book / Item Selection */}
       {step === 2 && (
-        <div className="flex-1 min-h-0 flex flex-col justify-between">
+        <div className="flex-1 min-h-0 flex flex-col">
           <div className="flex-1 min-h-0 flex flex-col space-y-3">
             {/* Search & Filtering Options Header */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-3 shrink-0">
@@ -1445,7 +1520,7 @@ function NewReservationModal({ isOpen, onClose }: NewReservationModalProps) {
               </div>
             </div>
 
-            {/* Book Selection List (Expands to fill 100% of middle available space) */}
+            {/* Book Selection List (Vertically limited with scrolling) */}
             <div className="flex-1 min-h-0 flex flex-col">
               <label className="text-[11px] font-bold text-[#122222]/70 dark:text-white/70 block mb-1 uppercase tracking-wider shrink-0">
                 Select Book Title / Item
@@ -1465,27 +1540,27 @@ function NewReservationModal({ isOpen, onClose }: NewReservationModalProps) {
                           setSelectedBook(bk);
                           setSelectedCopy(null);
                         }}
-                        className={`p-3 flex items-center justify-between cursor-pointer transition-colors ${
+                        className={`p-3 flex items-center justify-between gap-3 cursor-pointer transition-colors ${
                           isSelected ? "bg-emerald/10 dark:bg-emerald/20 border-l-4 border-emerald" : "hover:bg-black/5 dark:hover:bg-white/5"
                         }`}
                       >
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-3 min-w-0 flex-1">
                           {bk.cover_path ? (
-                            <img src={bk.cover_path} alt="" className="w-9 h-12 object-cover rounded shadow-sm" />
+                            <img src={bk.cover_path} alt="" className="w-9 h-12 object-cover rounded shadow-sm shrink-0" />
                           ) : (
-                            <div className="w-9 h-12 bg-black/5 dark:bg-white/5 rounded flex items-center justify-center text-[#122222]/40">
+                            <div className="w-9 h-12 bg-black/5 dark:bg-white/5 rounded flex items-center justify-center text-[#122222]/40 shrink-0">
                               <BookOpen size={18} />
                             </div>
                           )}
-                          <div>
-                            <div className="text-[13px] font-bold text-[#122222] dark:text-white line-clamp-1">
+                          <div className="min-w-0 flex-1">
+                            <div className="text-[13px] font-bold text-[#122222] dark:text-white line-clamp-2 leading-snug" title={bk.title}>
                               {bk.title}
                             </div>
-                            <div className="text-[11px] text-[#122222]/60 dark:text-white/60 flex items-center gap-2 mt-0.5">
-                              <span>{bk.author || "Unknown Author"}</span>
-                              <ItemTypeBadge type={bk.item_type} />
+                            <div className="text-[11px] text-[#122222]/60 dark:text-white/60 flex items-center gap-2 mt-0.5 min-w-0">
+                              <span className="truncate">{bk.author || "Unknown Author"}</span>
+                              <span className="shrink-0"><ItemTypeBadge type={bk.item_type} /></span>
                               {bk.category && (
-                                <span className="text-[10px] bg-black/5 dark:bg-white/5 px-1.5 py-0.5 rounded font-medium">
+                                <span className="text-[10px] bg-black/5 dark:bg-white/5 px-1.5 py-0.5 rounded font-medium shrink-0 truncate">
                                   {bk.category}
                                 </span>
                               )}
@@ -1493,18 +1568,18 @@ function NewReservationModal({ isOpen, onClose }: NewReservationModalProps) {
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-3">
-                          <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full ${
-                            availableCount > 0 
-                              ? "bg-emerald/10 text-emerald dark:bg-emerald-light/20 dark:text-emerald-light" 
+                        <div className="flex items-center gap-3 shrink-0">
+                          <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full whitespace-nowrap ${
+                            availableCount > 0
+                              ? "bg-emerald/10 text-emerald dark:bg-emerald-light/20 dark:text-emerald-light"
                               : "bg-copper/10 text-copper"
                           }`}>
-                            {availableCount > 0 
+                            {availableCount > 0
                               ? t("reservations.addModal.availableCopies", { available: availableCount, total: totalCount }) || `${availableCount}/${totalCount} available`
                               : t("reservations.addModal.outOfStock", { total: totalCount }) || `Out of stock (${totalCount})`}
                           </span>
                           {isSelected && (
-                            <CheckCircle2 size={18} className="text-emerald dark:text-emerald-light" />
+                            <CheckCircle2 size={18} className="text-emerald dark:text-emerald-light shrink-0" />
                           )}
                         </div>
                       </div>
@@ -1541,7 +1616,7 @@ function NewReservationModal({ isOpen, onClose }: NewReservationModalProps) {
 
       {/* Step 3: Physical Copy & Location Selection */}
       {step === 3 && (
-        <div className="flex-1 min-h-0 flex flex-col justify-between">
+        <div className="flex-1 min-h-0 flex flex-col">
           <div className="flex-1 min-h-0 flex flex-col space-y-3">
             {/* Selected Book Summary Header Banner */}
             {selectedBook && (
@@ -1613,7 +1688,7 @@ function NewReservationModal({ isOpen, onClose }: NewReservationModalProps) {
                 )}
               </div>
 
-              {/* Specific Copies Grid / Scrollable List (Fills Available Space) */}
+              {/* Specific Copies Grid / Scrollable List (Vertically limited) */}
               <div className="flex-1 min-h-0 overflow-y-auto space-y-2 pr-1">
                 {copiesQuery.isLoading ? (
                   <div className="text-xs text-center py-6 text-[#122222]/50">Loading physical copies & shelf locations...</div>
@@ -1624,33 +1699,33 @@ function NewReservationModal({ isOpen, onClose }: NewReservationModalProps) {
                       <div
                         key={cp.id}
                         onClick={() => setSelectedCopy(cp)}
-                        className={`p-3 rounded-xl border flex items-center justify-between cursor-pointer text-[12px] transition-all ${
+                        className={`p-3 rounded-xl border flex items-center justify-between gap-3 cursor-pointer text-[12px] transition-all ${
                           isCopySelected
                             ? "bg-white dark:bg-[#1d2926] border-emerald ring-2 ring-emerald/20 shadow-md font-bold"
                             : "border-black/10 dark:border-white/10 hover:bg-black/5 dark:hover:bg-white/5 bg-white/80 dark:bg-[#1d2926]/80"
                         }`}
                       >
-                        <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-4 min-w-0 flex-1">
                           {/* Prominent Location Badge */}
-                          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald/10 text-emerald dark:bg-emerald-light/20 dark:text-emerald-light font-extrabold text-[12px]">
-                            <MapPin size={14} />
-                            <span>{cp.shelf ? `Shelf: ${cp.shelf}` : "Unassigned Shelf"}</span>
+                          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald/10 text-emerald dark:bg-emerald-light/20 dark:text-emerald-light font-extrabold text-[12px] shrink-0 max-w-[45%]">
+                            <MapPin size={14} className="shrink-0" />
+                            <span className="truncate">{cp.shelf ? `Shelf: ${cp.shelf}` : "Unassigned Shelf"}</span>
                           </div>
 
-                          <div>
-                            <div className="font-mono font-bold text-[#122222] dark:text-white flex items-center gap-2 text-[12px]">
-                              <Hash size={13} className="opacity-50" />
-                              {cp.barcode}
+                          <div className="min-w-0 flex-1">
+                            <div className="font-mono font-bold text-[#122222] dark:text-white flex items-center gap-2 text-[12px] min-w-0">
+                              <Hash size={13} className="opacity-50 shrink-0" />
+                              <span className="truncate">{cp.barcode}</span>
                             </div>
-                            <div className="text-[11px] text-[#122222]/60 dark:text-white/60 flex items-center gap-3 mt-0.5">
-                              <span>Index: <strong className="font-mono font-semibold text-[#122222] dark:text-white">{cp.accession_number}</strong></span>
-                              <span>•</span>
-                              <span>Condition: <strong className="capitalize">{cp.condition || "good"}</strong></span>
+                            <div className="text-[11px] text-[#122222]/60 dark:text-white/60 flex items-center gap-3 mt-0.5 min-w-0">
+                              <span className="truncate">Index: <strong className="font-mono font-semibold text-[#122222] dark:text-white">{cp.accession_number}</strong></span>
+                              <span className="shrink-0">•</span>
+                              <span className="shrink-0">Condition: <strong className="capitalize">{cp.condition || "good"}</strong></span>
                             </div>
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-3 shrink-0">
                           <StatusBadge value={cp.status} />
                           {isCopySelected && (
                             <CheckCircle2 size={18} className="text-emerald dark:text-emerald-light" />
@@ -1689,8 +1764,8 @@ function NewReservationModal({ isOpen, onClose }: NewReservationModalProps) {
 
       {/* Step 4: Scope & Review */}
       {step === 4 && (
-        <div className="flex-1 min-h-0 flex flex-col justify-between">
-          <div className="flex-1 min-h-0 flex flex-col space-y-4 overflow-y-auto">
+        <div className="flex-1 min-h-0 flex flex-col">
+          <div className="flex-1 min-h-0 flex flex-col space-y-4 overflow-y-auto pr-1">
             {/* Scope Selector */}
             <div className="shrink-0">
               <label className="text-[12px] font-bold text-[#122222] dark:text-white block mb-2">
@@ -1757,7 +1832,7 @@ function NewReservationModal({ isOpen, onClose }: NewReservationModalProps) {
                   <span className="text-[#122222]/60 dark:text-white/60 text-[11px] block mb-0.5">
                     {t("reservations.addModal.summaryItem") || "Book / Item"}
                   </span>
-                  <span className="font-bold text-[#122222] dark:text-white line-clamp-1 block">
+                  <span className="font-bold text-[#122222] dark:text-white line-clamp-2 leading-snug block" title={selectedBook?.title || ""}>
                     {selectedBook?.title}
                   </span>
                   <span className="text-[11px] text-[#122222]/50 dark:text-white/50 block">

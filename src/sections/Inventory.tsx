@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 
 import { useContextMenu } from "../components/ui/ContextMenu";
+import { useThemedAsset } from "../utils/useThemedAsset";
 
 const invalidate = () => queryClient.invalidateQueries();
 
@@ -103,6 +104,7 @@ function ShelfSvgVisual({ copiesList, capacity }: { copiesList: (Copy & { title?
 export function InventoryPage() {
   const { t } = useTranslation();
   const { showContextMenu } = useContextMenu();
+  const noShelvesSrc = useThemedAsset("no-shelves");
 
   const handleCopyContextMenu = (e: React.MouseEvent, copy: Copy & { title: string }) => {
     showContextMenu(e, [
@@ -427,15 +429,15 @@ export function InventoryPage() {
           {view === "grid" && (
             <div className="bg-white dark:bg-[#1d2926] rounded-xl border border-black/5 dark:border-white/5 shadow-card p-5 overflow-auto">
               {!selectedRoom ? (
-                <div className="flex flex-col items-center justify-center py-20 text-center text-[#122222]/40 dark:text-white/40">
-                  <Library size={36} className="text-[#b96f3e] mb-3" />
+                <div className="flex flex-col items-center justify-center py-16 text-center text-[#122222]/50 dark:text-white/50">
+                  <img src={noShelvesSrc} alt="" aria-hidden="true" className="h-64 w-auto object-contain mb-3 opacity-90" />
                   <h3 className="text-sm font-bold">{t("inventory.noRoomSelected", "No room selected")}</h3>
                   <p className="text-[11px] max-w-sm mt-1 mb-4 leading-normal">{t("inventory.createRoomHint", "Create a room in Manage Rooms, then add columns to give it shelves.")}</p>
                   <button type="button" onClick={() => setManageRoomsOpen(true)} className="bg-emerald text-white px-4 py-2 rounded-lg font-bold text-[12px] hover:bg-emerald/90 transition-all shadow-sm cursor-pointer">{t("inventory.manageRooms", "Manage Rooms")}</button>
                 </div>
               ) : roomColumns.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-20 text-center text-[#122222]/40 dark:text-white/40">
-                  <Library size={36} className="text-[#b96f3e] mb-3" />
+                <div className="flex flex-col items-center justify-center py-16 text-center text-[#122222]/50 dark:text-white/50">
+                  <img src={noShelvesSrc} alt="" aria-hidden="true" className="h-64 w-auto object-contain mb-3 opacity-90" />
                   <h3 className="text-sm font-bold">{t("inventory.noColumns", "No columns yet")}</h3>
                   <p className="text-[11px] max-w-sm mt-1 mb-4 leading-normal">{t("inventory.noColumnsHint", "Add a column to give this room its first shelves.")}</p>
                   <button type="button" onClick={() => setNewColumnOpen(true)} className="bg-emerald text-white px-4 py-2 rounded-lg font-bold text-[12px] hover:bg-emerald/90 transition-all shadow-sm cursor-pointer">+ {t("inventory.addColumn", "Add Column")}</button>
@@ -780,6 +782,7 @@ function ManageRoomsModal({ rooms, onClose, onRename, onDelete, onCreate, creati
   onCreate: (name: string, notes?: string) => void; creating: boolean;
 }) {
   const { t } = useTranslation();
+  const noShelvesSrc = useThemedAsset("no-shelves");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [nameInput, setNameInput] = useState("");
   const [adding, setAdding] = useState(false);
@@ -805,7 +808,12 @@ function ManageRoomsModal({ rooms, onClose, onRename, onDelete, onCreate, creati
             )}
           </div>
         ))}
-        {rooms.length === 0 && !adding && <p className="text-[12px] text-[#122222]/40 italic px-2 py-4 text-center">{t("inventory.noRooms", "No rooms yet — create one to get started.")}</p>}
+        {rooms.length === 0 && !adding && (
+          <div className="flex flex-col items-center justify-center py-6 text-center">
+            <img src={noShelvesSrc} alt="" aria-hidden="true" className="h-36 w-auto object-contain mb-2 opacity-90" />
+            <p className="text-[12px] text-[#122222]/60 dark:text-white/60 italic px-2">{t("inventory.noRooms", "No rooms yet — create one to get started.")}</p>
+          </div>
+        )}
 
         {adding ? (
           <form onSubmit={e => { e.preventDefault(); if (newName.trim()) { onCreate(newName.trim()); setNewName(""); setAdding(false); } }} className="flex items-center gap-1 px-2.5 py-1">
