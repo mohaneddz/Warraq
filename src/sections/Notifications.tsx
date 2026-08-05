@@ -1,11 +1,39 @@
+import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
-import { Bell, BellRing, CalendarClock, CheckCheck, Clock } from "lucide-react";
+import { Bell, BellRing, CalendarClock, CheckCheck, Clock, Search, Info } from "lucide-react";
 
 import { dashboard, reservations, notifications, markNotificationRead, markAllNotificationsRead } from "../data/repositories/library";
 import { useLibrarySettingsStore } from "../store/librarySettingsStore";
 import { formatDisplayDate } from "../utils/dates";
+
+type NotificationKind = "overdue" | "ready" | "system";
+
+interface NotificationRow {
+  id: string;
+  kind: NotificationKind;
+  title: string;
+  subtitle: string;
+  date: string;
+  isRead: boolean;
+  markable: boolean;
+  onOpen: () => void;
+}
+
+function KindBadge({ kind, t }: { kind: NotificationKind; t: (k: string, d: string) => string }) {
+  const styles: Record<NotificationKind, string> = {
+    overdue: "bg-red-500/10 text-red-500 border border-red-500/20",
+    ready: "bg-emerald/10 text-emerald dark:bg-emerald-light/20 dark:text-emerald-light border border-emerald/20",
+    system: "bg-black/5 dark:bg-white/5 text-[#122222]/70 dark:text-white/70 border border-black/10 dark:border-white/10",
+  };
+  const labels: Record<NotificationKind, string> = {
+    overdue: t("notificationsPage.kindOverdue", "Overdue"),
+    ready: t("notificationsPage.kindReady", "Ready for Pickup"),
+    system: t("notificationsPage.kindSystem", "System"),
+  };
+  return <span className={`px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap ${styles[kind]}`}>{labels[kind]}</span>;
+}
 
 export function NotificationsPage() {
   const { t } = useTranslation();
@@ -13,10 +41,14 @@ export function NotificationsPage() {
   const qc = useQueryClient();
   const librarySettings = useLibrarySettingsStore((s) => s.settings);
 
-  const { data: dashData } = useQuery({ queryKey: ["dashboard-shell"], queryFn: dashboard });
+  const [term, setTerm] = useState("");
+  const [kindFilter, setKindFilter] = useState<"all" | NotificationKind>("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "unread">("all");
+
+  const { data: dashData, isLoading: dashLoading } = useQuery({ queryKey: ["dashboard-shell"], queryFn: dashboard });
   const overdueList = librarySettings.notify_overdue ? (dashData?.overdueLoans ?? []) : [];
 
-  const { data: resData } = useQuery({
+  const { data: resData, isLoading: resLoading } = useQuery({
     queryKey: ["reservations-shell"],
     queryFn: reservations,
     enabled: librarySettings.notify_ready,
@@ -25,7 +57,7 @@ export function NotificationsPage() {
     ? (resData?.filter((r) => r.status === "ready") ?? [])
     : [];
 
-  const { data: history } = useQuery({ queryKey: ["notifications"], queryFn: () => notifications(200) });
+  const { data: history, isLoading: historyLoading } = useQuery({ queryKey: ["notifications"], queryFn: () => notifications(200) });
 
   const handleMarkRead = async (id: string) => {
     await markNotificationRead(id);
@@ -37,13 +69,63 @@ export function NotificationsPage() {
     qc.invalidateQueries({ queryKey: ["notifications"] });
   };
 
-  const hasAttention = overdueList.length > 0 || readyReservations.length > 0;
-  const hasUnread = (history ?? []).some((n) => !n.is_read);
+  const rows: NotificationRow[] = useMemo(() => {
+    const overdueRows: NotificationRow[] = overdueList.map((loan) => ({
+      id: `overdue-${loan.id}`,
+      kind: "overdue",
+      title: loan.title ?? "",
+      subtitle: `${t("circulation.selectedMember")}: ${loan.member_name}`,
+      date: loan.due_at,
+      isRead: false,
+      markable: false,
+      onOpen: () => navigate("/members"),
+    }));
+    const readyRows: NotificationRow[] = readyReservations.map((res) => ({
+      id: `ready-${res.id}`,
+      kind: "ready",
+      title: res.title ?? "",
+      subtitle: `${t("circulation.selectedMember")}: ${res.member_name}`,
+      date: res.reserved_at || res.requested_at,
+      isRead: false,
+      markable: false,
+      onOpen: () => navigate("/reservations"),
+    }));
+    const historyRows: NotificationRow[] = (history ?? []).map((n) => ({
+      id: n.id,
+      kind: n.type === "reservation_ready" ? "ready" : "system",
+      title: n.title,
+      subtitle: n.body ?? "",
+      date: n.created_at,
+      isRead: n.is_read,
+      markable: true,
+      onOpen: () => {
+        if (!n.is_read) handleMarkRead(n.id);
+        if (n.link) navigate(n.link);
+      },
+    }));
+    return [...overdueRows, ...readyRows, ...historyRows].sort((a, b) => new Date(b.date).valueOf() - new Date(a.date).valueOf());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [overdueList, readyReservations, history, t]);
+
+  const filteredRows = useMemo(() => {
+    return rows.filter((r) => {
+      if (kindFilter !== "all" && r.kind !== kindFilter) return false;
+      if (statusFilter === "unread" && r.isRead) return false;
+      if (term.trim()) {
+        const q = term.trim().toLowerCase();
+        if (!r.title.toLowerCase().includes(q) && !r.subtitle.toLowerCase().includes(q)) return false;
+      }
+      return true;
+    });
+  }, [rows, kindFilter, statusFilter, term]);
+
+  const unreadCount = rows.filter((r) => !r.isRead).length;
+  const isLoading = dashLoading || resLoading || historyLoading;
 
   return (
-    <div className="flex flex-col h-full w-full">
+    <div className="flex flex-col h-full w-full text-[13px]">
       {/* Header */}
-      <div className="flex justify-between items-end mb-8">
+      <div className="flex justify-between items-end mb-6">
         <div>
           <h1 className="font-display text-[28px] font-bold text-[#122222] dark:text-white leading-tight">
             {t("nav.notifications")}
@@ -52,7 +134,7 @@ export function NotificationsPage() {
             {t("notificationsPage.subtitle", "Overdue loans, ready holds, and notification history")}
           </p>
         </div>
-        {hasUnread && (
+        {unreadCount > 0 && (
           <button
             onClick={handleMarkAllRead}
             className="flex items-center gap-2 bg-white dark:bg-[#1d2926] border border-black/10 dark:border-white/10 text-[#122222] dark:text-white px-4 py-2 rounded-xl font-bold text-[13px] hover:bg-black/5 dark:hover:bg-white/5 transition-colors shadow-card cursor-pointer"
@@ -63,90 +145,111 @@ export function NotificationsPage() {
         )}
       </div>
 
-      <div className="max-w-3xl w-full">
-
-      {/* Needs Attention (live) */}
-      <section className="mb-8">
-        <h2 className="text-[11px] font-bold text-[#122222]/40 dark:text-white/40 uppercase tracking-wider mb-2.5 px-1">
-          {t("notificationsPage.needsAttention", "Needs Attention")}
-        </h2>
-        <div className="bg-white dark:bg-[#1d2926] border border-black/10 dark:border-white/10 rounded-2xl divide-y divide-black/5 dark:divide-white/5 overflow-hidden">
-          {!hasAttention ? (
-            <div className="flex flex-col items-center justify-center py-10 text-center text-[#122222]/40 dark:text-white/40">
-              <Bell size={28} className="mb-2 opacity-40" />
-              <span className="text-[13px]">{t("nav.allClear")}</span>
-            </div>
-          ) : (
-            <>
-              {overdueList.map((loan) => (
-                <div
-                  key={loan.id}
-                  onClick={() => navigate("/members")}
-                  className="p-4 flex items-center gap-3 hover:bg-emerald/5 dark:hover:bg-emerald-light/10 transition-colors cursor-pointer"
-                >
-                  <span className="w-9 h-9 shrink-0 rounded-full bg-red-500/10 text-red-500 flex items-center justify-center">
-                    <Clock size={16} />
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <div className="font-bold text-[13px] text-[#122222] dark:text-white truncate">{loan.title}</div>
-                    <div className="text-[11px] text-[#122222]/60 dark:text-white/60 mt-0.5">{t("circulation.selectedMember")}: {loan.member_name}</div>
-                  </div>
-                  <div className="text-[10px] text-red-500 font-bold shrink-0">{t("circulation.due")}: {formatDisplayDate(loan.due_at)}</div>
-                </div>
-              ))}
-              {readyReservations.map((res) => (
-                <div
-                  key={res.id}
-                  onClick={() => navigate("/reservations")}
-                  className="p-4 flex items-center gap-3 hover:bg-emerald/5 dark:hover:bg-emerald-light/10 transition-colors cursor-pointer"
-                >
-                  <span className="w-9 h-9 shrink-0 rounded-full bg-emerald/10 text-emerald-600 dark:text-emerald-light flex items-center justify-center">
-                    <CalendarClock size={16} />
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <div className="font-bold text-[13px] text-[#122222] dark:text-white truncate">{res.title}</div>
-                    <div className="text-[11px] text-[#122222]/60 dark:text-white/60 mt-0.5">{t("circulation.selectedMember")}: {res.member_name}</div>
-                  </div>
-                  <div className="text-[10px] text-emerald-600 dark:text-emerald-light font-bold shrink-0">{t("dashboard.ready")}</div>
-                </div>
-              ))}
-            </>
-          )}
-        </div>
-      </section>
-
-      {/* History (persisted) */}
-      <section>
-        <h2 className="text-[11px] font-bold text-[#122222]/40 dark:text-white/40 uppercase tracking-wider mb-2.5 px-1">
-          {t("notificationsPage.history", "History")}
-        </h2>
-        <div className="bg-white dark:bg-[#1d2926] border border-black/10 dark:border-white/10 rounded-2xl divide-y divide-black/5 dark:divide-white/5 overflow-hidden">
-          {!history || history.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-10 text-center text-[#122222]/40 dark:text-white/40">
-              <BellRing size={28} className="mb-2 opacity-40" />
-              <span className="text-[13px]">{t("notificationsPage.empty", "No notifications yet.")}</span>
-            </div>
-          ) : (
-            history.map((n) => (
-              <div
-                key={n.id}
-                onClick={() => {
-                  if (!n.is_read) handleMarkRead(n.id);
-                  if (n.link) navigate(n.link);
-                }}
-                className={`p-4 flex items-center gap-3 hover:bg-black/[0.02] dark:hover:bg-white/[0.03] transition-colors cursor-pointer ${!n.is_read ? "bg-[#b96f3e]/[0.04]" : ""}`}
-              >
-                <span className={`w-2 h-2 rounded-full shrink-0 ${!n.is_read ? "bg-[#b96f3e]" : "bg-transparent"}`} />
-                <div className="min-w-0 flex-1">
-                  <div className="font-bold text-[13px] text-[#122222] dark:text-white truncate">{n.title}</div>
-                  {n.body && <div className="text-[11px] text-[#122222]/60 dark:text-white/60 mt-0.5 truncate">{n.body}</div>}
-                </div>
-                <div className="text-[10px] text-[#122222]/40 dark:text-white/40 shrink-0">{formatDisplayDate(n.created_at)}</div>
+      {/* Summary Metric Pills */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+        {[
+          { label: t("notificationsPage.total", "Total"), val: rows.length, icon: Bell, color: "emerald" },
+          { label: t("notificationsPage.unread", "Unread"), val: unreadCount, icon: BellRing, color: "emerald" },
+          { label: t("notificationsPage.kindOverdue", "Overdue"), val: overdueList.length, icon: Clock, color: "red" },
+          { label: t("notificationsPage.kindReady", "Ready for Pickup"), val: readyReservations.length, icon: CalendarClock, color: "emerald" },
+        ].map((m) => {
+          const colorClass = m.color === "red" ? "text-red-500" : "text-emerald dark:text-emerald-light";
+          const bgLight = m.color === "red" ? "bg-red-500/10" : "bg-emerald/10 dark:bg-emerald-light/10";
+          return (
+            <div key={m.label} className="bg-white dark:bg-[#1d2926] border border-black/5 dark:border-white/5 p-3 rounded-2xl shadow-card flex items-center gap-3">
+              <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${bgLight}`}>
+                <m.icon size={18} className={colorClass} />
               </div>
-            ))
+              <div>
+                <div className="text-[11px] font-semibold text-[#122222]/50 dark:text-white/50 uppercase">{m.label}</div>
+                <div className="text-[16px] font-bold text-[#122222] dark:text-white">{m.val}</div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Main Panel */}
+      <div className="flex-1 bg-white dark:bg-[#1d2926] border border-black/5 dark:border-white/5 rounded-2xl flex flex-col shadow-card overflow-hidden">
+        {/* Toolbar */}
+        <div className="p-4 border-b border-black/5 dark:border-white/5 flex items-center gap-3 bg-[#fcfbf8] dark:bg-[#111d1a] flex-wrap">
+          <div className="flex-1 max-w-sm relative min-w-[200px]">
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#122222]/40" />
+            <input
+              type="text"
+              placeholder={t("notificationsPage.searchPlaceholder", "Search notifications...") as string}
+              value={term}
+              onChange={(e) => setTerm(e.target.value)}
+              className="w-full bg-white dark:bg-[#1d2926] border border-black/10 dark:border-white/10 rounded-xl py-2 pl-9 pr-3 text-[13px] text-[#122222] dark:text-[#f0ebe1] outline-none focus:border-emerald focus:ring-1 focus:ring-emerald"
+            />
+          </div>
+
+          <select
+            value={kindFilter}
+            onChange={(e) => setKindFilter(e.target.value as "all" | NotificationKind)}
+            className="bg-white dark:bg-[#1d2926] border border-black/10 dark:border-white/10 rounded-xl py-2 px-3 text-[13px] font-semibold text-[#122222]/70 dark:text-white/70 outline-none cursor-pointer hover:border-emerald/30 transition-colors"
+          >
+            <option value="all">{t("notificationsPage.allTypes", "All Types")}</option>
+            <option value="overdue">{t("notificationsPage.kindOverdue", "Overdue")}</option>
+            <option value="ready">{t("notificationsPage.kindReady", "Ready for Pickup")}</option>
+            <option value="system">{t("notificationsPage.kindSystem", "System")}</option>
+          </select>
+
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value as "all" | "unread")}
+            className="bg-white dark:bg-[#1d2926] border border-black/10 dark:border-white/10 rounded-xl py-2 px-3 text-[13px] font-semibold text-[#122222]/70 dark:text-white/70 outline-none cursor-pointer hover:border-emerald/30 transition-colors"
+          >
+            <option value="all">{t("notificationsPage.allStatus", "All Status")}</option>
+            <option value="unread">{t("notificationsPage.unread", "Unread")}</option>
+          </select>
+        </div>
+
+        {/* Table Area */}
+        <div className="flex-1 overflow-auto font-sans">
+          {isLoading ? (
+            <div className="flex items-center justify-center py-20 text-zinc-500 text-[13px]">
+              {t("notificationsPage.loading", "Loading notifications...")}
+            </div>
+          ) : filteredRows.length ? (
+            <table className="w-full text-left text-[13px]">
+              <thead className="bg-[#fcfbf8] dark:bg-[#111d1a] sticky top-0 border-b border-black/5 dark:border-white/5 text-[11px] font-bold text-[#122222]/50 dark:text-white/50 uppercase tracking-wider select-none">
+                <tr>
+                  <th className="px-6 py-3 w-10"></th>
+                  <th className="px-6 py-3">{t("notificationsPage.type", "Type")}</th>
+                  <th className="px-6 py-3">{t("notificationsPage.details", "Details")}</th>
+                  <th className="px-6 py-3">{t("notificationsPage.date", "Date")}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-black/5 dark:divide-white/5">
+                {filteredRows.map((row) => (
+                  <tr
+                    key={row.id}
+                    onClick={row.onOpen}
+                    className={`hover:bg-black/5 dark:hover:bg-white/5 transition-colors cursor-pointer ${!row.isRead ? "bg-[#b96f3e]/[0.03]" : ""}`}
+                  >
+                    <td className="px-6 py-3">
+                      <span className={`block w-2 h-2 rounded-full ${!row.isRead ? "bg-[#b96f3e]" : "bg-transparent"}`} />
+                    </td>
+                    <td className="px-6 py-3">
+                      <KindBadge kind={row.kind} t={t} />
+                    </td>
+                    <td className="px-6 py-3 max-w-md">
+                      <div className="font-bold text-[#122222] dark:text-white truncate" title={row.title}>{row.title}</div>
+                      {row.subtitle && <div className="text-[11px] text-[#122222]/60 dark:text-white/60 mt-0.5 truncate" title={row.subtitle}>{row.subtitle}</div>}
+                    </td>
+                    <td className="px-6 py-3 text-[#122222]/70 dark:text-white/70 whitespace-nowrap">{formatDisplayDate(row.date)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-20 text-center text-[#122222]/40 dark:text-white/40">
+              {rows.length === 0 ? <Bell size={40} className="mb-3 opacity-30" /> : <Info size={40} className="mb-3 opacity-30" />}
+              <p className="font-bold text-[14px]">{rows.length === 0 ? t("nav.allClear") : t("notificationsPage.noMatches", "No notifications match your filters")}</p>
+            </div>
           )}
         </div>
-      </section>
       </div>
     </div>
   );

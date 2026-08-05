@@ -11,10 +11,11 @@ import { Modal, Input, Button, StatusBadge, ItemTypeBadge } from "../components/
 import { toast } from "sonner";
 import { queryClient } from "../app/providers";
 import type { Copy, Room, Shelf } from "../types";
-import { FLOOR_SHELF_CODE, TOP_SHELF_CODES } from "../types";
+import { FLOOR_SHELF_CODE, shelfRowCodes } from "../types";
 import { useTranslation } from "react-i18next";
 import { cleanBarcode, cleanText } from "../utils/isbn";
 import { useUiStore } from "../store/uiStore";
+import { useLibrarySettingsStore } from "../store/librarySettingsStore";
 import {
   BookCopy, Trash2,
   ChevronLeft, ChevronRight, LayoutGrid, List, Search, RefreshCw,
@@ -105,6 +106,8 @@ export function InventoryPage() {
   const { t } = useTranslation();
   const { showContextMenu } = useContextMenu();
   const noShelvesSrc = useThemedAsset("no-shelves");
+  const shelfRowCount = useLibrarySettingsStore((s) => s.settings.shelf_row_count);
+  const availableRowCodes = useMemo(() => shelfRowCodes(shelfRowCount), [shelfRowCount]);
 
   const handleCopyContextMenu = (e: React.MouseEvent, copy: Copy & { title: string }) => {
     showContextMenu(e, [
@@ -139,7 +142,7 @@ export function InventoryPage() {
 
   const [manageRoomsOpen, setManageRoomsOpen] = useState(false);
   const [newColumnOpen, setNewColumnOpen] = useState(false);
-  const [newColumnRows, setNewColumnRows] = useState<string[]>([...TOP_SHELF_CODES]);
+  const [newColumnRows, setNewColumnRows] = useState<string[]>([...availableRowCodes]);
   const [editingShelf, setEditingShelf] = useState<Shelf | null>(null);
 
   const [scanInitOpen, setScanInitOpen] = useState(false);
@@ -245,7 +248,7 @@ export function InventoryPage() {
 
   const createColumnMutation = useMutation({
     mutationFn: (v: { roomId: string; rows: string[] }) => createColumn(v.roomId, v.rows),
-    onSuccess: () => { toast.success(t("inventory.columnCreated", "Column added.")); setNewColumnOpen(false); setNewColumnRows([...TOP_SHELF_CODES]); columnsQuery.refetch(); shelvesQuery.refetch(); },
+    onSuccess: () => { toast.success(t("inventory.columnCreated", "Column added.")); setNewColumnOpen(false); setNewColumnRows([...availableRowCodes]); columnsQuery.refetch(); shelvesQuery.refetch(); },
     onError: (err: any) => toast.error(err.message),
   });
 
@@ -443,15 +446,16 @@ export function InventoryPage() {
                   <button type="button" onClick={() => setNewColumnOpen(true)} className="bg-emerald text-white px-4 py-2 rounded-lg font-bold text-[12px] hover:bg-emerald/90 transition-all shadow-sm cursor-pointer">+ {t("inventory.addColumn", "Add Column")}</button>
                 </div>
               ) : (
-                <div className="space-y-5">
+                <div className="flex flex-wrap items-start gap-4">
                   {roomColumns.map(column => {
                     const columnShelves = roomShelves.filter(s => s.column_id === column.id);
-                    const topShelves = columnShelves.filter(s => s.shelf_type === "top");
+                    // Stack tallest letter at the top, down to A, then the ground/floor shelf at the very bottom — like a real bookcase.
+                    const topShelves = columnShelves.filter(s => s.shelf_type === "top").sort((a, b) => b.code.localeCompare(a.code));
                     const floorShelf = columnShelves.find(s => s.shelf_type === "floor");
                     const columnEmpty = columnShelves.every(s => s.copiesList.length === 0);
                     return (
-                      <div key={column.id} className="border border-black/8 dark:border-white/8 rounded-xl p-3.5">
-                        <div className="flex items-center justify-between mb-3">
+                      <div key={column.id} className="w-[172px] shrink-0 border border-black/8 dark:border-white/8 rounded-xl bg-[#fcfbf8] dark:bg-[#111d1a] p-2.5 flex flex-col gap-1">
+                        <div className="flex items-center justify-between px-0.5 mb-1">
                           <span className="text-[11px] font-bold uppercase tracking-wider text-[#122222]/50 dark:text-white/50">{t("inventory.columnLabel", "Column {{number}}", { number: column.number })}</span>
                           {columnEmpty && (
                             <button type="button" title={t("inventory.deleteColumn", "Delete Column") as string}
@@ -461,42 +465,41 @@ export function InventoryPage() {
                             </button>
                           )}
                         </div>
-                        {topShelves.length > 0 && (
-                          <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
-                            {topShelves.map(shelf => {
-                              const isSelected = selectedShelfId === shelf.id;
-                              const occupancy = shelf.capacity > 0 ? shelf.copiesList.length / shelf.capacity : 0;
-                              return (
-                                <div key={shelf.id} onClick={() => setSelectedShelfId(isSelected ? null : shelf.id)}
-                                  className={`relative bg-white dark:bg-[#1d2926] border rounded-lg pt-1.5 px-1.5 pb-1.5 text-center flex flex-col items-center justify-between transition-all cursor-pointer hover:shadow-md hover:scale-[1.02] ${isSelected ? "ring-2 ring-[#b96f3e] border-[#b96f3e]/30 scale-[1.03] shadow-md" : "border-black/8 dark:border-white/8"}`}>
-                                  <div className="w-full"><ShelfSvgVisual copiesList={shelf.copiesList} capacity={shelf.capacity} /></div>
-                                  <div className="font-bold text-[12px] mt-1 text-[#122222] dark:text-white tracking-wide">{t("inventory.shelfLetter", "Shelf {{code}}", { code: shelf.code })}</div>
-                                  <div className="flex items-center gap-1 mt-0.5 justify-center">
-                                    <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: occupancyColor(occupancy) }} />
-                                    <span className="text-[9px] text-[#122222]/50 dark:text-white/50 font-bold">{shelf.copiesList.length}/{shelf.capacity}</span>
-                                  </div>
+
+                        {topShelves.map(shelf => {
+                          const isSelected = selectedShelfId === shelf.id;
+                          const occupancy = shelf.capacity > 0 ? shelf.copiesList.length / shelf.capacity : 0;
+                          return (
+                            <div key={shelf.id} onClick={() => setSelectedShelfId(isSelected ? null : shelf.id)}
+                              className={`flex items-center gap-2.5 rounded-lg px-2 py-1.5 cursor-pointer transition-all border ${isSelected ? "ring-2 ring-[#b96f3e] border-[#b96f3e]/30 bg-white dark:bg-[#1d2926] shadow-sm" : "border-transparent hover:bg-white dark:hover:bg-white/5"}`}>
+                              <div className="w-10 shrink-0"><ShelfSvgVisual copiesList={shelf.copiesList} capacity={shelf.capacity} /></div>
+                              <div className="min-w-0 flex-1">
+                                <div className="font-bold text-[12px] text-[#122222] dark:text-white tracking-wide">{t("inventory.shelfLetter", "Shelf {{code}}", { code: shelf.code })}</div>
+                                <div className="flex items-center gap-1 mt-0.5">
+                                  <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: occupancyColor(occupancy) }} />
+                                  <span className="text-[9px] text-[#122222]/50 dark:text-white/50 font-bold">{shelf.copiesList.length}/{shelf.capacity}</span>
                                 </div>
-                              );
-                            })}
-                          </div>
-                        )}
+                              </div>
+                            </div>
+                          );
+                        })}
 
                         {floorShelf && (() => {
                           const isSelected = selectedShelfId === floorShelf.id;
                           const occupancy = floorShelf.capacity > 0 ? floorShelf.copiesList.length / floorShelf.capacity : 0;
                           return (
                             <div onClick={() => setSelectedShelfId(isSelected ? null : floorShelf.id)}
-                              className={`mt-3 relative bg-[#f4ebdd]/40 dark:bg-[#1a2522] border-2 rounded-xl p-4 flex items-center gap-4 cursor-pointer transition-all hover:shadow-md ${isSelected ? "ring-2 ring-[#b96f3e] border-[#b96f3e]/40" : "border-black/10 dark:border-white/10"}`}>
-                              <div className="w-20 shrink-0"><ShelfSvgVisual copiesList={floorShelf.copiesList} capacity={floorShelf.capacity} /></div>
-                              <div className="flex-1">
-                                <div className="font-bold text-[14px] flex items-center gap-2">
-                                  <span className="text-[18px] leading-none">{FLOOR_SHELF_CODE}</span> {t("inventory.floorShelf", "Floor shelf")}
+                              title={t("inventory.floorShelfHint", "The library's oversized floor-level shelf — larger capacity than a lettered shelf.") as string}
+                              className={`mt-1 flex items-center gap-2.5 rounded-lg px-2 py-2 cursor-pointer transition-all border-2 ${isSelected ? "ring-2 ring-[#b96f3e] border-[#b96f3e]/40 bg-[#f4ebdd]/70 dark:bg-[#1a2522]" : "border-black/10 dark:border-white/10 bg-[#f4ebdd]/40 dark:bg-[#1a2522] hover:bg-[#f4ebdd]/60"}`}>
+                              <div className="w-10 shrink-0"><ShelfSvgVisual copiesList={floorShelf.copiesList} capacity={floorShelf.capacity} /></div>
+                              <div className="min-w-0 flex-1">
+                                <div className="font-bold text-[11px] text-[#122222] dark:text-white flex items-center gap-1">
+                                  <span className="text-[13px] leading-none">{FLOOR_SHELF_CODE}</span> {t("inventory.floorShelf", "Floor shelf")}
                                 </div>
-                                <div className="text-[11px] text-[#122222]/50 dark:text-white/50 mt-0.5">{t("inventory.floorShelfHint", "The library's oversized floor-level shelf — larger capacity than a lettered shelf.")}</div>
-                              </div>
-                              <div className="flex items-center gap-1.5 shrink-0">
-                                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: occupancyColor(occupancy) }} />
-                                <span className="text-[12px] font-bold text-[#122222]/60 dark:text-white/60">{floorShelf.copiesList.length}/{floorShelf.capacity}</span>
+                                <div className="flex items-center gap-1 mt-0.5">
+                                  <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: occupancyColor(occupancy) }} />
+                                  <span className="text-[9px] text-[#122222]/60 dark:text-white/60 font-bold">{floorShelf.copiesList.length}/{floorShelf.capacity}</span>
+                                </div>
                               </div>
                             </div>
                           );
@@ -666,9 +669,9 @@ export function InventoryPage() {
           <form onSubmit={e => { e.preventDefault(); if (newColumnRows.length === 0) { toast.warning(t("inventory.selectRowsWarning", "Select at least one row.") as string); return; } createColumnMutation.mutate({ roomId: selectedRoomId, rows: newColumnRows }); }} className="space-y-4 text-[13px]">
             <p className="text-[12px] text-[#122222]/60">{t("inventory.addColumnHint", "Adds a new bookshelf column to {{room}} with a floor shelf plus the rows you choose.", { room: selectedRoom?.name })}</p>
             <div>
-              <label className="text-[11px] font-bold text-[#122222]/60 uppercase block mb-2">{t("inventory.columnRows", "Shelf rows (A–F)")}</label>
+              <label className="text-[11px] font-bold text-[#122222]/60 uppercase block mb-2">{t("inventory.columnRows", "Shelf rows (A–{{last}})", { last: availableRowCodes[availableRowCodes.length - 1] })}</label>
               <div className="flex flex-wrap gap-2">
-                {TOP_SHELF_CODES.map(row => {
+                {availableRowCodes.map(row => {
                   const checked = newColumnRows.includes(row);
                   return (
                     <button key={row} type="button" onClick={() => setNewColumnRows(prev => checked ? prev.filter(r => r !== row) : [...prev, row].sort())}
