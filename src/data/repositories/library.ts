@@ -1,6 +1,6 @@
 import { supabase, unwrap } from "../supabaseClient";
 import { currentActor } from "../../store/authStore";
-import type { Book, Copy, DashboardMetrics, Loan, Member, Reservation, Room, Column, Shelf, ReservationScope } from "../../types";
+import type { Book, Copy, DashboardMetrics, Loan, Member, Reservation, Room, Column, Shelf, ReservationScope, AppNotification } from "../../types";
 import {
   normalizeIsbn, cleanBarcode, cleanAccession,
   cleanPhone, cleanText, cleanMemberNumber, generateRandomMemberNumber
@@ -415,6 +415,18 @@ export async function auditLog(limit = 500) {
   return unwrap(await supabase.from("audit_logs").select("*").order("created_at", { ascending: false }).limit(limit));
 }
 
+export async function notifications(limit = 100): Promise<AppNotification[]> {
+  return unwrap(await supabase.from("notifications").select("*").order("created_at", { ascending: false }).limit(limit)) as AppNotification[];
+}
+
+export async function markNotificationRead(notificationId: string): Promise<void> {
+  await supabase.from("notifications").update({ is_read: true }).eq("id", notificationId);
+}
+
+export async function markAllNotificationsRead(): Promise<void> {
+  await supabase.from("notifications").update({ is_read: true }).eq("is_read", false);
+}
+
 export async function getRooms(): Promise<Room[]> {
   return unwrap(await supabase.from("rooms").select("*").order("name")) as Room[];
 }
@@ -469,6 +481,15 @@ export async function getShelves(): Promise<Shelf[]> {
   return unwrap(await supabase.from("shelf_overview").select("*").order("room").order("column_number").order("shelf_type", { ascending: false }).order("code")) as Shelf[];
 }
 
+/** Adds a single lettered row to an existing bookcase column — used to fill an empty slot in the shelf grid. */
+export async function createShelf(columnId: string, code: string, capacity = 40): Promise<string> {
+  const shelf = unwrap<{ id: string }>(await supabase.from("shelves").insert({
+    column_id: columnId, shelf_type: "top", code: code.toUpperCase(), capacity,
+  }).select("id").single());
+  await audit("create_shelf", "shelf", shelf.id, { column_id: columnId, code, capacity });
+  return shelf.id;
+}
+
 export async function updateShelf(shelfId: string, updates: { capacity?: number; notes?: string | null }): Promise<void> {
   const patch: Record<string, unknown> = {};
   if (updates.capacity !== undefined) patch.capacity = updates.capacity;
@@ -476,4 +497,72 @@ export async function updateShelf(shelfId: string, updates: { capacity?: number;
   if (Object.keys(patch).length === 0) return;
   await supabase.from("shelves").update(patch).eq("id", shelfId);
   await audit("update_shelf", "shelf", shelfId, updates);
+}
+
+/**
+ * Table order matters twice over: export just needs every table, but import/delete must
+ * respect foreign keys — parents before children on the way in, children before parents
+ * on the way out. Keep this the single source of truth for both directions (delete uses
+ * it reversed) instead of re-deriving the dependency order elsewhere.
+ */
+const BACKUP_TABLES = [
+  "rooms", "columns", "shelves", "publishers", "categories", "authors", "tags",
+  "members", "books", "book_authors", "book_tags", "copies", "reservations", "loans",
+] as const;
+
+/** Most backup tables have a plain `id` PK; these two junction tables use a composite key instead. */
+const BACKUP_TABLE_KEYS: Partial<Record<(typeof BACKUP_TABLES)[number], string>> = {
+  book_authors: "book_id,author_id",
+  book_tags: "book_id,tag_id",
+};
+
+export interface LibraryBackup {
+  _version: 1;
+  _exported_at: string;
+  tables: Partial<Record<(typeof BACKUP_TABLES)[number], unknown[]>>;
+}
+
+export async function exportLibraryBackup(): Promise<LibraryBackup> {
+  const tables: LibraryBackup["tables"] = {};
+  for (const table of BACKUP_TABLES) {
+    tables[table] = unwrap(await supabase.from(table).select("*")) as unknown[];
+  }
+  return { _version: 1, _exported_at: timestamp(), tables };
+}
+
+/** Restores a backup produced by exportLibraryBackup(), preserving original row IDs so foreign keys stay intact. */
+export async function importLibraryBackup(backup: LibraryBackup): Promise<Record<string, number>> {
+  const counts: Record<string, number> = {};
+  const CHUNK_SIZE = 500;
+  for (const table of BACKUP_TABLES) {
+    const rows = backup.tables?.[table];
+    if (!Array.isArray(rows) || rows.length === 0) { counts[table] = 0; continue; }
+    for (let i = 0; i < rows.length; i += CHUNK_SIZE) {
+      const chunk = rows.slice(i, i + CHUNK_SIZE);
+      unwrap(await supabase.from(table).upsert(chunk, { onConflict: BACKUP_TABLE_KEYS[table] ?? "id" }));
+    }
+    counts[table] = rows.length;
+  }
+  await audit("import_backup", "library", "backup", counts);
+  return counts;
+}
+
+/** Wipes every row from every backed-up table, in FK-safe (children-first) order. Irreversible — call only after a verified export. */
+export async function deleteAllLibraryData(): Promise<Record<string, number>> {
+  const counts: Record<string, number> = {};
+  for (const table of [...BACKUP_TABLES].reverse()) {
+    const { count } = await supabase.from(table).select("*", { count: "exact", head: true });
+    const key = BACKUP_TABLE_KEYS[table];
+    if (key) {
+      // composite-key junction tables have nothing to filter on that's guaranteed non-null
+      // for an "all rows" delete other than the key columns themselves
+      const [colA] = key.split(",");
+      await supabase.from(table).delete().not(colA, "is", null);
+    } else {
+      await supabase.from(table).delete().not("id", "is", null);
+    }
+    counts[table] = count ?? 0;
+  }
+  await audit("delete_all_library_data", "library", "wipe", counts);
+  return counts;
 }
