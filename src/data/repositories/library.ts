@@ -481,12 +481,17 @@ export async function getShelves(): Promise<Shelf[]> {
   return unwrap(await supabase.from("shelf_overview").select("*").order("room").order("column_number").order("shelf_type", { ascending: false }).order("code")) as Shelf[];
 }
 
-/** Adds a single lettered row to an existing bookcase column — used to fill an empty slot in the shelf grid. */
-export async function createShelf(columnId: string, code: string, capacity = 40): Promise<string> {
+/** Adds a single shelf to an existing bookcase column — used to fill an empty slot in the shelf grid. */
+export async function createShelf(
+  columnId: string,
+  code: string,
+  shelfType: "top" | "floor" = "top",
+  capacity = shelfType === "floor" ? 120 : 40,
+): Promise<string> {
   const shelf = unwrap<{ id: string }>(await supabase.from("shelves").insert({
-    column_id: columnId, shelf_type: "top", code: code.toUpperCase(), capacity,
+    column_id: columnId, shelf_type: shelfType, code: code.toUpperCase(), capacity,
   }).select("id").single());
-  await audit("create_shelf", "shelf", shelf.id, { column_id: columnId, code, capacity });
+  await audit("create_shelf", "shelf", shelf.id, { column_id: columnId, code, shelf_type: shelfType, capacity });
   return shelf.id;
 }
 

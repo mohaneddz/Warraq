@@ -212,10 +212,18 @@ export function InventoryPage() {
    */
   const shelfGrid = useMemo(() => {
     const byColumnAndCode = new Map<string, typeof roomShelves[number]>();
+    const groundByColumn = new Map<string, typeof roomShelves[number]>();
     const usedLetters = new Set<string>();
     for (const s of roomShelves) {
-      byColumnAndCode.set(`${s.column_id}:${s.code.toUpperCase()}`, s);
-      if (s.shelf_type === "top") usedLetters.add(s.code.toUpperCase());
+      // The ground row is identified by shelf_type, never by its code: older libraries store it
+      // as a "⬤" glyph and only get renamed to "S" once migration 0016 runs, and matching on the
+      // label would leave the whole bottom row of the grid empty until then.
+      if (s.shelf_type === "floor") {
+        groundByColumn.set(s.column_id, s);
+      } else {
+        byColumnAndCode.set(`${s.column_id}:${s.code.toUpperCase()}`, s);
+        usedLetters.add(s.code.toUpperCase());
+      }
     }
     // Show every configured row plus any legacy row that exists beyond the current setting,
     // so lowering the setting never hides shelves that still hold copies.
@@ -223,7 +231,10 @@ export function InventoryPage() {
     const ordered = rowOrder === "desc" ? [...letters].reverse() : letters;
     return {
       rows: [...ordered, FLOOR_SHELF_CODE],
-      shelfAt: (columnId: string, code: string) => byColumnAndCode.get(`${columnId}:${code.toUpperCase()}`),
+      shelfAt: (columnId: string, code: string) =>
+        code === FLOOR_SHELF_CODE
+          ? groundByColumn.get(columnId)
+          : byColumnAndCode.get(`${columnId}:${code.toUpperCase()}`),
     };
   }, [roomShelves, availableRowCodes, rowOrder]);
 
@@ -279,7 +290,8 @@ export function InventoryPage() {
   });
 
   const createShelfMutation = useMutation({
-    mutationFn: (v: { columnId: string; code: string }) => createShelf(v.columnId, v.code),
+    mutationFn: (v: { columnId: string; code: string }) =>
+      createShelf(v.columnId, v.code, v.code === FLOOR_SHELF_CODE ? "floor" : "top"),
     onSuccess: () => { toast.success(t("inventory.shelfAdded", "Shelf added.")); shelvesQuery.refetch(); },
     onError: (err: any) => toast.error(err.message),
   });
@@ -534,12 +546,12 @@ export function InventoryPage() {
                             return (
                               <div key={column.id} className="px-0.5">
                                 <button type="button"
-                                  disabled={isGround || createShelfMutation.isPending}
+                                  disabled={createShelfMutation.isPending}
                                   onClick={() => createShelfMutation.mutate({ columnId: column.id, code: rowCode })}
-                                  title={isGround ? undefined : (t("inventory.addShelfAt", "Add shelf {{code}}", { code: cellCode }) as string)}
+                                  title={t("inventory.addShelfAt", "Add shelf {{code}}", { code: cellCode }) as string}
                                   className="w-full border border-dashed border-black/10 dark:border-white/10 rounded-lg flex flex-col items-center justify-center text-center transition-all group enabled:hover:border-emerald/50 enabled:hover:bg-emerald/5 enabled:cursor-pointer disabled:opacity-40"
                                   style={{ minHeight: "88px" }}>
-                                  {!isGround && <PlusCircle size={13} className="text-[#122222]/15 dark:text-white/15 group-hover:text-emerald transition-colors" />}
+                                  <PlusCircle size={13} className="text-[#122222]/15 dark:text-white/15 group-hover:text-emerald transition-colors" />
                                   <span className="text-[9px] font-mono text-[#122222]/20 dark:text-white/20 mt-1">{cellCode}</span>
                                 </button>
                               </div>
