@@ -8,6 +8,11 @@ export type ShelfType = "floor" | "top";
 /** The floor shelf's distinguishing glyph — bigger than a lettered shelf, one per room. */
 export const FLOOR_SHELF_CODE = "⬤";
 export const TOP_SHELF_CODES = ["A", "B", "C", "D", "E", "F"] as const;
+/** Generates the lettered row codes (A, B, C…) for a bookcase column, sized to the library's configured row count. */
+export function shelfRowCodes(count: number): string[] {
+  const n = Math.max(1, Math.min(20, count || TOP_SHELF_CODES.length));
+  return Array.from({ length: n }, (_, i) => String.fromCharCode(65 + i));
+}
 
 export type UserRole = "admin" | "staff";
 export type UserStatus = "active" | "disabled";
@@ -140,6 +145,7 @@ export interface LibrarySettings {
   notify_due_soon: boolean;
   notify_due_soon_days: number;
   notify_ready: boolean;
+  shelf_row_count: number;
   updated_at: string;
 }
 

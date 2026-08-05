@@ -5,7 +5,7 @@ import {
   Search, Clock, Trash2, Plus,
   UserCheck, UserPlus, BookOpen, Calendar, CheckCircle2, ChevronRight,
   Layers, Tag, MapPin, Hash, XCircle, Eye, Copy as CopyIcon, Ban, Globe, Building2,
-  Pencil, Check, X as XIcon
+  Pencil, Check, X as XIcon, MoreVertical
 } from "lucide-react";
 import { useContextMenu } from "../components/ui/ContextMenu";
 
@@ -738,6 +738,7 @@ function ReservationDetailsModal({
   isSaving: boolean;
 }) {
   const { t } = useTranslation();
+  const { showContextMenu } = useContextMenu();
   const [isEditingExpiry, setIsEditingExpiry] = useState(false);
   const [expiryDraft, setExpiryDraft] = useState("");
 
@@ -822,8 +823,8 @@ function ReservationDetailsModal({
                     className="w-20 h-28 object-cover rounded-xl shadow border border-black/10 dark:border-white/10 shrink-0"
                   />
                 ) : (
-                  <div className="w-20 h-28 bg-black/5 dark:bg-white/5 rounded-xl border border-black/10 dark:border-white/10 flex items-center justify-center text-[#122222]/40 shrink-0">
-                    <BookOpen size={32} />
+                  <div className="w-20 h-28 bg-[#f4ebdd] dark:bg-[#1a2522] rounded-xl border border-black/10 dark:border-white/10 flex items-center justify-center text-[#122222]/40 dark:text-white/40 shrink-0 shadow-sm">
+                    <BookOpen size={28} />
                   </div>
                 )}
 
@@ -943,13 +944,13 @@ function ReservationDetailsModal({
         </div>
 
         {/* Footer Actions (fixed, same position across all reservation states) */}
-        <div className="pt-4 mt-4 border-t border-black/10 dark:border-white/10 flex items-center justify-between flex-wrap gap-3 shrink-0">
+        <div className="pt-4 mt-4 border-t border-black/10 dark:border-white/10 flex items-center justify-between gap-3 shrink-0">
           <div className="flex items-center gap-2 flex-wrap">
             {reservation.status === 'pending' && (
               <>
                 <Button
                   type="button"
-                  className="bg-emerald text-white hover:bg-emerald/90 text-[12px] flex items-center gap-1.5 cursor-pointer"
+                  className="text-[12px] flex items-center gap-1.5 cursor-pointer"
                   onClick={() => { onAccept(reservation.id); onClose(); }}
                 >
                   <CheckCircle2 size={14} />
@@ -957,8 +958,8 @@ function ReservationDetailsModal({
                 </Button>
                 <Button
                   type="button"
-                  variant="secondary"
-                  className="text-red-600 hover:text-red-700 border-red-200 hover:border-red-300 text-[12px] flex items-center gap-1.5 cursor-pointer"
+                  variant="danger"
+                  className="text-[12px] flex items-center gap-1.5 cursor-pointer"
                   onClick={() => { onDecline(reservation.id); onClose(); }}
                 >
                   <XCircle size={14} />
@@ -971,7 +972,7 @@ function ReservationDetailsModal({
               <Button
                 type="button"
                 variant="secondary"
-                className="text-amber-700 border-amber-300 hover:bg-amber-50 text-[12px] flex items-center gap-1.5 cursor-pointer"
+                className="text-amber-700 dark:text-amber-400 text-[12px] flex items-center gap-1.5 cursor-pointer"
                 onClick={() => onExtend(reservation.id)}
               >
                 <Calendar size={14} />
@@ -983,42 +984,45 @@ function ReservationDetailsModal({
               <Button
                 type="button"
                 variant="secondary"
-                className="text-orange-600 hover:text-orange-700 border-orange-200 hover:border-orange-300 text-[12px] cursor-pointer"
+                className="text-orange-700 dark:text-orange-400 text-[12px] cursor-pointer"
                 onClick={() => { onCancel(reservation.id); onClose(); }}
               >
                 {t("reservations.cancelReservation", "Cancel Reservation")}
               </Button>
             )}
-
-            <div className="w-px h-6 bg-black/10 dark:bg-white/10 mx-1" />
-
-            <Button
-              type="button"
-              variant="secondary"
-              className="text-red-600 hover:text-red-700 border-red-200 hover:border-red-300 text-[12px] flex items-center gap-1.5 cursor-pointer"
-              onClick={() => {
-                const reason = prompt(t("reservations.banReasonPrompt", "Reason for banning this member:") as string);
-                if (reason && reason.trim()) { onBan(reservation.member_id, reason.trim()); onClose(); }
-              }}
-            >
-              <Ban size={14} />
-              {t("reservations.banMember", "Ban Member")}
-            </Button>
-
-            <Button
-              type="button"
-              variant="secondary"
-              className="text-red-600 hover:text-red-700 border-red-200 hover:border-red-300 text-[12px] flex items-center gap-1.5 cursor-pointer"
-              onClick={() => { onDelete(reservation.id); onClose(); }}
-            >
-              <Trash2 size={14} />
-              {t("reservations.deletePermanently", "Delete Permanently")}
-            </Button>
           </div>
 
-          <Button type="button" onClick={onClose}>
-            {t("common.close", "Close")}
-          </Button>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              aria-label={t("reservations.moreActions", "More actions") as string}
+              onClick={(e) => showContextMenu(e, [
+                {
+                  id: "ban-member",
+                  label: t("reservations.banMember", "Ban Member"),
+                  icon: Ban,
+                  variant: "danger",
+                  onClick: () => {
+                    const reason = prompt(t("reservations.banReasonPrompt", "Reason for banning this member:") as string);
+                    if (reason && reason.trim()) { onBan(reservation.member_id, reason.trim()); onClose(); }
+                  },
+                },
+                {
+                  id: "delete-permanently",
+                  label: t("reservations.deletePermanently", "Delete Permanently"),
+                  icon: Trash2,
+                  variant: "danger",
+                  onClick: () => { onDelete(reservation.id); onClose(); },
+                },
+              ], { title: t("reservations.detailsModal.title") || "Reservation Details" })}
+              className="w-9 h-9 flex items-center justify-center rounded-control text-[#122222]/50 dark:text-white/50 hover:bg-black/5 dark:hover:bg-white/10 hover:text-red-600 transition-colors cursor-pointer"
+            >
+              <MoreVertical size={16} />
+            </button>
+            <Button type="button" variant="secondary" onClick={onClose}>
+              {t("common.close", "Close")}
+            </Button>
+          </div>
         </div>
       </div>
     </Modal>

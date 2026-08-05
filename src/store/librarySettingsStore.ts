@@ -28,6 +28,7 @@ const defaults: LibrarySettings = {
   notify_due_soon: true,
   notify_due_soon_days: 2,
   notify_ready: true,
+  shelf_row_count: 6,
   updated_at: "",
 };
 
