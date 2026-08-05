@@ -3,10 +3,10 @@ import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import { useUiStore } from "../../store/uiStore";
 import { useTranslation } from "react-i18next";
-import { 
+import {
   BookOpen, CalendarClock, ClipboardList, Cog, LayoutDashboard, Search,
   Users, Warehouse, Moon, Sun, Plus,
-  Globe, Shield, Database, Zap, BookMarked
+  Globe, Shield, Database, Zap, BookMarked, Bell
 } from "lucide-react";
 
 export function CommandPalette() {
@@ -38,6 +38,7 @@ export function CommandPalette() {
     { label: t("nav.inventory") || "Inventory", subtitle: t("commandPalette.subtitles.inventory"), route: "/inventory", icon: Warehouse },
     { label: t("nav.reports") || "Reports", subtitle: t("commandPalette.subtitles.reports"), route: "/reports", icon: ClipboardList },
     { label: t("nav.activity") || "Activity", subtitle: t("commandPalette.subtitles.activity"), route: "/activity", icon: ClipboardList },
+    { label: t("nav.notifications") || "Notifications", subtitle: t("commandPalette.subtitles.notifications"), route: "/notifications", icon: Bell },
     { label: t("nav.settings") || "Settings", subtitle: t("commandPalette.subtitles.settings"), route: "/settings", icon: Cog },
 
     // Quick Actions
@@ -76,12 +77,12 @@ export function CommandPalette() {
         className="w-full max-w-xl overflow-hidden rounded-2xl bg-white dark:bg-[#1d2926] border border-black/5 dark:border-white/10 shadow-2xl flex flex-col"
         onMouseDown={(e) => e.stopPropagation()}
       >
-        <Command.Input 
-          autoFocus 
-          placeholder={t("commandPalette.placeholder") || "Search pages and actions..."} 
-          className="w-full border-b border-black/5 dark:border-white/5 p-4 outline-none text-[14px] text-[#122222] dark:text-white placeholder:text-[#122222]/40 dark:placeholder:white/40"
+        <Command.Input
+          autoFocus
+          placeholder={t("commandPalette.placeholder") || "Search pages and actions..."}
+          className="relative z-10 w-full border-b border-black/5 dark:border-white/5 p-4 outline-none focus:outline-none focus-visible:outline-none text-[14px] text-[#122222] dark:text-white placeholder:text-[#122222]/40 dark:placeholder:white/40"
         />
-        <Command.List className="max-h-96 overflow-y-auto p-2 no-scrollbar">
+        <Command.List className="max-h-96 overflow-y-auto p-2 pt-3 no-scrollbar">
           <Command.Empty className="p-4 text-sm text-[#122222]/60 dark:text-white/60">
             {t("commandPalette.empty") || "No matching command."}
           </Command.Empty>
@@ -99,16 +100,16 @@ export function CommandPalette() {
                   setPaletteOpen(false); 
                 }}
               >
-                <div className={`flex items-center gap-3 ${isRtl ? "flex-row-reverse" : ""}`}>
-                  <span className="w-7 h-7 rounded-lg bg-black/5 dark:bg-white/5 flex items-center justify-center text-[#122222]/60 dark:text-white/60 group-hover:bg-[#1a4d40]/20 group-hover:text-[#1a4d40] dark:group-hover:bg-[#1b9277]/20 dark:group-hover:text-[#1b9277] transition-colors">
+                <div className={`flex items-center gap-3 min-w-0 ${isRtl ? "flex-row-reverse" : ""}`}>
+                  <span className="w-7 h-7 shrink-0 rounded-lg bg-black/5 dark:bg-white/5 flex items-center justify-center text-[#122222]/60 dark:text-white/60 group-hover:bg-[#1a4d40]/20 group-hover:text-[#1a4d40] dark:group-hover:bg-[#1b9277]/20 dark:group-hover:text-[#1b9277] transition-colors">
                     <Icon size={15} />
                   </span>
-                  <div className={`flex flex-col ${isRtl ? "items-end" : "items-start"}`}>
-                    <span className="leading-tight">{item.label}</span>
-                    <span className="text-[10px] text-[#122222]/40 dark:text-white/40 font-medium leading-tight mt-0.5">{item.subtitle}</span>
+                  <div className={`flex flex-col min-w-0 ${isRtl ? "items-end" : "items-start"}`}>
+                    <span className="leading-tight truncate max-w-full">{item.label}</span>
+                    <span className="text-[10px] text-[#122222]/40 dark:text-white/40 font-medium leading-tight mt-0.5 truncate max-w-full">{item.subtitle}</span>
                   </div>
                 </div>
-                <span className="text-[10px] opacity-40 font-mono">{t("commandPalette.action") || "Action"}</span>
+                <span className="text-[10px] opacity-40 font-mono shrink-0 whitespace-nowrap">{t("commandPalette.action") || "Action"}</span>
               </Command.Item>
             );
           })}

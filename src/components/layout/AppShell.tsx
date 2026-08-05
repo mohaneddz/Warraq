@@ -142,6 +142,13 @@ export function AppShell() {
 
   const totalNotificationsCount = overdueCount + readyReservations.length;
 
+  const notificationPreview = [
+    ...overdueList.map((loan) => ({ kind: "overdue" as const, item: loan, date: loan.due_at })),
+    ...readyReservations.map((res) => ({ kind: "ready" as const, item: res, date: res.reserved_at || res.requested_at })),
+  ]
+    .sort((a, b) => new Date(b.date).valueOf() - new Date(a.date).valueOf())
+    .slice(0, 3);
+
   // ── Theme ────────────────────────────────────────────────────────────────────
   useEffect(() => {
     const applyTheme = () => {
@@ -337,18 +344,21 @@ export function AppShell() {
 
       <div className="flex flex-1 overflow-hidden relative">
         {/* Sidebar */}
-        <aside className={(sidebarOpen ? "" : "w-[80px]") + " relative shrink-0 text-white flex flex-col z-40 overflow-hidden " + (isDragging ? "" : "transition-[width]")} style={{ width: sidebarOpen ? `${sidebarWidth}px` : "80px", background: '#122222' }}>
+        <aside className={(sidebarOpen ? "" : "w-[80px]") + " relative shrink-0 text-white flex flex-col z-40 " + (isDragging ? "" : "transition-[width]")} style={{ width: sidebarOpen ? `${sidebarWidth}px` : "80px", background: '#122222' }}>
 
-          {/* Decorative geometric watermark, anchored to the sidebar's bottom corner */}
-          <img
-            src="/assets/warraq-sidebar-pattern-dark.png"
-            alt=""
-            aria-hidden="true"
-            className={`absolute bottom-0 w-full h-auto opacity-[0.16] mix-blend-screen pointer-events-none select-none ${preferences.locale === "ar" ? "right-0 scale-x-[-1]" : "left-0"}`}
-          />
+          {/* Decorative layer, clipped to the sidebar bounds so it doesn't affect popovers that need to overflow */}
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            {/* Decorative geometric watermark, anchored to the sidebar's bottom corner */}
+            <img
+              src="/assets/warraq-sidebar-pattern-dark.png"
+              alt=""
+              aria-hidden="true"
+              className={`absolute bottom-0 w-full h-auto opacity-[0.16] mix-blend-screen select-none ${preferences.locale === "ar" ? "right-0 scale-x-[-1]" : "left-0"}`}
+            />
 
-          {/* Decorative Book Spine Pattern */}
-          <div className="absolute top-0 right-0 bottom-0 w-[24px] opacity-100 pointer-events-none" style={{ background: 'url("data:image/svg+xml,%3Csvg width=\'24\' height=\'60\' viewBox=\'0 0 24 60\' fill=\'none\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cpath d=\'M24 0H20C15.5817 0 12 3.58172 12 8V22C12 26.4183 8.41828 30 4 30C8.41828 30 12 33.5817 12 38V52C12 56.4183 15.5817 60 20 60H24V0Z\' fill=\'%23c5a059\' fill-opacity=\'0.85\'/%3E%3C/svg%3E") repeat-y' }}></div>
+            {/* Decorative Book Spine Pattern */}
+            <div className="absolute top-0 right-0 bottom-0 w-[24px] opacity-100" style={{ background: 'url("data:image/svg+xml,%3Csvg width=\'24\' height=\'60\' viewBox=\'0 0 24 60\' fill=\'none\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cpath d=\'M24 0H20C15.5817 0 12 3.58172 12 8V22C12 26.4183 8.41828 30 4 30C8.41828 30 12 33.5817 12 38V52C12 56.4183 15.5817 60 20 60H24V0Z\' fill=\'%23c5a059\' fill-opacity=\'0.85\'/%3E%3C/svg%3E") repeat-y' }}></div>
+          </div>
 
           {/* Resize Handle */}
           {sidebarOpen && (
@@ -404,11 +414,11 @@ export function AppShell() {
                 <NavLink 
                   key={to} 
                   to={to} 
-                  className={({ isActive }) => 
+                  className={({ isActive }) =>
                     sidebarOpen
-                      ? `flex items-center gap-3.5 rounded-lg px-3 py-3 text-[14px] font-medium transition-all duration-200 ${isActive ? "bg-gradient-to-r from-[#b96f3e] to-[#a05b2e] text-white shadow-md shadow-[#b96f3e]/20" : "text-white/60 hover:bg-white/5 hover:text-white"}`
-                      : `w-10 h-10 rounded-xl flex items-center justify-center text-[14px] font-medium transition-all duration-200 shrink-0 ${isActive ? "bg-gradient-to-r from-[#b96f3e] to-[#a05b2e] text-white shadow-md shadow-[#b96f3e]/20" : "text-white/60 hover:bg-white/5 hover:text-white"}`
-                  } 
+                      ? `flex items-center gap-3.5 rounded-lg px-3 py-3 text-[14px] font-medium transition-all duration-200 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#b96f3e] ${isActive ? "bg-gradient-to-r from-[#b96f3e] to-[#a05b2e] text-white shadow-md shadow-[#b96f3e]/20" : "text-white/60 hover:bg-white/5 hover:text-white"}`
+                      : `w-10 h-10 rounded-xl flex items-center justify-center text-[14px] font-medium transition-all duration-200 shrink-0 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#b96f3e] ${isActive ? "bg-gradient-to-r from-[#b96f3e] to-[#a05b2e] text-white shadow-md shadow-[#b96f3e]/20" : "text-white/60 hover:bg-white/5 hover:text-white"}`
+                  }
                   title={!sidebarOpen ? t("nav." + label.toLowerCase()) : undefined}
                 >
                   {({ isActive }) => (
@@ -554,7 +564,7 @@ export function AppShell() {
                 className="w-full bg-[#F9F8F4] dark:bg-[#111d1a] border border-black/5 dark:border-white/5 rounded-full py-2.5 pl-11 pr-14 text-[14px] text-[#122222] dark:text-[#f0ebe1] outline-none focus:ring-2 focus:ring-emerald/20 transition-all" 
                 onKeyDown={(e) => { if (e.key === "Enter") navigate("/catalog?q=" + encodeURIComponent(e.currentTarget.value)); }}
               />
-              <div className="absolute right-3 flex items-center justify-center w-8 h-6 bg-white dark:bg-[#1d2926] border border-black/10 dark:border-white/10 rounded text-[11px] font-medium text-[#122222]/60 dark:text-white/60 cursor-pointer shadow-sm" onClick={() => setPaletteOpen(true)}>
+              <div className="absolute right-3 flex items-center justify-center w-8 h-6 shrink-0 whitespace-nowrap bg-white dark:bg-[#1d2926] border border-black/10 dark:border-white/10 rounded text-[11px] font-medium text-[#122222]/60 dark:text-white/60 cursor-pointer shadow-sm" onClick={() => setPaletteOpen(true)}>
                 ⌘ K
               </div>
             </div>
@@ -565,7 +575,7 @@ export function AppShell() {
               <div className="relative">
                 <button 
                   onClick={() => setShowNotifications(!showNotifications)}
-                  className="relative text-[#122222]/60 hover:text-[#122222] dark:text-white/60 dark:hover:text-white transition-colors p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5"
+                  className="relative text-[#122222]/60 hover:text-[#122222] dark:text-white/60 dark:hover:text-white transition-colors p-1.5 rounded-lg border border-transparent hover:border-black/10 dark:hover:border-white/10 hover:bg-black/5 dark:hover:bg-white/5"
                   aria-label="Notifications"
                 >
                   <Bell size={20} />
@@ -580,49 +590,55 @@ export function AppShell() {
                 {showNotifications && (
                   <>
                     <div className="fixed inset-0 z-40" onClick={() => setShowNotifications(false)} />
-                    <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-[#1d2926] rounded-xl border border-black/10 dark:border-white/10 shadow-2xl p-4 z-50 text-[13px]">
-                      <h4 className="font-bold text-[#122222] dark:text-white mb-3 pb-2 border-b border-black/5 dark:border-white/5 flex justify-between items-center">
+                    <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-[#1d2926] rounded-xl border border-black/10 dark:border-white/10 shadow-2xl z-50 text-[13px] overflow-hidden">
+                      <h4 className="font-bold text-[#122222] dark:text-white p-4 pb-3 border-b border-black/5 dark:border-white/5 flex justify-between items-center">
                         <span>{t("nav.notifications")}</span>
                         {totalNotificationsCount > 0 && <span className="text-[10px] text-red-500 font-bold bg-red-500/10 px-2 py-0.5 rounded">{t("nav.overdueCount", { count: totalNotificationsCount })}</span>}
                       </h4>
-                      <div className="space-y-3 max-h-60 overflow-y-auto pr-1 no-scrollbar">
-                        {totalNotificationsCount > 0 ? (
-                          <>
-                            {overdueList.map((loan) => (
-                              <div 
-                                key={loan.id} 
-                                onClick={() => {
-                                  navigate("/members");
-                                  setShowNotifications(false);
-                                }}
-                                className="p-2 rounded-lg hover:bg-emerald/5 dark:hover:bg-emerald-light/10 transition-colors cursor-pointer border border-black/5 dark:border-white/5"
-                              >
-                                <div className="font-bold text-[#122222] dark:text-white truncate">{loan.title}</div>
-                                <div className="text-[11px] text-[#122222]/60 dark:text-white/60 mt-0.5">{t("circulation.selectedMember")}: {loan.member_name}</div>
-                                <div className="text-[10px] text-red-500 font-bold mt-1">{t("circulation.due")}: {formatDisplayDate(loan.due_at)}</div>
-                              </div>
-                            ))}
-                            {readyReservations.map((res) => (
-                              <div 
-                                key={res.id} 
-                                onClick={() => {
-                                  navigate("/reservations");
-                                  setShowNotifications(false);
-                                }}
-                                className="p-2 rounded-lg hover:bg-emerald/5 dark:hover:bg-emerald-light/10 transition-colors cursor-pointer border border-black/5 dark:border-white/5"
-                              >
-                                <div className="font-bold text-[#122222] dark:text-white truncate">{res.title}</div>
-                                <div className="text-[11px] text-[#122222]/60 dark:text-white/60 mt-0.5">{t("circulation.selectedMember")}: {res.member_name}</div>
-                                <div className="text-[10px] text-emerald-600 dark:text-emerald-light font-bold mt-1">{t("dashboard.ready")}</div>
-                              </div>
-                            ))}
-                          </>
+                      <div className="space-y-2 max-h-60 overflow-y-auto p-3 no-scrollbar">
+                        {notificationPreview.length > 0 ? (
+                          notificationPreview.map(({ kind, item }) => kind === "overdue" ? (
+                            <div
+                              key={`overdue-${item.id}`}
+                              onClick={() => {
+                                navigate("/members");
+                                setShowNotifications(false);
+                              }}
+                              className="p-2 rounded-lg hover:bg-emerald/5 dark:hover:bg-emerald-light/10 transition-colors cursor-pointer border border-black/5 dark:border-white/5"
+                            >
+                              <div className="font-bold text-[#122222] dark:text-white truncate">{item.title}</div>
+                              <div className="text-[11px] text-[#122222]/60 dark:text-white/60 mt-0.5">{t("circulation.selectedMember")}: {item.member_name}</div>
+                              <div className="text-[10px] text-red-500 font-bold mt-1">{t("circulation.due")}: {formatDisplayDate(item.due_at)}</div>
+                            </div>
+                          ) : (
+                            <div
+                              key={`ready-${item.id}`}
+                              onClick={() => {
+                                navigate("/reservations");
+                                setShowNotifications(false);
+                              }}
+                              className="p-2 rounded-lg hover:bg-emerald/5 dark:hover:bg-emerald-light/10 transition-colors cursor-pointer border border-black/5 dark:border-white/5"
+                            >
+                              <div className="font-bold text-[#122222] dark:text-white truncate">{item.title}</div>
+                              <div className="text-[11px] text-[#122222]/60 dark:text-white/60 mt-0.5">{t("circulation.selectedMember")}: {item.member_name}</div>
+                              <div className="text-[10px] text-emerald-600 dark:text-emerald-light font-bold mt-1">{t("dashboard.ready")}</div>
+                            </div>
+                          ))
                         ) : (
                           <div className="text-center py-6 text-sm text-[#122222]/40 dark:text-white/40">
                             {t("nav.allClear")}
                           </div>
                         )}
                       </div>
+                      <button
+                        onClick={() => {
+                          navigate("/notifications");
+                          setShowNotifications(false);
+                        }}
+                        className="w-full text-center text-[12px] font-semibold text-[#1a4d40] dark:text-[#1b9277] py-2.5 border-t border-black/5 dark:border-white/5 hover:bg-black/[0.02] dark:hover:bg-white/[0.03] transition-colors"
+                      >
+                        {t("notificationsPage.viewAll")}
+                      </button>
                     </div>
                   </>
                 )}
@@ -636,19 +652,18 @@ export function AppShell() {
                 onMouseEnter={handleTopbarMouseEnter}
                 onMouseLeave={handleTopbarMouseLeave}
               >
-                <div className="flex items-center gap-2 cursor-pointer p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition-colors" onClick={() => navigate("/settings")}>
+                <div className="flex items-center gap-2 cursor-pointer p-1 pr-2 rounded-lg border border-transparent hover:border-black/10 dark:hover:border-white/10 hover:bg-black/5 dark:hover:bg-white/5 transition-colors" onClick={() => navigate("/settings")}>
                   {user?.avatar_path ? (
-                    <img src={user?.avatar_path} alt="" className="h-8 w-8 rounded-full object-cover shrink-0" />
+                    <img src={user?.avatar_path} alt="" className="h-8 w-8 rounded-full object-cover shrink-0 border border-black/5 dark:border-white/10" />
                   ) : (
-                    <div className="h-8 w-8 rounded-full bg-[#122222] dark:bg-white/10 text-white flex items-center justify-center text-[12px] font-bold shrink-0">
-                      <Users size={14} />
+                    <div className="h-8 w-8 rounded-full bg-[#b96f3e] text-white flex items-center justify-center text-[12px] font-bold shrink-0 shadow-sm">
+                      {(user?.full_name || "Librarian").substring(0, 2).toUpperCase()}
                     </div>
-
                   )}
-                  <span className="text-[14px] font-semibold text-[#122222] dark:text-white hidden sm:block truncate max-w-[80px]">
+                  <span className="text-[14px] font-semibold text-[#122222] dark:text-white hidden sm:block truncate max-w-[160px]">
                     {user?.full_name || "Librarian"}
                   </span>
-                  <ChevronDown size={14} className="text-[#122222]/40 dark:text-white/40" />
+                  <ChevronDown size={14} className="text-[#122222]/40 dark:text-white/40 shrink-0" />
                 </div>
 
                 {showTopbarProfileCard && (
@@ -733,7 +748,7 @@ function ProfileCard({
 
   return (
     <div 
-      className={`absolute ${alignmentClass} w-64 bg-white dark:bg-[#1d2926] border border-black/5 dark:border-white/5 rounded-2xl p-4 shadow-2xl z-50 text-[13px] text-[#122222] dark:text-[#f0ebe1] transition-all`}
+      className={`absolute ${alignmentClass} w-64 bg-white dark:bg-[#1d2926] border border-black/10 dark:border-white/10 rounded-2xl p-4 shadow-2xl z-50 text-[13px] text-[#122222] dark:text-[#f0ebe1] transition-all`}
       onClick={(e) => e.stopPropagation()}
     >
       {/* Header Profile Section */}

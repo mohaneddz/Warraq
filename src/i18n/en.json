@@ -224,7 +224,7 @@
       "description": "Description",
       "recentActivity": "Recent Activity",
       "edit": "Edit",
-      "archive": "Archive",
+      "archive": "Delete",
       "back": "Back",
       "confirmReserve": "Confirm Reservation Hold",
       "reserveTitle": "Place reservation hold",
@@ -283,9 +283,9 @@
       "invalidIsbn": "Enter a valid ISBN-10 or ISBN-13.",
       "bookSaved": "Book saved to the catalog.",
       "saveError": "An unknown error occurred while saving the book.",
-      "bulkArchived": "Selected books archived.",
-      "bulkArchiveFailed": "Failed to archive books.",
-      "confirmBulkArchive": "Are you sure you want to archive {{count}} selected book(s)? This will archive all of their copies.",
+      "bulkArchived": "Selected books deleted.",
+      "bulkArchiveFailed": "Failed to delete books.",
+      "confirmBulkArchive": "Are you sure you want to delete {{count}} selected book(s)? This will also delete all of their copies.",
       "typeQuery": "Please type an ISBN or book title to fetch details.",
       "querying": "Querying metadata provider...",
       "notFound": "Could not find any metadata matches for this query.",
@@ -298,11 +298,11 @@
       "bookDeleted": "Item deleted successfully",
       "updated": "Book metadata updated.",
       "updateError": "An unknown error occurred while updating the book.",
-      "archived": "Book and all copies archived.",
-      "confirmDelete": "Are you sure you want to delete this book? This will archive all of its copies.",
+      "archived": "Book and all copies deleted.",
+      "confirmDelete": "Are you sure you want to delete this book? This will also delete all of its copies.",
       "copyAdded": "Copy added.",
-      "copyArchived": "Copy archived.",
-      "confirmArchiveCopy": "Are you sure you want to archive this copy?",
+      "copyArchived": "Copy deleted.",
+      "confirmArchiveCopy": "Are you sure you want to delete this copy?",
       "reservationPlaced": "Reservation placed."
     },
     "bulk": {
@@ -310,7 +310,7 @@
       "selectedCount_other": "{{count}} books selected",
       "selectAll": "Select All",
       "deselectAll": "Deselect All",
-      "archiveSelected": "Archive Selected"
+      "archiveSelected": "Delete Selected"
     }
   },
   "circulation": {
@@ -807,6 +807,14 @@
       "overdueVsOpen": "Overdue vs open loans",
       "physicalHoldings": "Physical holdings"
     }
+  },
+  "notificationsPage": {
+    "subtitle": "Overdue loans, ready holds, and notification history",
+    "markAllRead": "Mark all as read",
+    "needsAttention": "Needs Attention",
+    "history": "History",
+    "empty": "No notifications yet.",
+    "viewAll": "View all notifications"
   },
   "activity": {
     "title": "Activity Logs",
@@ -1324,6 +1332,7 @@
       "inventory": "Physical shelves audit",
       "reports": "Excel exports & metrics",
       "activity": "Database audit logs",
+      "notifications": "Alerts & reminders",
       "settings": "General app settings"
     },
     "actions": {

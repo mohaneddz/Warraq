@@ -224,7 +224,7 @@
       "description": "Description",
       "recentActivity": "Activité récente",
       "edit": "Modifier",
-      "archive": "Archiver",
+      "archive": "Supprimer",
       "back": "Retour",
       "confirmReserve": "Confirmer la réservation",
       "reserveTitle": "Placer une réservation",
@@ -283,9 +283,9 @@
       "invalidIsbn": "Entrez un ISBN-10 ou ISBN-13 valide.",
       "bookSaved": "Livre enregistré dans le catalogue.",
       "saveError": "Une erreur inconnue est survenue lors de l'enregistrement du livre.",
-      "bulkArchived": "Livres sélectionnés archivés.",
-      "bulkArchiveFailed": "Échec de l'archivage des livres.",
-      "confirmBulkArchive": "Voulez-vous vraiment archiver les {{count}} livres sélectionnés? Cela archivera toutes leurs copies.",
+      "bulkArchived": "Livres sélectionnés supprimés.",
+      "bulkArchiveFailed": "Échec de la suppression des livres.",
+      "confirmBulkArchive": "Voulez-vous vraiment supprimer les {{count}} livres sélectionnés? Cela supprimera aussi toutes leurs copies.",
       "typeQuery": "Veuillez saisir un ISBN ou un titre pour rechercher.",
       "querying": "Recherche auprès du fournisseur de métadonnées...",
       "notFound": "Aucune correspondance trouvée pour cette recherche.",
@@ -298,11 +298,11 @@
       "bookDeleted": "Élément supprimé avec succès",
       "updated": "Métadonnées du livre mises à jour.",
       "updateError": "Une erreur inconnue est survenue lors de la mise à jour du livre.",
-      "archived": "Le livre et tous ses exemplaires ont été archivés.",
-      "confirmDelete": "Voulez-vous vraiment supprimer ce livre? Cela archivera tous ses exemplaires.",
+      "archived": "Le livre et tous ses exemplaires ont été supprimés.",
+      "confirmDelete": "Voulez-vous vraiment supprimer ce livre? Cela supprimera aussi tous ses exemplaires.",
       "copyAdded": "Exemplaire ajouté.",
-      "copyArchived": "Exemplaire archivé.",
-      "confirmArchiveCopy": "Voulez-vous vraiment archiver cet exemplaire?",
+      "copyArchived": "Exemplaire supprimé.",
+      "confirmArchiveCopy": "Voulez-vous vraiment supprimer cet exemplaire?",
       "reservationPlaced": "Réservation effectuée."
     },
     "bulk": {
@@ -310,7 +310,7 @@
       "selectedCount_other": "{{count}} livres sélectionnés",
       "selectAll": "Tout Sélectionner",
       "deselectAll": "Tout Désélectionner",
-      "archiveSelected": "Archiver la sélection"
+      "archiveSelected": "Supprimer la sélection"
     }
   },
   "circulation": {
@@ -807,6 +807,14 @@
       "overdueVsOpen": "Retards vs prêts ouverts",
       "physicalHoldings": "Exemplaires physiques"
     }
+  },
+  "notificationsPage": {
+    "subtitle": "Prêts en retard, réservations prêtes et historique des notifications",
+    "markAllRead": "Tout marquer comme lu",
+    "needsAttention": "Nécessite votre attention",
+    "history": "Historique",
+    "empty": "Aucune notification pour le moment.",
+    "viewAll": "Voir toutes les notifications"
   },
   "activity": {
     "title": "Journaux d'activité",
@@ -1324,6 +1332,7 @@
       "inventory": "Audit des étagères physiques",
       "reports": "Exports Excel et statistiques",
       "activity": "Journaux d'audit de la base de données",
+      "notifications": "Alertes et rappels",
       "settings": "Paramètres généraux de l'application"
     },
     "actions": {
