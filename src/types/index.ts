@@ -6,11 +6,13 @@ export type ReservationScope = "internal" | "external";
 export type ReservationStatus = "pending" | "queued" | "ready" | "fulfilled" | "cancelled" | "declined" | "expired";
 export type ShelfType = "floor" | "top";
 /** The floor shelf's distinguishing glyph — bigger than a lettered shelf, one per room. */
-export const FLOOR_SHELF_CODE = "⬤";
+/** The ground row of a bookcase column, addressed as "S" below the lettered rows A, B, C… */
+export const FLOOR_SHELF_CODE = "S";
 export const TOP_SHELF_CODES = ["A", "B", "C", "D", "E", "F"] as const;
 /** Generates the lettered row codes (A, B, C…) for a bookcase column, sized to the library's configured row count. */
 export function shelfRowCodes(count: number): string[] {
-  const n = Math.max(1, Math.min(20, count || TOP_SHELF_CODES.length));
+  // Capped at 18 (A..R) so "S" stays reserved for the ground row.
+  const n = Math.max(1, Math.min(18, count || TOP_SHELF_CODES.length));
   return Array.from({ length: n }, (_, i) => String.fromCharCode(65 + i));
 }
 
@@ -40,7 +42,7 @@ export interface Book {
 export interface Copy {
   id: string; book_id: string; accession_number: string; barcode: string; status: CopyStatus; shelf?: string | null;
   condition: string; title?: string; item_type?: string; metadata?: string | null; cover_path?: string | null; author?: string | null;
-  column_number?: number | null; room?: string | null;
+  column_number?: number | null; room?: string | null; shelf_id?: string | null;
 }
 export interface Member {
   id: string; member_number: string; full_name: string; email?: string | null; phone?: string | null; department?: string | null;

@@ -3,7 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import {
   copies, updateCopy, deleteCopy,
-  getShelves, updateShelf,
+  getShelves, updateShelf, createShelf,
   getRooms, createRoom, renameRoom, deleteRoom,
   getColumns, createColumn, deleteColumn,
 } from "../data/repositories/library";
@@ -131,6 +131,8 @@ export function InventoryPage() {
   };
 
   const [view, setView] = useState<"grid" | "list">("grid");
+  // "desc" mirrors the physical bookcase: A at the bottom climbing to the highest letter on top.
+  const [rowOrder, setRowOrder] = useState<"asc" | "desc">("desc");
   const [searchTerm, setSearchTerm] = useState("");
   const [conditionFilter, setConditionFilter] = useState("all");
   const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
@@ -187,8 +189,10 @@ export function InventoryPage() {
     if (activeSession && !sessionPaused && scanInputRef.current) scanInputRef.current.focus();
   }, [activeSession, sessionPaused]);
 
+  // Match on shelf_id, not code: every column repeats the same row letters, so matching by
+  // code alone would count one copy on the "A" shelf of every bookcase in the room.
   const shelvesWithCopies = useMemo(() => {
-    return allShelves.map((s) => ({ ...s, copiesList: allCopies.filter(c => c.shelf?.toUpperCase() === s.code.toUpperCase()) }));
+    return allShelves.map((s) => ({ ...s, copiesList: allCopies.filter(c => c.shelf_id === s.id) }));
   }, [allShelves, allCopies]);
 
   const roomShelves = useMemo(
@@ -200,6 +204,28 @@ export function InventoryPage() {
     () => allColumns.filter(c => c.room_id === selectedRoomId).sort((a, b) => a.number - b.number),
     [allColumns, selectedRoomId]
   );
+
+  /**
+   * The room laid out as a wall of bookcases: one grid column per bookcase (numbered 01, 02…)
+   * and one grid row per shelf level. Lettered rows are ordered by `rowOrder`; the ground row
+   * "S" is always pinned to the bottom because that's where it physically sits.
+   */
+  const shelfGrid = useMemo(() => {
+    const byColumnAndCode = new Map<string, typeof roomShelves[number]>();
+    const usedLetters = new Set<string>();
+    for (const s of roomShelves) {
+      byColumnAndCode.set(`${s.column_id}:${s.code.toUpperCase()}`, s);
+      if (s.shelf_type === "top") usedLetters.add(s.code.toUpperCase());
+    }
+    // Show every configured row plus any legacy row that exists beyond the current setting,
+    // so lowering the setting never hides shelves that still hold copies.
+    const letters = Array.from(new Set([...availableRowCodes, ...usedLetters])).sort();
+    const ordered = rowOrder === "desc" ? [...letters].reverse() : letters;
+    return {
+      rows: [...ordered, FLOOR_SHELF_CODE],
+      shelfAt: (columnId: string, code: string) => byColumnAndCode.get(`${columnId}:${code.toUpperCase()}`),
+    };
+  }, [roomShelves, availableRowCodes, rowOrder]);
 
   const filteredBrowseCopies = useMemo(() => {
     if (!targetShelfForBrowse) return [];
@@ -230,7 +256,7 @@ export function InventoryPage() {
       }
       if (selectedShelfId) {
         const shelf = allShelves.find(s => s.id === selectedShelfId);
-        if (!shelf || c.shelf?.toUpperCase() !== shelf.code.toUpperCase()) return false;
+        if (!shelf || c.shelf_id !== shelf.id) return false;
       }
       if (conditionFilter !== "all" && c.condition !== conditionFilter) return false;
       return true;
@@ -249,6 +275,12 @@ export function InventoryPage() {
   const createColumnMutation = useMutation({
     mutationFn: (v: { roomId: string; rows: string[] }) => createColumn(v.roomId, v.rows),
     onSuccess: () => { toast.success(t("inventory.columnCreated", "Column added.")); setNewColumnOpen(false); setNewColumnRows([...availableRowCodes]); columnsQuery.refetch(); shelvesQuery.refetch(); },
+    onError: (err: any) => toast.error(err.message),
+  });
+
+  const createShelfMutation = useMutation({
+    mutationFn: (v: { columnId: string; code: string }) => createShelf(v.columnId, v.code),
+    onSuccess: () => { toast.success(t("inventory.shelfAdded", "Shelf added.")); shelvesQuery.refetch(); },
     onError: (err: any) => toast.error(err.message),
   });
 
@@ -350,7 +382,7 @@ export function InventoryPage() {
             <RefreshCw size={13} className={result.isFetching || shelvesQuery.isFetching ? "animate-spin" : ""} />
           </button>
           <button onClick={() => setNewColumnOpen(true)} disabled={!selectedRoomId} title={!selectedRoomId ? (t("inventory.selectRoomFirst", "Select or create a room first") as string) : ""} className="flex items-center gap-1 bg-emerald text-white px-4 py-2 rounded-lg font-bold text-[12px] hover:bg-emerald/90 transition-all shadow-sm cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed">
-            <PlusCircle size={14} /> {t("inventory.addColumn", "Add Column")}
+            <PlusCircle size={14} /> {t("inventory.addColumn", "New Bookcase")}
           </button>
         </div>
       </div>
@@ -422,6 +454,19 @@ export function InventoryPage() {
               <button onClick={() => setView("grid")} className={`px-3 py-2 cursor-pointer transition-colors ${view === "grid" ? "bg-emerald text-white" : "bg-[#fcfcfc] dark:bg-[#111d1a] text-[#122222]/60"}`}><LayoutGrid size={13} /></button>
               <button onClick={() => setView("list")} className={`px-3 py-2 cursor-pointer transition-colors ${view === "list" ? "bg-emerald text-white" : "bg-[#fcfcfc] dark:bg-[#111d1a] text-[#122222]/60"}`}><List size={13} /></button>
             </div>
+            {view === "grid" && (
+              <button
+                onClick={() => setRowOrder(prev => prev === "asc" ? "desc" : "asc")}
+                className="bg-[#fcfcfc] dark:bg-[#111d1a] border border-black/8 rounded-lg py-2 px-3 text-[12px] outline-none cursor-pointer hover:bg-black/5 flex items-center gap-1.5 font-bold text-[#122222]/70 dark:text-white/70 whitespace-nowrap"
+                title={t("inventory.rowOrderHint", "Flip which end of the bookcase is drawn at the top") as string}
+              >
+                <span>{t("inventory.rowsLabel", "Rows:")}</span>
+                <span className="text-[#b96f3e]">
+                  {rowOrder === "asc" ? t("inventory.rowOrderAsc", "Top → Bottom (A is Top Row)") : t("inventory.rowOrderDesc", "Bottom → Top (A is Bottom Row)")}
+                </span>
+              </button>
+            )}
+
             <div className="hidden lg:flex items-center gap-3 text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 pl-2">
               <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#478574]"/>Good</span>
               <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#dd7a4a]"/>Repair</span>
@@ -443,70 +488,90 @@ export function InventoryPage() {
                   <img src={noShelvesSrc} alt="" aria-hidden="true" className="h-64 w-auto object-contain mb-3 opacity-90" />
                   <h3 className="text-sm font-bold">{t("inventory.noColumns", "No columns yet")}</h3>
                   <p className="text-[11px] max-w-sm mt-1 mb-4 leading-normal">{t("inventory.noColumnsHint", "Add a column to give this room its first shelves.")}</p>
-                  <button type="button" onClick={() => setNewColumnOpen(true)} className="bg-emerald text-white px-4 py-2 rounded-lg font-bold text-[12px] hover:bg-emerald/90 transition-all shadow-sm cursor-pointer">+ {t("inventory.addColumn", "Add Column")}</button>
+                  <button type="button" onClick={() => setNewColumnOpen(true)} className="bg-emerald text-white px-4 py-2 rounded-lg font-bold text-[12px] hover:bg-emerald/90 transition-all shadow-sm cursor-pointer">+ {t("inventory.addColumn", "New Bookcase")}</button>
                 </div>
               ) : (
-                <div className="flex flex-wrap items-start gap-4">
-                  {roomColumns.map(column => {
-                    const columnShelves = roomShelves.filter(s => s.column_id === column.id);
-                    // Stack tallest letter at the top, down to A, then the ground/floor shelf at the very bottom — like a real bookcase.
-                    const topShelves = columnShelves.filter(s => s.shelf_type === "top").sort((a, b) => b.code.localeCompare(a.code));
-                    const floorShelf = columnShelves.find(s => s.shelf_type === "floor");
-                    const columnEmpty = columnShelves.every(s => s.copiesList.length === 0);
-                    return (
-                      <div key={column.id} className="w-[172px] shrink-0 border border-black/8 dark:border-white/8 rounded-xl bg-[#fcfbf8] dark:bg-[#111d1a] p-2.5 flex flex-col gap-1">
-                        <div className="flex items-center justify-between px-0.5 mb-1">
-                          <span className="text-[11px] font-bold uppercase tracking-wider text-[#122222]/50 dark:text-white/50">{t("inventory.columnLabel", "Column {{number}}", { number: column.number })}</span>
+                <div className="min-w-max">
+                  {/* Bookcase numbers across the top, plus a shortcut to add another bookcase */}
+                  <div className="grid items-center mb-2 text-center text-[11px] font-bold text-[#122222]/40 dark:text-white/40" style={{ gridTemplateColumns: `28px repeat(${roomColumns.length}, 90px) 32px` }}>
+                    <div />
+                    {roomColumns.map(column => {
+                      const columnShelves = roomShelves.filter(s => s.column_id === column.id);
+                      const columnEmpty = columnShelves.every(s => s.copiesList.length === 0);
+                      return (
+                        <div key={column.id} className="group flex items-center justify-center gap-1 uppercase tracking-wider">
+                          <span>{String(column.number).padStart(2, "0")}</span>
                           {columnEmpty && (
                             <button type="button" title={t("inventory.deleteColumn", "Delete Column") as string}
                               onClick={() => { if (confirm(t("inventory.confirmDeleteColumn", "Delete this column and its shelves?") as string)) deleteColumnMutation.mutate(column.id); }}
-                              className="p-1 rounded-md hover:bg-red-50 dark:hover:bg-red-500/10 text-[#122222]/30 dark:text-white/30 hover:text-red-500 transition-colors cursor-pointer">
-                              <Trash2 size={12} />
+                              className="opacity-0 group-hover:opacity-100 p-0.5 rounded text-[#122222]/30 dark:text-white/30 hover:text-red-500 transition-all cursor-pointer">
+                              <Trash2 size={11} />
                             </button>
                           )}
                         </div>
+                      );
+                    })}
+                    <button onClick={() => setNewColumnOpen(true)} title={t("inventory.addColumn", "New Bookcase") as string}
+                      className="flex items-center justify-center w-7 h-7 rounded-lg border border-dashed border-emerald/40 text-emerald/60 hover:text-emerald hover:border-emerald hover:bg-emerald/5 transition-all cursor-pointer text-[14px] font-bold">
+                      +
+                    </button>
+                  </div>
 
-                        {topShelves.map(shelf => {
+                  {/* One row per shelf level, ground row "S" pinned at the bottom */}
+                  <div className="space-y-2">
+                    {shelfGrid.rows.map(rowCode => (
+                      <div key={rowCode} className="grid items-start" style={{ gridTemplateColumns: `28px repeat(${roomColumns.length}, 90px) 32px` }}>
+                        <div className={`font-display font-bold text-[13px] text-center self-center ${rowCode === FLOOR_SHELF_CODE ? "text-[#b96f3e]" : "text-[#122222]/40 dark:text-white/40"}`}>
+                          {rowCode}
+                        </div>
+
+                        {roomColumns.map(column => {
+                          const shelf = shelfGrid.shelfAt(column.id, rowCode);
+                          const cellCode = `${rowCode}${String(column.number).padStart(2, "0")}`;
+                          const isGround = rowCode === FLOOR_SHELF_CODE;
+
+                          if (!shelf) {
+                            return (
+                              <div key={column.id} className="px-0.5">
+                                <button type="button"
+                                  disabled={isGround || createShelfMutation.isPending}
+                                  onClick={() => createShelfMutation.mutate({ columnId: column.id, code: rowCode })}
+                                  title={isGround ? undefined : (t("inventory.addShelfAt", "Add shelf {{code}}", { code: cellCode }) as string)}
+                                  className="w-full border border-dashed border-black/10 dark:border-white/10 rounded-lg flex flex-col items-center justify-center text-center transition-all group enabled:hover:border-emerald/50 enabled:hover:bg-emerald/5 enabled:cursor-pointer disabled:opacity-40"
+                                  style={{ minHeight: "88px" }}>
+                                  {!isGround && <PlusCircle size={13} className="text-[#122222]/15 dark:text-white/15 group-hover:text-emerald transition-colors" />}
+                                  <span className="text-[9px] font-mono text-[#122222]/20 dark:text-white/20 mt-1">{cellCode}</span>
+                                </button>
+                              </div>
+                            );
+                          }
+
                           const isSelected = selectedShelfId === shelf.id;
                           const occupancy = shelf.capacity > 0 ? shelf.copiesList.length / shelf.capacity : 0;
                           return (
-                            <div key={shelf.id} onClick={() => setSelectedShelfId(isSelected ? null : shelf.id)}
-                              className={`flex items-center gap-2.5 rounded-lg px-2 py-1.5 cursor-pointer transition-all border ${isSelected ? "ring-2 ring-[#b96f3e] border-[#b96f3e]/30 bg-white dark:bg-[#1d2926] shadow-sm" : "border-transparent hover:bg-white dark:hover:bg-white/5"}`}>
-                              <div className="w-10 shrink-0"><ShelfSvgVisual copiesList={shelf.copiesList} capacity={shelf.capacity} /></div>
-                              <div className="min-w-0 flex-1">
-                                <div className="font-bold text-[12px] text-[#122222] dark:text-white tracking-wide">{t("inventory.shelfLetter", "Shelf {{code}}", { code: shelf.code })}</div>
-                                <div className="flex items-center gap-1 mt-0.5">
-                                  <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: occupancyColor(occupancy) }} />
+                            <div key={column.id} className="px-0.5">
+                              <div onClick={() => setSelectedShelfId(isSelected ? null : shelf.id)}
+                                title={isGround ? (t("inventory.floorShelfHint", "The library's oversized floor-level shelf — larger capacity than a lettered shelf.") as string) : undefined}
+                                className={`relative border rounded-lg pt-1.5 px-1.5 pb-1.5 text-center flex flex-col items-center justify-between transition-all cursor-pointer hover:shadow-md hover:scale-[1.02] ${isGround ? "bg-[#f4ebdd]/50 dark:bg-[#1a2522]" : "bg-white dark:bg-[#1d2926]"} ${isSelected ? "ring-2 ring-[#b96f3e] border-[#b96f3e]/30 scale-[1.03] shadow-md" : "border-black/8 dark:border-white/8"}`}>
+                                {isSelected && (
+                                  <div className="absolute -top-0.5 right-2 w-3 h-4 bg-[#b96f3e] rounded-b-sm shadow z-10 flex flex-col justify-end pb-0.5 items-center">
+                                    <div className="w-1 h-1 rounded-full bg-white/50" />
+                                  </div>
+                                )}
+                                <div className="w-full"><ShelfSvgVisual copiesList={shelf.copiesList} capacity={shelf.capacity} /></div>
+                                <div className="font-bold text-[10px] mt-1 text-[#122222] dark:text-white tracking-wide">{cellCode}</div>
+                                <div className="flex items-center gap-1 mt-0.5 justify-center">
+                                  <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: occupancyColor(occupancy) }} />
                                   <span className="text-[9px] text-[#122222]/50 dark:text-white/50 font-bold">{shelf.copiesList.length}/{shelf.capacity}</span>
                                 </div>
                               </div>
                             </div>
                           );
                         })}
-
-                        {floorShelf && (() => {
-                          const isSelected = selectedShelfId === floorShelf.id;
-                          const occupancy = floorShelf.capacity > 0 ? floorShelf.copiesList.length / floorShelf.capacity : 0;
-                          return (
-                            <div onClick={() => setSelectedShelfId(isSelected ? null : floorShelf.id)}
-                              title={t("inventory.floorShelfHint", "The library's oversized floor-level shelf — larger capacity than a lettered shelf.") as string}
-                              className={`mt-1 flex items-center gap-2.5 rounded-lg px-2 py-2 cursor-pointer transition-all border-2 ${isSelected ? "ring-2 ring-[#b96f3e] border-[#b96f3e]/40 bg-[#f4ebdd]/70 dark:bg-[#1a2522]" : "border-black/10 dark:border-white/10 bg-[#f4ebdd]/40 dark:bg-[#1a2522] hover:bg-[#f4ebdd]/60"}`}>
-                              <div className="w-10 shrink-0"><ShelfSvgVisual copiesList={floorShelf.copiesList} capacity={floorShelf.capacity} /></div>
-                              <div className="min-w-0 flex-1">
-                                <div className="font-bold text-[11px] text-[#122222] dark:text-white flex items-center gap-1">
-                                  <span className="text-[13px] leading-none">{FLOOR_SHELF_CODE}</span> {t("inventory.floorShelf", "Floor shelf")}
-                                </div>
-                                <div className="flex items-center gap-1 mt-0.5">
-                                  <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: occupancyColor(occupancy) }} />
-                                  <span className="text-[9px] text-[#122222]/60 dark:text-white/60 font-bold">{floorShelf.copiesList.length}/{floorShelf.capacity}</span>
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })()}
+                        <div />
                       </div>
-                    );
-                  })}
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
@@ -624,7 +689,7 @@ export function InventoryPage() {
         <div className="space-y-4 text-[13px]">
           <div className="flex items-center justify-between bg-[#fcfbf8] dark:bg-[#111d1a] p-3 rounded-xl border border-black/5 dark:border-white/5">
             <div className="text-[12px] text-[#122222]/70 dark:text-white/70">Browse your library catalog to place items onto shelf <span className="font-bold text-emerald font-mono">{targetShelfForBrowse?.code}</span>.</div>
-            {targetShelfForBrowse && <span className="text-[11px] font-bold px-2.5 py-1 rounded-md bg-emerald/10 text-emerald shrink-0">Occupancy: {allCopies.filter(c => c.shelf?.toUpperCase() === targetShelfForBrowse.code.toUpperCase()).length} / {targetShelfForBrowse.capacity}</span>}
+            {targetShelfForBrowse && <span className="text-[11px] font-bold px-2.5 py-1 rounded-md bg-emerald/10 text-emerald shrink-0">Occupancy: {allCopies.filter(c => c.shelf_id === targetShelfForBrowse.id).length} / {targetShelfForBrowse.capacity}</span>}
           </div>
           <div className="flex gap-3 items-center">
             <div className="flex-1 relative"><Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#122222]/40" /><Input type="text" value={browseSearch} onChange={(e) => setBrowseSearch(e.target.value)} placeholder="Search items by title, author, barcode, accession number..." className="pl-9 text-[13px] py-2" /></div>
@@ -636,7 +701,7 @@ export function InventoryPage() {
             {filteredBrowseCopies.length === 0 ? (
               <div className="text-center py-12 text-[#122222]/40 dark:text-white/40"><BookCopy size={36} className="mx-auto mb-2 opacity-30" /><p className="font-bold text-[14px]">No matching items found</p></div>
             ) : filteredBrowseCopies.map((c) => {
-              const isCurrentShelf = targetShelfForBrowse ? (c.shelf?.trim().toUpperCase() ?? "") === targetShelfForBrowse.code.toUpperCase() : false;
+              const isCurrentShelf = targetShelfForBrowse ? c.shelf_id === targetShelfForBrowse.id : false;
               const isOtherShelf = c.shelf && !isCurrentShelf;
               return (
                 <div key={c.id} className="flex items-center justify-between p-3 rounded-xl border border-black/5 dark:border-white/5 bg-white dark:bg-[#1d2926] hover:border-emerald/30 transition-all shadow-sm gap-4">
@@ -665,7 +730,7 @@ export function InventoryPage() {
       </Modal>
 
       {newColumnOpen && selectedRoomId && (
-        <Modal isOpen={newColumnOpen} onClose={() => setNewColumnOpen(false)} title={t("inventory.addColumn", "Add Column")}>
+        <Modal isOpen={newColumnOpen} onClose={() => setNewColumnOpen(false)} title={t("inventory.addColumn", "New Bookcase")}>
           <form onSubmit={e => { e.preventDefault(); if (newColumnRows.length === 0) { toast.warning(t("inventory.selectRowsWarning", "Select at least one row.") as string); return; } createColumnMutation.mutate({ roomId: selectedRoomId, rows: newColumnRows }); }} className="space-y-4 text-[13px]">
             <p className="text-[12px] text-[#122222]/60">{t("inventory.addColumnHint", "Adds a new bookshelf column to {{room}} with a floor shelf plus the rows you choose.", { room: selectedRoom?.name })}</p>
             <div>
@@ -707,7 +772,7 @@ export function InventoryPage() {
         <Modal isOpen={scanInitOpen} onClose={() => setScanInitOpen(false)} title="Scan Shelf Barcodes">
           <form onSubmit={startScanningSession} className="space-y-4">
             <p className="text-[13px] text-[#122222]/70 font-semibold">Enter or select a shelf code to scan. Scanned barcodes will highlight whether they are misplaced or correctly positioned on this shelf.</p>
-            <div><label className="text-[11px] font-bold text-[#122222]/60 uppercase block mb-1.5">Target Shelf Code</label><Input type="text" placeholder="e.g. A, ⬤" value={targetShelf} onChange={e => setTargetShelf(e.target.value)} required /></div>
+            <div><label className="text-[11px] font-bold text-[#122222]/60 uppercase block mb-1.5">Target Shelf Code</label><Input type="text" placeholder="e.g. A, S" value={targetShelf} onChange={e => setTargetShelf(e.target.value)} required /></div>
             {allShelves.length > 0 && (
               <div>
                 <p className="text-[11px] font-bold text-[#122222]/50 uppercase mb-2">Or click to select a shelf:</p>
