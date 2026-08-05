@@ -35,6 +35,7 @@ export interface Book {
 export interface Copy {
   id: string; book_id: string; accession_number: string; barcode: string; status: CopyStatus; shelf?: string | null;
   condition: string; title?: string; item_type?: string; metadata?: string | null; cover_path?: string | null; author?: string | null;
+  column_number?: number | null; room?: string | null;
 }
 export interface Member {
   id: string; member_number: string; full_name: string; email?: string | null; phone?: string | null; department?: string | null;
@@ -94,6 +95,18 @@ export interface DashboardMetrics {
   titles: number; copies: number; onLoan: number; members: number; overdue: number; readyReservations: number;
   recentLoans: Loan[]; overdueLoans: Loan[]; activity: { date: string; count: number }[];
   activeDepartments?: { name: string; count: number }[]; circulationRhythm?: { time: string; checkouts: number; returns: number }[];
+}
+
+export interface AppNotification {
+  id: string;
+  type: "reservation_ready" | "system";
+  title: string;
+  body: string | null;
+  link: string | null;
+  entity_type: string | null;
+  entity_id: string | null;
+  is_read: boolean;
+  created_at: string;
 }
 
 /**

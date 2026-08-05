@@ -5,7 +5,7 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Plus, Search,
-  MoreHorizontal, ChevronLeft, ChevronRight, X, Clock, Edit2, Trash2, MapPin, Sparkles,
+  ChevronLeft, ChevronRight, X, Clock, Edit2, Trash2, MapPin, Sparkles,
   Eye, Copy, CalendarClock
 } from "lucide-react";
 import { useContextMenu } from "../components/ui/ContextMenu";
@@ -466,16 +466,16 @@ export function CatalogPage() {
     },
     onSuccess: () => {
       invalidate();
-      toast.success(t("catalog.alerts.bulkArchived") || "Selected books archived.");
+      toast.success(t("catalog.alerts.bulkArchived") || "Selected books deleted.");
       setSelectedIds([]);
     },
     onError: (error: any) => {
-      toast.error(error?.message || t("catalog.alerts.bulkArchiveFailed") || "Failed to archive books.");
+      toast.error(error?.message || t("catalog.alerts.bulkArchiveFailed") || "Failed to delete books.");
     }
   });
 
   const handleBulkArchive = () => {
-    if (confirm(t("catalog.alerts.confirmBulkArchive", { count: selectedIds.length }) || `Are you sure you want to archive ${selectedIds.length} selected book(s)? This will archive all of their copies.`)) {
+    if (confirm(t("catalog.alerts.confirmBulkArchive", { count: selectedIds.length }) || `Are you sure you want to delete ${selectedIds.length} selected book(s)? This will also delete all of their copies.`)) {
       bulkArchiveMutation.mutate();
     }
   };
@@ -864,7 +864,6 @@ export function CatalogPage() {
                     <th className="px-4 py-3 whitespace-nowrap cursor-pointer hover:text-emerald dark:hover:text-emerald-light" onClick={() => handleSort("available_copies")}>
                       {t("catalog.headers.availability", "Availability")} {sortBy === "available_copies" ? (sortOrder === "asc" ? "▲" : "▼") : "↕"}
                     </th>
-                    <th className="px-4 py-3 w-10"></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-black/5 dark:divide-white/5">
@@ -905,20 +904,20 @@ export function CatalogPage() {
                                 {book.item_type ? book.item_type.slice(0, 3) : "doc"}
                               </div>
                             )}
-                            <div className="min-w-0 flex-1">
-                              <div className="font-bold text-[#122222] dark:text-white line-clamp-2" title={displayTitle.main}>{displayTitle.main}</div>
-                              {displayTitle.sub && <div className="text-[11px] text-[#122222]/50 dark:text-white/50 mt-0.5 line-clamp-2" title={displayTitle.sub}>{displayTitle.sub}</div>}
+                            <div className="min-w-0 flex-1 max-w-[280px]">
+                              <div className="font-bold text-[#122222] dark:text-white truncate" title={displayTitle.main}>{displayTitle.main}</div>
+                              {displayTitle.sub && <div className="text-[11px] text-[#122222]/50 dark:text-white/50 mt-0.5 truncate" title={displayTitle.sub}>{displayTitle.sub}</div>}
                             </div>
                           </div>
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap">
                           <ItemTypeBadge type={book.item_type} />
                         </td>
-                        <td className="px-4 py-3 text-[#122222]/70 dark:text-white/70">
-                          <div className="line-clamp-2" title={book.author || ""}>{book.author || "—"}</div>
+                        <td className="px-4 py-3 text-[#122222]/70 dark:text-white/70 max-w-[160px]">
+                          <div className="truncate" title={book.author || ""}>{book.author || "—"}</div>
                         </td>
-                        <td className="px-4 py-3 text-[#122222]/70 dark:text-white/70">
-                          <div className="line-clamp-2" title={book.category || ""}>{book.category || t("catalog.uncategorized") || "Uncategorized"}</div>
+                        <td className="px-4 py-3 text-[#122222]/70 dark:text-white/70 max-w-[140px]">
+                          <div className="truncate" title={book.category || ""}>{book.category || t("catalog.uncategorized") || "Uncategorized"}</div>
                         </td>
                         <td className="px-4 py-3 text-[#122222]/70 dark:text-white/70 font-mono text-[12px] whitespace-nowrap">{formatIsbn(book.isbn13 || book.isbn10) || "—"}</td>
                         <td className="px-4 py-3 text-[#122222]/70 dark:text-white/70 whitespace-nowrap">{formatDisplayDate(book.created_at)}</td>
@@ -930,7 +929,6 @@ export function CatalogPage() {
                             {book.available_copies ?? 0} / {book.total_copies ?? 0}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-[#122222]/40 hover:text-[#122222]"><MoreHorizontal size={16} /></td>
                       </tr>
                     );
                   })}
@@ -1077,7 +1075,7 @@ export function CatalogPage() {
               className="flex items-center gap-1.5 text-[12px] font-bold bg-red-500 hover:bg-red-600 text-white px-4 py-1.5 rounded-full shadow transition-colors cursor-pointer"
             >
               <Trash2 size={13} />
-              {t("catalog.bulk.archiveSelected") || "Archive Selected"}
+              {t("catalog.bulk.archiveSelected") || "Delete Selected"}
             </button>
           </div>
         </div>
@@ -1243,7 +1241,7 @@ function BookSidebar({ book, onClose, registerClean }: { book: Book; onClose: ()
   const deleteBookMutation = useMutation({
     mutationFn: () => deleteBook(book.id),
     onSuccess: () => {
-      toast.success(t("catalog.alerts.archived") || "Book and all copies archived.");
+      toast.success(t("catalog.alerts.archived") || "Book and all copies deleted.");
       invalidate();
       onClose();
     },
@@ -1265,7 +1263,7 @@ function BookSidebar({ book, onClose, registerClean }: { book: Book; onClose: ()
   const deleteCopyMutation = useMutation({
     mutationFn: (copyId: string) => deleteCopy(copyId),
     onSuccess: () => {
-      toast.success(t("catalog.alerts.copyArchived") || "Copy archived.");
+      toast.success(t("catalog.alerts.copyArchived") || "Copy deleted.");
       refetchCopies();
       invalidate();
     },
@@ -1282,7 +1280,7 @@ function BookSidebar({ book, onClose, registerClean }: { book: Book; onClose: ()
         <button onClick={onClose} className="text-[#122222]/40 hover:text-[#122222] transition-colors cursor-pointer"><X size={18} /></button>
       </div>
 
-      <div className="flex-1 overflow-auto p-6 flex flex-col items-start space-y-6">
+      <div className="flex-1 overflow-auto p-6 flex flex-col items-start space-y-6 [scrollbar-gutter:stable]">
         {/* Book Cover */}
         <div className="w-full aspect-[2/3] bg-[#f4ebdd] dark:bg-[#1a2522] rounded-xl border border-black/10 flex items-center justify-center shadow-md relative overflow-hidden shrink-0">
           <div className="absolute left-2 top-0 bottom-0 w-1 bg-black/10" />
@@ -1393,7 +1391,7 @@ function BookSidebar({ book, onClose, registerClean }: { book: Book; onClose: ()
               </button>
               <button
                 onClick={() => {
-                  if (confirm(t("catalog.alerts.confirmDelete") || "Are you sure you want to delete this item? This will archive all of its copies.")) {
+                  if (confirm(t("catalog.alerts.confirmDelete") || "Are you sure you want to delete this item? This will also delete all of its copies.")) {
                     deleteBookMutation.mutate();
                   }
                 }}
@@ -1444,7 +1442,10 @@ function BookSidebar({ book, onClose, registerClean }: { book: Book; onClose: ()
                     <div className="text-[10px] text-[#122222]/50 dark:text-white/50 mt-0.5">Accession: {copy.accession_number}</div>
                     {copy.shelf && (
                       <div className="flex items-center gap-1 text-[10px] text-emerald font-semibold mt-1">
-                        <MapPin size={10} /> Shelf {copy.shelf}
+                        <MapPin size={10} />
+                        {copy.room ? `${copy.room} · ` : ""}
+                        {copy.column_number != null ? `${t("inventory.columnLabel", "Column {{number}}", { number: copy.column_number })} — ` : ""}
+                        {copy.shelf === FLOOR_SHELF_CODE ? t("inventory.floorShelf", "Floor shelf") : t("inventory.shelfLetter", "Shelf {{code}}", { code: copy.shelf })}
                       </div>
                     )}
                   </div>
@@ -1452,7 +1453,7 @@ function BookSidebar({ book, onClose, registerClean }: { book: Book; onClose: ()
                     <StatusBadge value={copy.status} />
                     <button
                       onClick={() => {
-                        if (confirm(t("catalog.alerts.confirmArchiveCopy") || "Are you sure you want to archive this copy?")) {
+                        if (confirm(t("catalog.alerts.confirmArchiveCopy") || "Are you sure you want to delete this copy?")) {
                           deleteCopyMutation.mutate(copy.id);
                         }
                       }}
@@ -1479,7 +1480,7 @@ function BookSidebar({ book, onClose, registerClean }: { book: Book; onClose: ()
                     <select {...copyForm.register("shelfId")} className="field-select mt-1 text-[13px] py-2 px-3 bg-white dark:bg-[#1d2926]">
                       <option value="">{t("catalog.details.shelfUnassigned", "Unassigned")}</option>
                       {allShelves.map((s) => (
-                        <option key={s.id} value={s.id}>{s.room} — {s.shelf_type === "floor" ? `${FLOOR_SHELF_CODE} ${t("inventory.floorShelf", "Floor shelf")}` : `${t("inventory.shelfLetter", "Shelf {{code}}", { code: s.code })}`}</option>
+                        <option key={s.id} value={s.id}>{s.room} · {t("inventory.columnLabel", "Column {{number}}", { number: s.column_number })} — {s.shelf_type === "floor" ? `${FLOOR_SHELF_CODE} ${t("inventory.floorShelf", "Floor shelf")}` : `${t("inventory.shelfLetter", "Shelf {{code}}", { code: s.code })}`}</option>
                       ))}
                     </select>
                   </label>
