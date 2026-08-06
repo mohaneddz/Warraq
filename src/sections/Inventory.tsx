@@ -38,9 +38,19 @@ interface ScannedItem {
   copyId?: string;
 }
 
+/**
+ * Shelf status palette. Instead of a red/amber alarm ramp, degrees of concern are shown as
+ * deepening tones of the app's warm parchment brown, so a wall of shelves reads as one
+ * material rather than a traffic light. Healthy shelves stay green for contrast.
+ */
+// "#f9eedd" (faintest wash, badge backgrounds) is used directly in Tailwind class names below —
+// Tailwind's JIT scanner needs static literal strings, so it can't be pulled from a constant.
+const SHELF_WARN = "#d2ae96";   // worn / filling up
+const SHELF_ALERT = "#a87c5f";  // damaged, missing, or full
+
 function occupancyColor(pct: number) {
-  if (pct >= 0.9) return "#ef4444";
-  if (pct >= 0.7) return "#f97316";
+  if (pct >= 0.9) return SHELF_ALERT;
+  if (pct >= 0.7) return SHELF_WARN;
   return "#10b981";
 }
 
@@ -64,8 +74,8 @@ function ShelfSvgVisual({ copiesList, capacity }: { copiesList: (Copy & { title?
         const idx = filledSlots > 0 ? Math.floor((slot / filledSlots) * Math.min(copiesList.length, filledSlots)) : 0;
         const copy = copiesList[idx];
         if (copy) {
-          if (copy.status === "lost" || copy.condition === "damaged") color = "#dd4a4a";
-          else if (copy.condition === "worn" || copy.condition === "fair") color = "#dd7a4a";
+          if (copy.status === "lost" || copy.condition === "damaged") color = SHELF_ALERT;
+          else if (copy.condition === "worn" || copy.condition === "fair") color = SHELF_WARN;
           else color = "#478574";
         } else color = "#478574";
       }
@@ -403,11 +413,14 @@ export function InventoryPage() {
         {[
           { label: t("inventory.totalCopies", "Total copies"), val: counts.total.toLocaleString(), color: "emerald", border: "border-emerald/15" },
           { label: t("inventory.shelved", "Shelved"), val: `${counts.shelved.toLocaleString()} (${counts.total > 0 ? Math.round(counts.shelved / counts.total * 100) : 0}%)`, color: "emerald", border: "border-emerald/15" },
-          { label: t("inventory.needsRepair", "Needs repair"), val: counts.needsRepair.toLocaleString(), color: "orange", border: "border-orange-500/15" },
-          { label: t("inventory.missing", "Missing"), val: counts.missing.toLocaleString(), color: "red", border: "border-red-500/15" },
+          { label: t("inventory.needsRepair", "Needs repair"), val: counts.needsRepair.toLocaleString(), color: "warn", border: "border-[#d2ae96]/40" },
+          { label: t("inventory.missing", "Missing"), val: counts.missing.toLocaleString(), color: "alert", border: "border-[#a87c5f]/30" },
         ].map(m => {
-          const colorClass = m.color === "emerald" ? "text-emerald" : m.color === "orange" ? "text-orange-500" : "text-red-500";
-          const bgLight = m.color === "emerald" ? "bg-emerald/5" : m.color === "orange" ? "bg-orange-500/5" : "bg-red-500/5";
+          // Tailwind's JIT scanner needs these as static literal classes — it can't see class
+          // names assembled from a variable at runtime — so the two warm tones are spelled out
+          // here rather than interpolated from the SHELF_WARN / SHELF_ALERT constants above.
+          const colorClass = m.color === "emerald" ? "text-emerald" : m.color === "warn" ? "text-[#ab8264] dark:text-[#d2ae96]" : "text-[#8a6249] dark:text-[#c99b7d]";
+          const bgLight = m.color === "emerald" ? "bg-emerald/5" : m.color === "warn" ? "bg-[#f9eedd] dark:bg-[#d2ae96]/10" : "bg-[#f2ddc9] dark:bg-[#a87c5f]/15";
           return (
             <div key={m.label} className={`bg-white dark:bg-[#1d2926] rounded-xl border ${m.border} shadow-card p-4 flex gap-4 items-center`}>
               <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${bgLight}`}><BookCopy size={18} className={colorClass} /></div>
@@ -481,8 +494,8 @@ export function InventoryPage() {
 
             <div className="hidden lg:flex items-center gap-3 text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 pl-2">
               <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#478574]"/>Good</span>
-              <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#dd7a4a]"/>Repair</span>
-              <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#dd4a4a]"/>Missing</span>
+              <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#d2ae96]"/>Repair</span>
+              <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#a87c5f]"/>Missing</span>
             </div>
           </div>
 
@@ -608,7 +621,7 @@ export function InventoryPage() {
                           <td className="px-5 py-3"><ItemTypeBadge type={copy.item_type} /></td>
                           <td className="px-5 py-3 font-semibold text-[#122222]/80 dark:text-white/80"><div className="line-clamp-2" title={copy.title}>{copy.title}</div></td>
                           <td className="px-5 py-3">{copy.shelf ? <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#1a4d40]/10 text-[#1a4d40] dark:text-[#1b9277] font-bold text-[11px]"><MapPin size={10} /> {copy.shelf}</span> : <span className="text-[#122222]/30 dark:text-white/30 text-[11px]">Unassigned</span>}</td>
-                          <td className="px-5 py-3"><span className={`capitalize text-[11px] font-semibold px-2 py-0.5 rounded-full ${copy.condition === "damaged" ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400" : copy.condition === "worn" ? "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400" : "bg-[#10b981]/10 text-[#1a4d40] dark:text-[#1b9277]"}`}>{copy.condition}</span></td>
+                          <td className="px-5 py-3"><span className={`capitalize text-[11px] font-semibold px-2 py-0.5 rounded-full ${copy.condition === "damaged" ? "bg-[#f2ddc9] text-[#8a6249] dark:bg-[#a87c5f]/20 dark:text-[#c99b7d]" : copy.condition === "worn" ? "bg-[#f9eedd] text-[#ab8264] dark:bg-[#d2ae96]/15 dark:text-[#d2ae96]" : "bg-[#10b981]/10 text-[#1a4d40] dark:text-[#1b9277]"}`}>{copy.condition}</span></td>
                           <td className="px-5 py-3"><StatusBadge value={copy.status} /></td>
                         </tr>
                       ))}
@@ -641,7 +654,7 @@ export function InventoryPage() {
               <div>
                 <div className="flex justify-between items-end mb-1"><span className="text-[11px] font-bold text-[#122222]/50 uppercase tracking-wider">Scanning progress</span><span className="text-[13px] font-bold text-[#1a4d40] dark:text-[#1b9277]">{Math.min(scanPct, 100)}%</span></div>
                 <div className="text-[18px] font-bold mb-2">{scannedItems.length} <span className="text-[13px] font-semibold text-[#122222]/50">/ {scanTarget} copies scanned</span></div>
-                <div className="h-2 bg-black/5 rounded-full overflow-hidden"><div className="h-full bg-orange-500 rounded-full transition-all duration-500" style={{ width: `${Math.min(scanPct, 100)}%` }} /></div>
+                <div className="h-2 bg-black/5 rounded-full overflow-hidden"><div className="h-full bg-[#a87c5f] rounded-full transition-all duration-500" style={{ width: `${Math.min(scanPct, 100)}%` }} /></div>
               </div>
               <div className="p-3 bg-[#122222]/[0.02] rounded-xl border border-black/5">
                 <div className="flex items-center justify-between mb-2"><div className="flex items-center gap-1.5 text-[11px] font-semibold text-[#122222]/60"><Wifi size={11} className="text-[#1a4d40]" /> Scanner input</div><span className="text-[10px] font-bold text-[#10b981]">Connected ●</span></div>
@@ -650,7 +663,7 @@ export function InventoryPage() {
                 </form>
               </div>
               <div className="grid grid-cols-3 gap-2 border-t border-b border-black/5 py-3">
-                {[{ label: "On shelf", val: sessionFound, color: "#478574" }, { label: "Wrong shelf", val: sessionMisplaced, color: "#dd7a4a" }, { label: "Not found", val: sessionUnknown, color: "#dd4a4a" }].map(s => (
+                {[{ label: "On shelf", val: sessionFound, color: "#478574" }, { label: "Wrong shelf", val: sessionMisplaced, color: SHELF_WARN }, { label: "Not found", val: sessionUnknown, color: SHELF_ALERT }].map(s => (
                   <div key={s.label} className="text-center"><div className="text-[18px] font-bold" style={{ color: s.color }}>{s.val}</div><div className="text-[10px] font-bold text-[#122222]/70 dark:text-white/70">{s.label}</div></div>
                 ))}
               </div>
@@ -681,7 +694,7 @@ export function InventoryPage() {
                   {selectedShelfDetails.copiesList.length === 0 ? <p className="text-center py-6 text-[12px] text-[#122222]/40">No items currently placed on this shelf.</p> : selectedShelfDetails.copiesList.map((c) => (
                     <div key={c.id} onClick={() => setSelectedCopy(c as Copy & { title: string })} className="flex items-center justify-between p-2 rounded-lg bg-black/[0.01] border border-black/5 hover:bg-emerald/5 cursor-pointer transition-all">
                       <div className="min-w-0 pr-2 flex-1"><div className="flex items-center gap-1.5 mb-0.5"><span className="font-semibold text-[12px] truncate" title={c.title}>{c.title}</span><ItemTypeBadge type={c.item_type} /></div><div className="font-mono text-[9px] text-[#122222]/40">{c.barcode}</div></div>
-                      <span className={`text-[9px] font-bold capitalize px-1.5 py-0.5 rounded-full shrink-0 ${c.condition === "damaged" ? "bg-red-100 text-red-700" : "bg-emerald/10 text-[#1a4d40]"}`}>{c.condition}</span>
+                      <span className={`text-[9px] font-bold capitalize px-1.5 py-0.5 rounded-full shrink-0 ${c.condition === "damaged" ? "bg-[#f2ddc9] text-[#8a6249]" : "bg-emerald/10 text-[#1a4d40]"}`}>{c.condition}</span>
                     </div>
                   ))}
                 </div>
@@ -726,7 +739,7 @@ export function InventoryPage() {
                     <div className="flex items-center gap-2.5 text-[11px] text-[#122222]/50 dark:text-white/50 font-mono"><span>Barcode: <strong className="text-[#122222]/80 dark:text-white/80">{c.barcode}</strong></span><span>·</span><span>Accession: <strong className="text-[#122222]/80 dark:text-white/80">{c.accession_number}</strong></span></div>
                   </div>
                   <div className="flex items-center gap-3 shrink-0">
-                    {isCurrentShelf ? <span className="text-[11px] font-bold text-emerald bg-emerald/10 px-2.5 py-1 rounded-md">Placed on this shelf</span> : isOtherShelf ? <span className="text-[11px] font-semibold text-orange-600 dark:text-orange-400 bg-orange-500/10 px-2.5 py-1 rounded-md">Shelf {c.shelf}</span> : <span className="text-[11px] text-[#122222]/40 dark:text-white/40 bg-black/5 dark:bg-white/5 px-2.5 py-1 rounded-md font-semibold">Unassigned</span>}
+                    {isCurrentShelf ? <span className="text-[11px] font-bold text-emerald bg-emerald/10 px-2.5 py-1 rounded-md">Placed on this shelf</span> : isOtherShelf ? <span className="text-[11px] font-semibold text-[#8a6249] dark:text-[#d2ae96] bg-[#f9eedd] dark:bg-[#d2ae96]/15 px-2.5 py-1 rounded-md">Shelf {c.shelf}</span> : <span className="text-[11px] text-[#122222]/40 dark:text-white/40 bg-black/5 dark:bg-white/5 px-2.5 py-1 rounded-md font-semibold">Unassigned</span>}
                     {isCurrentShelf ? (
                       <Button variant="ghost" className="text-[12px] text-red-500 hover:bg-red-500/10 py-1.5 px-3" onClick={async () => { await updateCopy(c.id, { shelfId: null }); toast.success(`Removed "${c.title}" from shelf`); invalidate(); shelvesQuery.refetch(); }}>Remove</Button>
                     ) : (
