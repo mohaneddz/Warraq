@@ -219,6 +219,7 @@
       "publisher": "Éditeur",
       "pubYear": "Année de publication",
       "callNumber": "Cote de rangement",
+      "deweyCode": "Indice Dewey",
       "isbn10": "ISBN-10",
       "isbn13": "ISBN-13",
       "description": "Description",

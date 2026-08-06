@@ -219,6 +219,7 @@
       "publisher": "Publisher",
       "pubYear": "Publication Year",
       "callNumber": "Call Number",
+      "deweyCode": "Dewey Decimal Code",
       "isbn10": "ISBN-10",
       "isbn13": "ISBN-13",
       "description": "Description",

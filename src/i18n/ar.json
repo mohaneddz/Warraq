@@ -219,6 +219,7 @@
       "publisher": "دار النشر",
       "pubYear": "سنة النشر",
       "callNumber": "رقم التصنيف (Call No.)",
+      "deweyCode": "ترميز ديوي العشري",
       "isbn10": "ردمك 10 (ISBN-10)",
       "isbn13": "ردمك 13 (ISBN-13)",
       "description": "نبذة عن الكتاب",
