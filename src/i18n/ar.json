@@ -753,11 +753,12 @@
     "subtitle": "تصدير ملخصات النشاط، وسجلات الاستعارة ووثائق إكسل (Excel).",
     "refreshReports": "تحديث التقارير",
     "refreshed": "تم تحديث التقارير بنجاح",
-    "printReport": "طباعة صفحة التقارير",
+    "printReport": "تصدير تقرير PDF",
     "copySummary": "نسخ الملخص الإحصائي",
     "copiedSummary": "تم نسخ ملخص الإحصائيات إلى الحافظة",
     "exportCSV": "تصدير CSV",
     "csvExported": "تم تصدير تقرير CSV بنجاح",
+    "pdfExported": "تم إنشاء تقرير PDF بنجاح",
     "range": "نطاق:",
     "ranges": {
       "7d": "الـ 7 أيام الأخيرة",
@@ -810,7 +811,7 @@
       "activeDepts": "الأقسام الأكثر نشاطًا",
       "vsLastPeriodSuffix": "مقارنة بالفترة السابقة"
     },
-    "print": "طباعة",
+    "print": "تصدير PDF",
     "thisMonth": "هذا الشهر",
     "activityChartTitle": "نشاط الإعارة (الأيام الأخيرة)",
     "loadingStats": "جاري تحميل الإحصائيات...",

@@ -12,7 +12,12 @@
     "test:watch": "vitest",
     "rust:check": "cargo check --manifest-path src-tauri/Cargo.toml",
     "preview": "vite preview",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "package:win": "powershell -ExecutionPolicy Bypass -File ./scripts/package_windows.ps1",
+    "package:win7": "powershell -ExecutionPolicy Bypass -File ./scripts/package_windows.ps1 -TargetOS win7",
+    "package:win10": "powershell -ExecutionPolicy Bypass -File ./scripts/package_windows.ps1 -TargetOS win10",
+    "package:win11": "powershell -ExecutionPolicy Bypass -File ./scripts/package_windows.ps1 -TargetOS win11",
+    "package:all": "powershell -ExecutionPolicy Bypass -File ./scripts/package_windows.ps1 -TargetOS all"
   },
   "dependencies": {
     "@fontsource/ibm-plex-sans-arabic": "^5.2.9",
@@ -42,6 +47,8 @@
     "date-fns": "^4.4.0",
     "exceljs": "^4.4.0",
     "i18next": "^26.3.6",
+    "jspdf": "^4.2.1",
+    "jspdf-autotable": "^5.0.8",
     "lucide-react": "^1.24.0",
     "motion": "^12.42.2",
     "papaparse": "^5.5.4",

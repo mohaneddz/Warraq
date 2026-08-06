@@ -737,11 +737,12 @@
     "subtitle": "Export summaries, library statistics and Excel sheets.",
     "refreshReports": "Refresh Reports",
     "refreshed": "Reports refreshed successfully",
-    "printReport": "Print Report Page",
+    "printReport": "Export PDF Report",
     "copySummary": "Copy Stat Summary",
     "copiedSummary": "Stat summary copied to clipboard",
     "exportCSV": "Export CSV",
     "csvExported": "CSV report exported successfully",
+    "pdfExported": "PDF report generated successfully",
     "range": "Range:",
     "ranges": {
       "7d": "Last 7 Days",
@@ -794,7 +795,7 @@
       "activeDepts": "Most Active Departments",
       "vsLastPeriodSuffix": "vs previous period"
     },
-    "print": "Print",
+    "print": "Export PDF",
     "thisMonth": "This Month",
     "activityChartTitle": "Circulation Activity (Recent days)",
     "loadingStats": "Loading stats...",
