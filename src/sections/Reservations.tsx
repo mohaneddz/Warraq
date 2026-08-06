@@ -320,7 +320,7 @@ export function ReservationsPage() {
         <div className="p-4 border-b border-black/5 dark:border-white/5 flex flex-wrap items-center gap-3 bg-[#fcfbf8] dark:bg-[#111d1a]">
           {/* Search Input */}
           <div className="flex-1 min-w-[220px] max-w-sm relative">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#122222]/40" />
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#122222]/40 dark:text-white/40" />
             <input 
               type="text" 
               placeholder={t("reservations.searchPlaceholder") || "Search title, member, barcode, shelf..."} 
@@ -401,7 +401,7 @@ export function ReservationsPage() {
               <option value="queued">{t("reservations.status.queued", "Queued")}</option>
               <option value="cancelled">{t("reservations.status.cancelled", "Cancelled")}</option>
             </select>
-            <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-[#122222]/40">
+            <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-[#122222]/40 dark:text-white/40">
               <svg width="10" height="6" viewBox="0 0 10 6" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M1 1L5 5L9 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
@@ -468,7 +468,7 @@ export function ReservationsPage() {
                         {res.cover_path ? (
                           <img src={res.cover_path} alt="" className="w-8 h-11 object-cover rounded shadow-sm shrink-0" />
                         ) : (
-                          <div className="w-8 h-11 bg-black/5 dark:bg-white/5 rounded flex items-center justify-center text-[#122222]/40 shrink-0">
+                          <div className="w-8 h-11 bg-black/5 dark:bg-white/5 rounded flex items-center justify-center text-[#122222]/40 dark:text-white/40 shrink-0">
                             <BookOpen size={16} />
                           </div>
                         )}
@@ -1296,7 +1296,7 @@ function NewReservationModal({ isOpen, onClose }: NewReservationModalProps) {
                 {/* Search & Filters Toolbar */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3 shrink-0">
                   <div className="md:col-span-1 relative">
-                    <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#122222]/40" />
+                    <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#122222]/40 dark:text-white/40" />
                     <Input
                       type="text"
                       placeholder={t("reservations.addModal.searchMemberPlaceholder") || "Search member by name, ID, email..."}
@@ -1338,7 +1338,7 @@ function NewReservationModal({ isOpen, onClose }: NewReservationModalProps) {
                 {/* Members Scrollable Grid / List */}
                 <div className="flex-1 min-h-0 overflow-y-auto divide-y divide-black/5 dark:divide-white/5 border border-black/10 dark:border-white/10 rounded-xl bg-white dark:bg-[#1d2926]">
                   {membersQuery.isLoading ? (
-                    <div className="p-6 text-center text-xs text-[#122222]/50">Loading members...</div>
+                    <div className="p-6 text-center text-xs text-[#122222]/50 dark:text-white/50">Loading members...</div>
                   ) : filteredMembersList.length > 0 ? (
                     filteredMembersList.map((mem) => {
                       const isSelected = selectedMember?.id === mem.id;
@@ -1386,7 +1386,7 @@ function NewReservationModal({ isOpen, onClose }: NewReservationModalProps) {
                       );
                     })
                   ) : (
-                    <div className="p-6 text-center text-xs text-[#122222]/50">
+                    <div className="p-6 text-center text-xs text-[#122222]/50 dark:text-white/50">
                       {t("reservations.addModal.noMembersFound") || "No members found matching your search or filters."}
                     </div>
                   )}
@@ -1472,7 +1472,7 @@ function NewReservationModal({ isOpen, onClose }: NewReservationModalProps) {
             {/* Search & Filtering Options Header */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-3 shrink-0">
               <div className="md:col-span-1 relative">
-                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#122222]/40" />
+                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#122222]/40 dark:text-white/40" />
                 <Input
                   type="text"
                   placeholder={t("reservations.addModal.searchItemPlaceholder") || "Search book title, author, ISBN..."}
@@ -1531,7 +1531,7 @@ function NewReservationModal({ isOpen, onClose }: NewReservationModalProps) {
               </label>
               <div className="flex-1 min-h-0 overflow-y-auto divide-y divide-black/5 dark:divide-white/5 border border-black/10 dark:border-white/10 rounded-xl bg-white dark:bg-[#1d2926]">
                 {booksQuery.isLoading ? (
-                  <div className="p-6 text-center text-xs text-[#122222]/50">Loading catalog items...</div>
+                  <div className="p-6 text-center text-xs text-[#122222]/50 dark:text-white/50">Loading catalog items...</div>
                 ) : filteredBooksList.length > 0 ? (
                   filteredBooksList.map((bk) => {
                     const isSelected = selectedBook?.id === bk.id;
@@ -1552,7 +1552,7 @@ function NewReservationModal({ isOpen, onClose }: NewReservationModalProps) {
                           {bk.cover_path ? (
                             <img src={bk.cover_path} alt="" className="w-9 h-12 object-cover rounded shadow-sm shrink-0" />
                           ) : (
-                            <div className="w-9 h-12 bg-black/5 dark:bg-white/5 rounded flex items-center justify-center text-[#122222]/40 shrink-0">
+                            <div className="w-9 h-12 bg-black/5 dark:bg-white/5 rounded flex items-center justify-center text-[#122222]/40 dark:text-white/40 shrink-0">
                               <BookOpen size={18} />
                             </div>
                           )}
@@ -1590,7 +1590,7 @@ function NewReservationModal({ isOpen, onClose }: NewReservationModalProps) {
                     );
                   })
                 ) : (
-                  <div className="p-6 text-center text-xs text-[#122222]/50">
+                  <div className="p-6 text-center text-xs text-[#122222]/50 dark:text-white/50">
                     {t("reservations.addModal.noItemsFound") || "No items found matching your search or filters."}
                   </div>
                 )}
@@ -1629,7 +1629,7 @@ function NewReservationModal({ isOpen, onClose }: NewReservationModalProps) {
                   {selectedBook.cover_path ? (
                     <img src={selectedBook.cover_path} alt="" className="w-9 h-12 object-cover rounded shadow-sm" />
                   ) : (
-                    <div className="w-9 h-12 bg-black/5 dark:bg-white/5 rounded flex items-center justify-center text-[#122222]/40">
+                    <div className="w-9 h-12 bg-black/5 dark:bg-white/5 rounded flex items-center justify-center text-[#122222]/40 dark:text-white/40">
                       <BookOpen size={18} />
                     </div>
                   )}
@@ -1695,7 +1695,7 @@ function NewReservationModal({ isOpen, onClose }: NewReservationModalProps) {
               {/* Specific Copies Grid / Scrollable List (Vertically limited) */}
               <div className="flex-1 min-h-0 overflow-y-auto space-y-2 pr-1">
                 {copiesQuery.isLoading ? (
-                  <div className="text-xs text-center py-6 text-[#122222]/50">Loading physical copies & shelf locations...</div>
+                  <div className="text-xs text-center py-6 text-[#122222]/50 dark:text-white/50">Loading physical copies & shelf locations...</div>
                 ) : copiesQuery.data && copiesQuery.data.length > 0 ? (
                   copiesQuery.data.map((cp) => {
                     const isCopySelected = selectedCopy?.id === cp.id;
@@ -1739,7 +1739,7 @@ function NewReservationModal({ isOpen, onClose }: NewReservationModalProps) {
                     );
                   })
                 ) : (
-                  <div className="text-xs text-center py-6 text-[#122222]/50 italic">
+                  <div className="text-xs text-center py-6 text-[#122222]/50 dark:text-white/50 italic">
                     {t("reservations.addModal.noCopiesFound") || "No physical copies recorded for this item."}
                   </div>
                 )}

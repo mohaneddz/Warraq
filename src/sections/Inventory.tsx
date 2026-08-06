@@ -458,10 +458,10 @@ export function InventoryPage() {
               <span className="font-bold text-[11px] uppercase tracking-wider text-[#122222]/70 dark:text-white/70">{t("inventory.roomDetails", "Room details")}</span>
             </div>
             <div className="text-[12px] space-y-2.5">
-              <div className="flex justify-between items-center"><span className="text-[#122222]/55">{t("inventory.room", "Room")}</span><span className="font-bold">{selectedRoom?.name ?? "—"}</span></div>
-              <div className="flex justify-between items-center"><span className="text-[#122222]/55">{t("inventory.totalShelves", "Total shelves")}</span><span className="font-bold text-[#b96f3e]">{roomShelves.length}</span></div>
-              <div className="flex justify-between items-center"><span className="text-[#122222]/55">{t("inventory.totalCapacity", "Total capacity")}</span><span className="font-bold">{roomTotalCapacity.toLocaleString()} {t("inventory.copiesWord", "copies")}</span></div>
-              <div className="flex justify-between items-center"><span className="text-[#122222]/55">{t("inventory.currentlyShelved", "Currently shelved")}</span><span className="font-bold">{roomTotalCopies.toLocaleString()}</span></div>
+              <div className="flex justify-between items-center"><span className="text-[#122222]/55 dark:text-white/55">{t("inventory.room", "Room")}</span><span className="font-bold">{selectedRoom?.name ?? "—"}</span></div>
+              <div className="flex justify-between items-center"><span className="text-[#122222]/55 dark:text-white/55">{t("inventory.totalShelves", "Total shelves")}</span><span className="font-bold text-[#b96f3e]">{roomShelves.length}</span></div>
+              <div className="flex justify-between items-center"><span className="text-[#122222]/55 dark:text-white/55">{t("inventory.totalCapacity", "Total capacity")}</span><span className="font-bold">{roomTotalCapacity.toLocaleString()} {t("inventory.copiesWord", "copies")}</span></div>
+              <div className="flex justify-between items-center"><span className="text-[#122222]/55 dark:text-white/55">{t("inventory.currentlyShelved", "Currently shelved")}</span><span className="font-bold">{roomTotalCopies.toLocaleString()}</span></div>
             </div>
           </div>
         </div>
@@ -469,7 +469,7 @@ export function InventoryPage() {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-4 bg-white dark:bg-[#1d2926] p-2 rounded-xl border border-black/5 shadow-sm">
             <div className="flex-1 relative">
-              <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#122222]/40" />
+              <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#122222]/40 dark:text-white/40" />
               <input type="text" placeholder={t("inventory.searchPlaceholder", "Search barcode, title, or shelf...") as string} value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full bg-[#fcfcfc] dark:bg-[#111d1a] border border-black/8 rounded-lg py-2 pl-9 pr-3 text-[12px] outline-none focus:border-emerald transition-all" />
             </div>
             <select value={conditionFilter} onChange={e => setConditionFilter(e.target.value)} className="bg-[#fcfcfc] dark:bg-[#111d1a] border border-black/8 rounded-lg py-2 px-3 text-[12px] outline-none cursor-pointer">
@@ -477,8 +477,8 @@ export function InventoryPage() {
               <option value="mint">Mint</option><option value="good">Good</option><option value="fair">Fair</option><option value="worn">Worn</option><option value="damaged">Damaged</option>
             </select>
             <div className="flex rounded-lg border border-black/8 overflow-hidden">
-              <button onClick={() => setView("grid")} className={`px-3 py-2 cursor-pointer transition-colors ${view === "grid" ? "bg-emerald text-white" : "bg-[#fcfcfc] dark:bg-[#111d1a] text-[#122222]/60"}`}><LayoutGrid size={13} /></button>
-              <button onClick={() => setView("list")} className={`px-3 py-2 cursor-pointer transition-colors ${view === "list" ? "bg-emerald text-white" : "bg-[#fcfcfc] dark:bg-[#111d1a] text-[#122222]/60"}`}><List size={13} /></button>
+              <button onClick={() => setView("grid")} className={`px-3 py-2 cursor-pointer transition-colors ${view === "grid" ? "bg-emerald text-white" : "bg-[#fcfcfc] dark:bg-[#111d1a] text-[#122222]/60 dark:text-white/60"}`}><LayoutGrid size={13} /></button>
+              <button onClick={() => setView("list")} className={`px-3 py-2 cursor-pointer transition-colors ${view === "list" ? "bg-emerald text-white" : "bg-[#fcfcfc] dark:bg-[#111d1a] text-[#122222]/60 dark:text-white/60"}`}><List size={13} /></button>
             </div>
             {view === "grid" && (
               <button
@@ -608,7 +608,7 @@ export function InventoryPage() {
               {paginatedCopies.length > 0 ? (
                 <>
                   <table className="w-full text-left text-[13px]">
-                    <thead className="bg-[#fcfbf8] dark:bg-[#111d1a] border-b border-black/5 text-[11px] font-bold text-[#122222]/50 uppercase tracking-wider">
+                    <thead className="bg-[#fcfbf8] dark:bg-[#111d1a] border-b border-black/5 text-[11px] font-bold text-[#122222]/50 dark:text-white/50 uppercase tracking-wider">
                       <tr>
                         <th className="px-5 py-3 w-8"><input type="checkbox" checked={selectedIds.length === filteredCopies.length && filteredCopies.length > 0} onChange={e => setSelectedIds(e.target.checked ? filteredCopies.map(c => c.id) : [])} className="cursor-pointer" /></th>
                         <th className="px-5 py-3">Barcode</th><th className="px-5 py-3">Type</th><th className="px-5 py-3">Title</th><th className="px-5 py-3">Shelf</th><th className="px-5 py-3">Condition</th><th className="px-5 py-3">Status</th>
@@ -628,7 +628,7 @@ export function InventoryPage() {
                       ))}
                     </tbody>
                   </table>
-                  <div className="p-3 border-t border-black/5 flex items-center justify-between text-[12px] text-[#122222]/60 font-semibold bg-[#fcfbf8] dark:bg-[#111d1a]">
+                  <div className="p-3 border-t border-black/5 flex items-center justify-between text-[12px] text-[#122222]/60 dark:text-white/60 font-semibold bg-[#fcfbf8] dark:bg-[#111d1a]">
                     <span>Showing {Math.min(filteredCopies.length, (listPage - 1) * itemsPerPage + 1)}–{Math.min(filteredCopies.length, listPage * itemsPerPage)} of {filteredCopies.length}</span>
                     <div className="flex items-center gap-1">
                       <button onClick={() => setListPage(p => Math.max(1, p - 1))} disabled={listPage === 1} className="w-7 h-7 rounded flex items-center justify-center hover:bg-black/5 disabled:opacity-30 cursor-pointer"><ChevronLeft size={14} /></button>
@@ -649,16 +649,16 @@ export function InventoryPage() {
             <div className="bg-white dark:bg-[#1d2926] rounded-xl border border-black/8 shadow-card p-5 sticky top-4 flex flex-col gap-4">
               <div className="flex items-center justify-between pb-2 border-b border-black/5">
                 <span className="text-[11px] font-bold text-[#1a4d40] dark:text-[#1b9277] uppercase tracking-wider">Scanning in progress</span>
-                <button onClick={() => setSessionPaused(p => !p)} className="flex items-center gap-1 text-[11px] font-bold text-[#122222]/60 hover:text-[#122222] cursor-pointer bg-black/5 px-2.5 py-1 rounded-lg">{sessionPaused ? <><Play size={11} /> Resume</> : <><Pause size={11} /> Pause</>}</button>
+                <button onClick={() => setSessionPaused(p => !p)} className="flex items-center gap-1 text-[11px] font-bold text-[#122222]/60 dark:text-white/60 hover:text-[#122222] dark:hover:text-white cursor-pointer bg-black/5 dark:bg-white/5 px-2.5 py-1 rounded-lg">{sessionPaused ? <><Play size={11} /> Resume</> : <><Pause size={11} /> Pause</>}</button>
               </div>
               <h3 className="font-bold text-[18px]">Shelf {targetShelf}</h3>
               <div>
-                <div className="flex justify-between items-end mb-1"><span className="text-[11px] font-bold text-[#122222]/50 uppercase tracking-wider">Scanning progress</span><span className="text-[13px] font-bold text-[#1a4d40] dark:text-[#1b9277]">{Math.min(scanPct, 100)}%</span></div>
-                <div className="text-[18px] font-bold mb-2">{scannedItems.length} <span className="text-[13px] font-semibold text-[#122222]/50">/ {scanTarget} copies scanned</span></div>
+                <div className="flex justify-between items-end mb-1"><span className="text-[11px] font-bold text-[#122222]/50 dark:text-white/50 uppercase tracking-wider">Scanning progress</span><span className="text-[13px] font-bold text-[#1a4d40] dark:text-[#1b9277]">{Math.min(scanPct, 100)}%</span></div>
+                <div className="text-[18px] font-bold mb-2">{scannedItems.length} <span className="text-[13px] font-semibold text-[#122222]/50 dark:text-white/50">/ {scanTarget} copies scanned</span></div>
                 <div className="h-2 bg-black/5 rounded-full overflow-hidden"><div className="h-full bg-[#a87c5f] rounded-full transition-all duration-500" style={{ width: `${Math.min(scanPct, 100)}%` }} /></div>
               </div>
               <div className="p-3 bg-[#122222]/[0.02] rounded-xl border border-black/5">
-                <div className="flex items-center justify-between mb-2"><div className="flex items-center gap-1.5 text-[11px] font-semibold text-[#122222]/60"><Wifi size={11} className="text-[#1a4d40]" /> Scanner input</div><span className="text-[10px] font-bold text-[#10b981]">Connected ●</span></div>
+                <div className="flex items-center justify-between mb-2"><div className="flex items-center gap-1.5 text-[11px] font-semibold text-[#122222]/60 dark:text-white/60"><Wifi size={11} className="text-[#1a4d40]" /> Scanner input</div><span className="text-[10px] font-bold text-[#10b981]">Connected ●</span></div>
                 <form onSubmit={handleBarcodeSubmit}>
                   <input ref={scanInputRef} type="text" value={barcodeInput} onChange={e => setBarcodeInput(e.target.value)} disabled={sessionPaused} placeholder="Scan barcode or Accession..." className="w-full bg-white dark:bg-[#111d1a] border border-black/10 rounded-lg py-2 px-3 text-[12px] outline-none focus:border-emerald disabled:opacity-50" />
                 </form>
@@ -669,7 +669,7 @@ export function InventoryPage() {
                 ))}
               </div>
               <div className="flex gap-2 pt-2">
-                <button onClick={() => { if (confirm("Discard scanning session?")) { setActiveSession(false); setScannedItems([]); } }} className="flex-1 py-2 text-center rounded-lg border border-black/10 text-[12px] font-bold text-[#122222]/60 hover:bg-black/5 cursor-pointer transition-colors">Cancel</button>
+                <button onClick={() => { if (confirm("Discard scanning session?")) { setActiveSession(false); setScannedItems([]); } }} className="flex-1 py-2 text-center rounded-lg border border-black/10 text-[12px] font-bold text-[#122222]/60 dark:text-white/60 hover:bg-black/5 cursor-pointer transition-colors">Cancel</button>
                 <button onClick={() => finishMutation.mutate()} disabled={finishMutation.isPending} className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg bg-[#1a4d40] text-white text-[12px] font-bold hover:bg-[#1a4d40]/90 cursor-pointer transition-colors disabled:opacity-50"><Check size={13} /> Finish shelf</button>
               </div>
             </div>
@@ -680,28 +680,28 @@ export function InventoryPage() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 pr-4 min-w-0">
                   <div className="w-8 h-8 bg-[#b96f3e]/10 rounded-lg flex items-center justify-center shrink-0"><MapPin size={14} className="text-[#b96f3e]" /></div>
-                  <div className="min-w-0"><h3 className="font-bold text-[15px] truncate">{selectedShelfDetails.shelf_type === "floor" ? t("inventory.floorShelf", "Floor shelf") : `Shelf ${selectedShelfDetails.code}`}</h3><p className="text-[11px] text-[#122222]/50 truncate">{selectedRoom?.name}</p></div>
+                  <div className="min-w-0"><h3 className="font-bold text-[15px] truncate">{selectedShelfDetails.shelf_type === "floor" ? t("inventory.floorShelf", "Floor shelf") : `Shelf ${selectedShelfDetails.code}`}</h3><p className="text-[11px] text-[#122222]/50 dark:text-white/50 truncate">{selectedRoom?.name}</p></div>
                 </div>
-                <button onClick={() => setSelectedShelfId(null)} className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-black/5 cursor-pointer shrink-0"><X size={14} className="text-[#122222]/60" /></button>
+                <button onClick={() => setSelectedShelfId(null)} className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-black/5 cursor-pointer shrink-0"><X size={14} className="text-[#122222]/60 dark:text-white/60" /></button>
               </div>
-              {selectedShelfDetails.notes && <div className="p-3 bg-black/[0.01] border border-black/5 rounded-lg text-[12px] text-[#122222]/70 italic">{selectedShelfDetails.notes}</div>}
+              {selectedShelfDetails.notes && <div className="p-3 bg-black/[0.01] border border-black/5 rounded-lg text-[12px] text-[#122222]/70 dark:text-white/70 italic">{selectedShelfDetails.notes}</div>}
               <div>
-                <div className="flex justify-between items-center mb-1"><span className="text-[11px] font-bold text-[#122222]/40 uppercase tracking-wider">Books on shelf</span><span className="text-[12px] font-bold text-[#b96f3e]">{selectedShelfDetails.copiesList.length} / {selectedShelfDetails.capacity}</span></div>
+                <div className="flex justify-between items-center mb-1"><span className="text-[11px] font-bold text-[#122222]/40 dark:text-white/40 uppercase tracking-wider">Books on shelf</span><span className="text-[12px] font-bold text-[#b96f3e]">{selectedShelfDetails.copiesList.length} / {selectedShelfDetails.capacity}</span></div>
                 <div className="h-2 bg-black/5 rounded-full overflow-hidden"><div className="h-full rounded-full transition-all" style={{ width: `${Math.min((selectedShelfDetails.copiesList.length / selectedShelfDetails.capacity) * 100, 100)}%`, backgroundColor: occupancyColor(selectedShelfDetails.copiesList.length / selectedShelfDetails.capacity) }} /></div>
               </div>
               <div className="flex flex-col gap-2">
-                <div className="flex items-center justify-between"><div className="text-[11px] font-bold text-[#122222]/40 uppercase tracking-wider">Placed items</div><button onClick={() => handleOpenBrowseModal(selectedShelfDetails)} className="text-[11px] font-bold text-emerald hover:underline flex items-center gap-1 cursor-pointer"><Plus size={12} /> Add items</button></div>
+                <div className="flex items-center justify-between"><div className="text-[11px] font-bold text-[#122222]/40 dark:text-white/40 uppercase tracking-wider">Placed items</div><button onClick={() => handleOpenBrowseModal(selectedShelfDetails)} className="text-[11px] font-bold text-emerald hover:underline flex items-center gap-1 cursor-pointer"><Plus size={12} /> Add items</button></div>
                 <div className="space-y-1.5 max-h-60 overflow-y-auto pr-1 no-scrollbar border-t border-black/5 pt-2">
-                  {selectedShelfDetails.copiesList.length === 0 ? <p className="text-center py-6 text-[12px] text-[#122222]/40">No items currently placed on this shelf.</p> : selectedShelfDetails.copiesList.map((c) => (
+                  {selectedShelfDetails.copiesList.length === 0 ? <p className="text-center py-6 text-[12px] text-[#122222]/40 dark:text-white/40">No items currently placed on this shelf.</p> : selectedShelfDetails.copiesList.map((c) => (
                     <div key={c.id} onClick={() => setSelectedCopy(c as Copy & { title: string })} className="flex items-center justify-between p-2 rounded-lg bg-black/[0.01] border border-black/5 hover:bg-emerald/5 cursor-pointer transition-all">
-                      <div className="min-w-0 pr-2 flex-1"><div className="flex items-center gap-1.5 mb-0.5"><span className="font-semibold text-[12px] truncate" title={c.title}>{c.title}</span><ItemTypeBadge type={c.item_type} /></div><div className="font-mono text-[9px] text-[#122222]/40">{c.barcode}</div></div>
+                      <div className="min-w-0 pr-2 flex-1"><div className="flex items-center gap-1.5 mb-0.5"><span className="font-semibold text-[12px] truncate" title={c.title}>{c.title}</span><ItemTypeBadge type={c.item_type} /></div><div className="font-mono text-[9px] text-[#122222]/40 dark:text-white/40">{c.barcode}</div></div>
                       <span className={`text-[9px] font-bold capitalize px-1.5 py-0.5 rounded-full shrink-0 ${c.condition === "damaged" ? "bg-[#f2ddc9] text-[#8a6249]" : "bg-emerald/10 text-[#1a4d40]"}`}>{c.condition}</span>
                     </div>
                   ))}
                 </div>
               </div>
               <div className="pt-2 border-t border-black/5 flex gap-2 w-full">
-                <button onClick={() => handleOpenBrowseModal(selectedShelfDetails)} className="flex-1 py-2 text-center rounded-xl bg-white border border-black/10 hover:bg-black/5 hover:text-emerald text-[12px] font-bold cursor-pointer flex items-center justify-center gap-1.5 transition-colors"><Plus size={14} /> Add Books</button>
+                <button onClick={() => handleOpenBrowseModal(selectedShelfDetails)} className="flex-1 py-2 text-center rounded-xl bg-white dark:bg-[#111d1a] border border-black/10 dark:border-white/10 hover:bg-black/5 dark:hover:bg-white/5 hover:text-emerald text-[12px] font-bold cursor-pointer flex items-center justify-center gap-1.5 transition-colors"><Plus size={14} /> Add Books</button>
                 <button onClick={() => handleOpenEditShelf(selectedShelfDetails)} className="flex-1 py-2 text-center rounded-xl bg-emerald hover:bg-emerald/90 text-white text-[12px] font-bold cursor-pointer">Edit</button>
               </div>
             </div>
@@ -718,7 +718,7 @@ export function InventoryPage() {
             {targetShelfForBrowse && <span className="text-[11px] font-bold px-2.5 py-1 rounded-md bg-emerald/10 text-emerald shrink-0">Occupancy: {allCopies.filter(c => c.shelf_id === targetShelfForBrowse.id).length} / {targetShelfForBrowse.capacity}</span>}
           </div>
           <div className="flex gap-3 items-center">
-            <div className="flex-1 relative"><Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#122222]/40" /><Input type="text" value={browseSearch} onChange={(e) => setBrowseSearch(e.target.value)} placeholder="Search items by title, author, barcode, accession number..." className="pl-9 text-[13px] py-2" /></div>
+            <div className="flex-1 relative"><Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#122222]/40 dark:text-white/40" /><Input type="text" value={browseSearch} onChange={(e) => setBrowseSearch(e.target.value)} placeholder="Search items by title, author, barcode, accession number..." className="pl-9 text-[13px] py-2" /></div>
             <select value={browseTypeFilter} onChange={(e) => setBrowseTypeFilter(e.target.value)} className="bg-white dark:bg-[#1d2926] border border-black/10 dark:border-white/10 rounded-lg py-2 px-3 text-[13px] font-semibold text-[#122222] dark:text-white outline-none focus:border-emerald cursor-pointer">
               <option value="all">All Types</option><option value="book">Book</option><option value="fyp">FYP / PFE</option><option value="journal">Journal</option><option value="other">Other</option>
             </select>
@@ -758,15 +758,15 @@ export function InventoryPage() {
       {newColumnOpen && selectedRoomId && (
         <Modal isOpen={newColumnOpen} onClose={() => setNewColumnOpen(false)} title={t("inventory.addColumn", "New Bookcase")}>
           <form onSubmit={e => { e.preventDefault(); if (newColumnRows.length === 0) { toast.warning(t("inventory.selectRowsWarning", "Select at least one row.") as string); return; } createColumnMutation.mutate({ roomId: selectedRoomId, rows: newColumnRows }); }} className="space-y-4 text-[13px]">
-            <p className="text-[12px] text-[#122222]/60">{t("inventory.addColumnHint", "Adds a new bookshelf column to {{room}} with a floor shelf plus the rows you choose.", { room: selectedRoom?.name })}</p>
+            <p className="text-[12px] text-[#122222]/60 dark:text-white/60">{t("inventory.addColumnHint", "Adds a new bookshelf column to {{room}} with a floor shelf plus the rows you choose.", { room: selectedRoom?.name })}</p>
             <div>
-              <label className="text-[11px] font-bold text-[#122222]/60 uppercase block mb-2">{t("inventory.columnRows", "Shelf rows (A–{{last}})", { last: availableRowCodes[availableRowCodes.length - 1] })}</label>
+              <label className="text-[11px] font-bold text-[#122222]/60 dark:text-white/60 uppercase block mb-2">{t("inventory.columnRows", "Shelf rows (A–{{last}})", { last: availableRowCodes[availableRowCodes.length - 1] })}</label>
               <div className="flex flex-wrap gap-2">
                 {availableRowCodes.map(row => {
                   const checked = newColumnRows.includes(row);
                   return (
                     <button key={row} type="button" onClick={() => setNewColumnRows(prev => checked ? prev.filter(r => r !== row) : [...prev, row].sort())}
-                      className={`w-9 h-9 rounded-lg border font-bold text-xs transition-all cursor-pointer ${checked ? "bg-emerald text-white border-emerald" : "bg-white dark:bg-[#1d2926] text-[#122222]/50 border-black/10 hover:border-[#b96f3e]"}`}>
+                      className={`w-9 h-9 rounded-lg border font-bold text-xs transition-all cursor-pointer ${checked ? "bg-emerald text-white border-emerald" : "bg-white dark:bg-[#1d2926] text-[#122222]/50 dark:text-white/50 border-black/10 hover:border-[#b96f3e]"}`}>
                       {row}
                     </button>
                   );
@@ -784,8 +784,8 @@ export function InventoryPage() {
       {editingShelf && (
         <Modal isOpen={!!editingShelf} onClose={() => setEditingShelf(null)} title={editingShelf.shelf_type === "floor" ? "Edit Floor Shelf" : `Edit Shelf: ${editingShelf.code}`}>
           <form onSubmit={editShelfForm.handleSubmit(v => updateShelfMutation.mutate({ ...v, id: editingShelf.id }))} className="space-y-4 text-[13px]">
-            <label className="text-[11px] font-semibold text-[#122222]/60 block">Shelf Capacity<Input type="number" {...editShelfForm.register("capacity", { valueAsNumber: true })} min={1} required className="mt-1" /></label>
-            <label className="text-[11px] font-semibold text-[#122222]/60 block">Notes (Optional)<Input {...editShelfForm.register("notes")} className="mt-1" /></label>
+            <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">Shelf Capacity<Input type="number" {...editShelfForm.register("capacity", { valueAsNumber: true })} min={1} required className="mt-1" /></label>
+            <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">Notes (Optional)<Input {...editShelfForm.register("notes")} className="mt-1" /></label>
             <div className="flex gap-2 justify-end pt-4 border-t border-black/5">
               <Button type="button" variant="ghost" onClick={() => setEditingShelf(null)}>Cancel</Button>
               <Button type="submit" disabled={updateShelfMutation.isPending}>Save Changes</Button>
@@ -797,11 +797,11 @@ export function InventoryPage() {
       {scanInitOpen && (
         <Modal isOpen={scanInitOpen} onClose={() => setScanInitOpen(false)} title="Scan Shelf Barcodes">
           <form onSubmit={startScanningSession} className="space-y-4">
-            <p className="text-[13px] text-[#122222]/70 font-semibold">Enter or select a shelf code to scan. Scanned barcodes will highlight whether they are misplaced or correctly positioned on this shelf.</p>
-            <div><label className="text-[11px] font-bold text-[#122222]/60 uppercase block mb-1.5">Target Shelf Code</label><Input type="text" placeholder="e.g. A, S" value={targetShelf} onChange={e => setTargetShelf(e.target.value)} required /></div>
+            <p className="text-[13px] text-[#122222]/70 dark:text-white/70 font-semibold">Enter or select a shelf code to scan. Scanned barcodes will highlight whether they are misplaced or correctly positioned on this shelf.</p>
+            <div><label className="text-[11px] font-bold text-[#122222]/60 dark:text-white/60 uppercase block mb-1.5">Target Shelf Code</label><Input type="text" placeholder="e.g. A, S" value={targetShelf} onChange={e => setTargetShelf(e.target.value)} required /></div>
             {allShelves.length > 0 && (
               <div>
-                <p className="text-[11px] font-bold text-[#122222]/50 uppercase mb-2">Or click to select a shelf:</p>
+                <p className="text-[11px] font-bold text-[#122222]/50 dark:text-white/50 uppercase mb-2">Or click to select a shelf:</p>
                 <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
                   {allShelves.map((b) => (
                     <button key={b.id} type="button" onClick={() => setTargetShelf(b.code)} className={`px-3 py-1.5 rounded-lg text-[12px] font-bold border border-solid cursor-pointer transition-all ${targetShelf.toUpperCase() === b.code.toUpperCase() ? "border-emerald bg-emerald/10 text-emerald" : "border-transparent bg-[#122222]/[0.03] dark:bg-white/[0.03] text-[#122222]/70 dark:text-white/70 hover:bg-[#122222]/[0.06]"}`}>{b.code} <span className="opacity-50">({b.room} · Col {b.column_number})</span></button>
@@ -825,9 +825,9 @@ export function InventoryPage() {
 
       {selectedIds.length > 0 && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-white/95 dark:bg-[#1d2926]/95 backdrop-blur-md px-6 py-3 rounded-full border border-black/10 shadow-lg flex items-center gap-5 z-50">
-          <span className="text-[13px] font-semibold text-[#122222]">{selectedIds.length} copies selected</span>
+          <span className="text-[13px] font-semibold text-[#122222] dark:text-white">{selectedIds.length} copies selected</span>
           <div className="h-4 w-px bg-black/10" />
-          <button onClick={() => setSelectedIds([])} className="text-[12px] font-bold text-[#122222]/60 hover:underline cursor-pointer">Deselect all</button>
+          <button onClick={() => setSelectedIds([])} className="text-[12px] font-bold text-[#122222]/60 dark:text-white/60 hover:underline cursor-pointer">Deselect all</button>
           <button onClick={() => { if (confirm(`Archive ${selectedIds.length} copies?`)) bulkArchiveMutation.mutate(); }} className="flex items-center gap-1.5 text-[12px] font-bold bg-red-500 hover:bg-red-600 text-white px-4 py-1.5 rounded-full transition-colors cursor-pointer"><Trash2 size={12} /> Archive Selected</button>
         </div>
       )}
@@ -855,13 +855,13 @@ function ManageRoomsModal({ rooms, onClose, onRename, onDelete, onCreate, creati
               <form onSubmit={e => { e.preventDefault(); if (nameInput.trim()) { onRename(room.id, nameInput.trim()); setEditingId(null); } }} className="flex items-center gap-1 flex-1">
                 <input autoFocus value={nameInput} onChange={e => setNameInput(e.target.value)} className="flex-1 bg-white dark:bg-[#111d1a] border border-emerald rounded px-2 py-1 text-[12px] outline-none" onKeyDown={e => e.key === "Escape" && setEditingId(null)} />
                 <button type="submit" className="text-emerald cursor-pointer"><Check size={13} /></button>
-                <button type="button" onClick={() => setEditingId(null)} className="text-[#122222]/40 cursor-pointer"><X size={13} /></button>
+                <button type="button" onClick={() => setEditingId(null)} className="text-[#122222]/40 dark:text-white/40 cursor-pointer"><X size={13} /></button>
               </form>
             ) : (
               <>
                 <span className="flex-1 font-medium">{room.name}</span>
-                <button onClick={() => { setEditingId(room.id); setNameInput(room.name); }} className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-black/10 text-[#122222]/50 transition-opacity cursor-pointer"><Pencil size={11} /></button>
-                <button onClick={() => onDelete(room.id)} className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-red-50 text-[#122222]/50 hover:text-red-500 transition-opacity cursor-pointer"><Trash2 size={11} /></button>
+                <button onClick={() => { setEditingId(room.id); setNameInput(room.name); }} className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-black/10 text-[#122222]/50 dark:text-white/50 transition-opacity cursor-pointer"><Pencil size={11} /></button>
+                <button onClick={() => onDelete(room.id)} className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-red-50 text-[#122222]/50 dark:text-white/50 hover:text-red-500 transition-opacity cursor-pointer"><Trash2 size={11} /></button>
               </>
             )}
           </div>
@@ -877,7 +877,7 @@ function ManageRoomsModal({ rooms, onClose, onRename, onDelete, onCreate, creati
           <form onSubmit={e => { e.preventDefault(); if (newName.trim()) { onCreate(newName.trim()); setNewName(""); setAdding(false); } }} className="flex items-center gap-1 px-2.5 py-1">
             <input autoFocus placeholder={t("inventory.roomName", "Room name") as string} value={newName} onChange={e => setNewName(e.target.value)} className="flex-1 bg-white dark:bg-[#111d1a] border border-emerald rounded px-2 py-1 text-[12px] outline-none" onKeyDown={e => e.key === "Escape" && setAdding(false)} />
             <button type="submit" disabled={creating} className="text-emerald cursor-pointer"><Check size={13} /></button>
-            <button type="button" onClick={() => setAdding(false)} className="text-[#122222]/40 cursor-pointer"><X size={13} /></button>
+            <button type="button" onClick={() => setAdding(false)} className="text-[#122222]/40 dark:text-white/40 cursor-pointer"><X size={13} /></button>
           </form>
         ) : (
           <button onClick={() => setAdding(true)} className="flex items-center gap-1.5 px-2.5 py-2 rounded-lg text-[12px] font-bold text-emerald hover:bg-emerald/5 transition-colors cursor-pointer w-full">

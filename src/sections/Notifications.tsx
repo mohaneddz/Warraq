@@ -174,7 +174,7 @@ export function NotificationsPage() {
         {/* Toolbar */}
         <div className="p-4 border-b border-black/5 dark:border-white/5 flex items-center gap-3 bg-[#fcfbf8] dark:bg-[#111d1a] flex-wrap">
           <div className="flex-1 max-w-sm relative min-w-[200px]">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#122222]/40" />
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#122222]/40 dark:text-white/40" />
             <input
               type="text"
               placeholder={t("notificationsPage.searchPlaceholder", "Search notifications...") as string}

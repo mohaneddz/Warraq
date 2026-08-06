@@ -8,7 +8,8 @@ import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContai
 import { dashboard, loans } from "../data/repositories/library";
 import { supabase, unwrap } from "../data/supabaseClient";
 import { daysLate } from "../utils/dates";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
+import { captureChart, waitForChartsToSettle } from "../utils/chartCapture";
 import { useTranslation } from "react-i18next";
 
 import { useUiStore } from "../store/uiStore";
@@ -32,6 +33,8 @@ export function ReportsPage() {
   const librarySettings = useLibrarySettingsStore((s) => s.settings);
   const [activeTab, setActiveTab] = useState<"Overview" | "Circulation" | "Inventory" | "Members">("Overview");
   const [timeRange, setTimeRange] = useState<"7d" | "30d" | "1y" | "all">("30d");
+  const [pdfExporting, setPdfExporting] = useState(false);
+  const chartRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   // Queries
   const dashQuery = useQuery({ queryKey: ["dashboard-reports"], queryFn: dashboard });
@@ -184,8 +187,54 @@ export function ReportsPage() {
 
   // Builds a purpose-made PDF — not a screenshot of the app page — with the same four
   // sections as the on-screen tabs (Overview, Circulation, Inventory Health, Member Activity),
-  // each rendered as its own page with a clean header, KPI strip, and data tables.
-  const handleExportPdf = () => {
+  // each rendered as its own page with a clean header, KPI strip, chart images, and data tables.
+  const handleExportPdf = async () => {
+    if (pdfExporting) return;
+    setPdfExporting(true);
+    const toastId = toast.loading(t("reports.generatingPdf", "Generating PDF report…") as string);
+    const originalTab = activeTab;
+
+    try {
+      // Only one tab's charts are mounted in the DOM at a time, so each tab is switched to in
+      // turn, given a moment to render and settle its entrance animation, then captured — the
+      // original tab is restored once every chart image has been collected.
+      const chartKeysByTab: Record<typeof activeTab, string[]> = {
+        Overview: ["circulationTrend", "topCategories", "statusDistribution", "hourlyRhythm"],
+        Circulation: ["peakHours", "mediaTypeDist", "fulfillmentStatus", "dailyPace"],
+        Inventory: ["copyStatusDist", "conditionHealth", "categoryShare", "formatHoldingsCount"],
+        Members: ["membersByRole", "activeDepts"],
+      };
+      const captured: Record<string, { dataUrl: string; width: number; height: number } | null> = {};
+      for (const tab of Object.keys(chartKeysByTab) as (typeof activeTab)[]) {
+        setActiveTab(tab);
+        await waitForChartsToSettle();
+        for (const key of chartKeysByTab[tab]) {
+          captured[key] = await captureChart(chartRefs.current[key]);
+        }
+      }
+      setActiveTab(originalTab);
+      await waitForChartsToSettle(50);
+
+      const chartFor = (key: string, title: string): ReturnType<typeof buildChart> | undefined => {
+        const c = captured[key];
+        return c ? buildChart(title, c) : undefined;
+      };
+
+      await buildAndSavePdf(chartFor);
+      toast.success((t("reports.pdfExported", "PDF report generated successfully") as string), { id: toastId });
+    } catch (err: any) {
+      setActiveTab(originalTab);
+      toast.error(err?.message || String(err), { id: toastId });
+    } finally {
+      setPdfExporting(false);
+    }
+  };
+
+  function buildChart(title: string, chart: { dataUrl: string; width: number; height: number }) {
+    return { title, dataUrl: chart.dataUrl, width: chart.width, height: chart.height };
+  }
+
+  const buildAndSavePdf = async (chartFor: (key: string, title: string) => ReturnType<typeof buildChart> | undefined) => {
     const rangeLabels: Record<typeof timeRange, string> = {
       "7d": (t("reports.ranges.7d") || "Last 7 Days") as string,
       "30d": (t("reports.ranges.30d") || "Last 30 Days") as string,
@@ -193,7 +242,9 @@ export function ReportsPage() {
       "all": (t("reports.ranges.all") || "All Time") as string,
     };
 
-    generateReportsPdf({
+    const overviewChartTitle = (key: string, fallback: string) => (t(`reports.charts.${key}`) || fallback) as string;
+
+    await generateReportsPdf({
       libraryName: librarySettings.library_name || "Warraq Library",
       librarySubtitle: (t("reports.title", "Analytics & Reports") as string),
       generatedAt: new Date(),
@@ -210,62 +261,84 @@ export function ReportsPage() {
           id: "overview",
           title: (t("reports.tabs.overview") || "Overview") as string,
           subtitle: (t("reports.subtitle", "Comprehensive intelligence, holdings stats, and circulation metrics") as string),
+          charts: [
+            chartFor("circulationTrend", overviewChartTitle("circulationTrend", "Circulation Activity Trend")),
+            chartFor("topCategories", overviewChartTitle("topCategories", "Top Borrowed Categories")),
+            chartFor("statusDistribution", overviewChartTitle("statusDistribution", "Holding Status Distribution")),
+            chartFor("hourlyRhythm", overviewChartTitle("hourlyRhythm", "Circulation Hourly Rhythm")),
+          ].filter((c): c is NonNullable<typeof c> => !!c),
           tables: [
-            { title: (t("reports.charts.circulationTrend") || "Circulation Activity Trend") as string, columns: ["Day", "Circulation"], rows: trendData.map(d => [d.name, d.circulation]) },
-            { title: (t("reports.charts.topCategories") || "Top Borrowed Categories") as string, columns: ["Category", "Loans"], rows: categoriesList.map(c => [c.name, c.value]) },
+            { title: (t("reports.charts.circulationTrend") || "Circulation Activity Trend") as string, columns: [t("reports.columns.day", "Day"), t("reports.columns.circulation", "Circulation")], rows: trendData.map(d => [d.name, d.circulation]) },
+            { title: (t("reports.charts.topCategories") || "Top Borrowed Categories") as string, columns: [t("reports.columns.category", "Category"), t("reports.columns.loans", "Loans")], rows: categoriesList.map(c => [c.name, c.value]) },
           ],
         },
         {
           id: "circulation",
           title: (t("reports.tabs.circulation") || "Circulation") as string,
-          subtitle: "Loan fulfillment, peak hours, and collection type breakdown",
+          subtitle: t("reports.sectionSubtitles.circulation", "Loan fulfillment, peak hours, and collection type breakdown"),
+          charts: [
+            chartFor("peakHours", overviewChartTitle("peakHours", "Peak Circulation Hours")),
+            chartFor("mediaTypeDist", overviewChartTitle("mediaTypeDist", "Collection Media Type Distribution")),
+            chartFor("fulfillmentStatus", overviewChartTitle("fulfillmentStatus", "Loan Fulfillment Status")),
+            chartFor("dailyPace", overviewChartTitle("dailyPace", "Daily Checkouts Pace")),
+          ].filter((c): c is NonNullable<typeof c> => !!c),
           tables: [
             {
-              title: (t("reports.charts.fulfillmentStatus") || "Loan Fulfillment Status") as string, columns: ["Status", "Count"], rows: [
+              title: (t("reports.charts.fulfillmentStatus") || "Loan Fulfillment Status") as string, columns: [t("reports.columns.status", "Status"), t("reports.columns.count", "Count")], rows: [
                 [translateLabel("Returned"), stats.returnedLoans],
                 [translateLabel("Open Active"), stats.openLoansCount],
                 [translateLabel("Overdue"), stats.overdueLoansCount],
               ]
             },
-            { title: (t("reports.charts.peakHours") || "Peak Circulation Hours") as string, columns: ["Time", "Checkouts", "Returns"], rows: (dashQuery.data?.circulationRhythm ?? []).map(r => [r.time, r.checkouts, r.returns]) },
-            { title: (t("reports.charts.mediaTypeDist") || "Collection Media Type Distribution") as string, columns: ["Type", "Count"], rows: (itemTypesQuery.data ?? []).map(d => [translateLabel(d.item_type), d.count]) },
+            { title: (t("reports.charts.peakHours") || "Peak Circulation Hours") as string, columns: [t("reports.columns.time", "Time"), t("reports.columns.checkouts", "Checkouts"), t("reports.columns.returns", "Returns")], rows: (dashQuery.data?.circulationRhythm ?? []).map(r => [r.time, r.checkouts, r.returns]) },
+            { title: (t("reports.charts.mediaTypeDist") || "Collection Media Type Distribution") as string, columns: [t("reports.columns.type", "Type"), t("reports.columns.count", "Count")], rows: (itemTypesQuery.data ?? []).map(d => [translateLabel(d.item_type), d.count]) },
           ],
         },
         {
           id: "inventory",
           title: (t("reports.tabs.inventory") || "Inventory Health") as string,
-          subtitle: "Copy status, condition, and category share across the collection",
+          subtitle: t("reports.sectionSubtitles.inventory", "Copy status, condition, and category share across the collection"),
+          charts: [
+            chartFor("copyStatusDist", overviewChartTitle("copyStatusDist", "Copy Status Distribution")),
+            chartFor("conditionHealth", overviewChartTitle("conditionHealth", "Physical Item Condition Health")),
+            chartFor("categoryShare", overviewChartTitle("categoryShare", "Category Inventory Share")),
+            chartFor("formatHoldingsCount", overviewChartTitle("formatHoldingsCount", "Format Holdings Count")),
+          ].filter((c): c is NonNullable<typeof c> => !!c),
           tables: [
-            { title: (t("reports.charts.copyStatusDist") || "Copy Status Distribution") as string, columns: ["Status", "Count"], rows: (copyStatusQuery.data ?? []).map(d => [translateLabel(d.status), d.count]) },
-            { title: (t("reports.charts.conditionHealth") || "Physical Item Condition Health") as string, columns: ["Condition", "Count"], rows: (conditionQuery.data ?? []).map(d => [translateLabel(d.condition), d.count]) },
-            { title: (t("reports.charts.categoryShare") || "Category Inventory Share") as string, columns: ["Category", "Copies"], rows: categoriesList.map(c => [c.name, c.value]) },
+            { title: (t("reports.charts.copyStatusDist") || "Copy Status Distribution") as string, columns: [t("reports.columns.status", "Status"), t("reports.columns.count", "Count")], rows: (copyStatusQuery.data ?? []).map(d => [translateLabel(d.status), d.count]) },
+            { title: (t("reports.charts.conditionHealth") || "Physical Item Condition Health") as string, columns: [t("reports.columns.condition", "Condition"), t("reports.columns.count", "Count")], rows: (conditionQuery.data ?? []).map(d => [translateLabel(d.condition), d.count]) },
+            { title: (t("reports.charts.categoryShare") || "Category Inventory Share") as string, columns: [t("reports.columns.category", "Category"), t("reports.columns.copies", "Copies")], rows: categoriesList.map(c => [c.name, c.value]) },
           ],
         },
         {
           id: "members",
           title: (t("reports.tabs.members") || "Member Activity") as string,
-          subtitle: "Membership roles and departmental engagement",
+          subtitle: t("reports.sectionSubtitles.members", "Membership roles and departmental engagement"),
+          charts: [
+            chartFor("membersByRole", overviewChartTitle("membersByRole", "Members by Academic Role")),
+            chartFor("activeDepts", overviewChartTitle("activeDepts", "Most Active Departments")),
+          ].filter((c): c is NonNullable<typeof c> => !!c),
           tables: [
-            { title: (t("reports.charts.membersByRole") || "Members by Academic Role") as string, columns: ["Role", "Count"], rows: (memberRolesQuery.data ?? []).map(d => [translateLabel(d.role), d.count]) },
-            { title: (t("reports.charts.activeDepts") || "Most Active Departments") as string, columns: ["Department", "Loans"], rows: (dashQuery.data?.activeDepartments ?? []).map((d: any) => [d.name, d.count]) },
+            { title: (t("reports.charts.membersByRole") || "Members by Academic Role") as string, columns: [t("reports.columns.role", "Role"), t("reports.columns.count", "Count")], rows: (memberRolesQuery.data ?? []).map(d => [translateLabel(d.role), d.count]) },
+            { title: (t("reports.charts.activeDepts") || "Most Active Departments") as string, columns: [t("reports.columns.department", "Department"), t("reports.columns.loans", "Loans")], rows: (dashQuery.data?.activeDepartments ?? []).map((d: any) => [d.name, d.count]) },
           ],
         },
       ],
     });
-
-    toast.success((t("reports.pdfExported", "PDF report generated successfully") as string));
   };
 
   // Helper for localized status/condition/role names in charts
   const translateLabel = (st: string) => {
     const map: Record<string, string> = {
-      available: t("status.available") || "Available",
-      "on-loan": t("status.onloan") || "On Loan",
-      repair: t("status.repair") || "In Maintenance",
-      lost: t("status.lost") || "Lost",
-      Returned: t("status.returned") || "Returned",
-      "Open Active": t("status.openActive") || "Active Loan",
-      Overdue: t("status.overdue") || "Overdue",
+      available: t("reports.statusLabels.available") || "Available",
+      "on-loan": t("reports.statusLabels.onloan") || "On Loan",
+      reserved: t("reports.statusLabels.reserved") || "Reserved",
+      repair: t("reports.statusLabels.repair") || "In Maintenance",
+      lost: t("reports.statusLabels.lost") || "Lost",
+      archived: t("reports.statusLabels.archived") || "Archived",
+      Returned: t("reports.statusLabels.returned") || "Returned",
+      "Open Active": t("reports.statusLabels.openActive") || "Active Loan",
+      Overdue: t("reports.statusLabels.overdue") || "Overdue",
       good: t("catalog.condition.good") || "Good",
       fair: t("catalog.condition.fair") || "Fair",
       worn: t("catalog.condition.worn") || "Worn",
@@ -346,7 +419,7 @@ export function ReportsPage() {
       {activeTab === "Overview" && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 flex-1">
           {/* Chart 1: Circulation Activity Trend */}
-          <ChartWidget title={t("reports.charts.circulationTrend") || "Circulation Activity Trend"} icon={TrendingUp} badge={trendBadge ? `${trendBadge} ${t("reports.charts.vsLastPeriodSuffix") || "vs previous period"}` : undefined}>
+          <ChartWidget title={t("reports.charts.circulationTrend") || "Circulation Activity Trend"} icon={TrendingUp} badge={trendBadge ? `${trendBadge} ${t("reports.charts.vsLastPeriodSuffix") || "vs previous period"}` : undefined} chartRef={(el) => { chartRefs.current["circulationTrend"] = el; }}>
             <ResponsiveContainer width="100%" height={220}>
               <AreaChart data={trendData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
                 <defs>
@@ -364,7 +437,7 @@ export function ReportsPage() {
           </ChartWidget>
 
           {/* Chart 2: Top Borrowed Categories */}
-          <ChartWidget title={t("reports.charts.topCategories") || "Top Borrowed Categories"} icon={BarChart2}>
+          <ChartWidget title={t("reports.charts.topCategories") || "Top Borrowed Categories"} icon={BarChart2} chartRef={(el) => { chartRefs.current["topCategories"] = el; }}>
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={categoriesList} layout="vertical" margin={{ top: 5, right: 20, left: 20, bottom: 5 }}>
                 <XAxis type="number" hide />
@@ -376,7 +449,7 @@ export function ReportsPage() {
           </ChartWidget>
 
           {/* Chart 3: Holdings Distribution */}
-          <ChartWidget title={t("reports.charts.statusDistribution") || "Holding Status Distribution"} icon={Layers}>
+          <ChartWidget title={t("reports.charts.statusDistribution") || "Holding Status Distribution"} icon={Layers} chartRef={(el) => { chartRefs.current["statusDistribution"] = el; }}>
             <ResponsiveContainer width="100%" height={200}>
               <BarChart data={(copyStatusQuery.data ?? []).map(d => ({ ...d, status: translateLabel(d.status) }))} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
                 <XAxis dataKey="status" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: 'currentColor' }} />
@@ -388,7 +461,7 @@ export function ReportsPage() {
           </ChartWidget>
 
           {/* Chart 4: Hourly Checkout Rhythm */}
-          <ChartWidget title={t("reports.charts.hourlyRhythm") || "Circulation Hourly Rhythm"} icon={Clock} secondaryBadge={t("reports.charts.checkoutsVsReturns") || "Checkouts vs Returns"}>
+          <ChartWidget title={t("reports.charts.hourlyRhythm") || "Circulation Hourly Rhythm"} icon={Clock} secondaryBadge={t("reports.charts.checkoutsVsReturns") || "Checkouts vs Returns"} chartRef={(el) => { chartRefs.current["hourlyRhythm"] = el; }}>
             <ResponsiveContainer width="100%" height={200}>
               <BarChart data={dashQuery.data?.circulationRhythm ?? []} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
                 <XAxis dataKey="time" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: 'currentColor' }} />
@@ -405,7 +478,7 @@ export function ReportsPage() {
       {activeTab === "Circulation" && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 flex-1">
           {/* Chart 1: Hourly Rhythm */}
-          <ChartWidget title={t("reports.charts.peakHours") || "Peak Circulation Hours"} icon={Clock}>
+          <ChartWidget title={t("reports.charts.peakHours") || "Peak Circulation Hours"} icon={Clock} chartRef={(el) => { chartRefs.current["peakHours"] = el; }}>
             <ResponsiveContainer width="100%" height={230}>
               <BarChart data={dashQuery.data?.circulationRhythm ?? []} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
                 <XAxis dataKey="time" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: 'currentColor' }} />
@@ -418,7 +491,7 @@ export function ReportsPage() {
           </ChartWidget>
 
           {/* Chart 2: Items by Type */}
-          <ChartWidget title={t("reports.charts.mediaTypeDist") || "Collection Media Type Distribution"} icon={Bookmark}>
+          <ChartWidget title={t("reports.charts.mediaTypeDist") || "Collection Media Type Distribution"} icon={Bookmark} chartRef={(el) => { chartRefs.current["mediaTypeDist"] = el; }}>
             <ResponsiveContainer width="100%" height={230}>
               <BarChart data={(itemTypesQuery.data ?? []).map(d => ({ ...d, item_type: translateLabel(d.item_type) }))} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
                 <XAxis dataKey="item_type" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: 'currentColor' }} />
@@ -430,7 +503,7 @@ export function ReportsPage() {
           </ChartWidget>
 
           {/* Chart 3: Loan Status Breakdown */}
-          <ChartWidget title={t("reports.charts.fulfillmentStatus") || "Loan Fulfillment Status"} icon={CheckCircle2}>
+          <ChartWidget title={t("reports.charts.fulfillmentStatus") || "Loan Fulfillment Status"} icon={CheckCircle2} chartRef={(el) => { chartRefs.current["fulfillmentStatus"] = el; }}>
             <ResponsiveContainer width="100%" height={200}>
               <BarChart data={[
                 { status: translateLabel('Returned'), count: stats.returnedLoans },
@@ -446,7 +519,7 @@ export function ReportsPage() {
           </ChartWidget>
 
           {/* Chart 4: Daily Loans Flow */}
-          <ChartWidget title={t("reports.charts.dailyPace") || "Daily Checkouts Pace"} icon={TrendingUp}>
+          <ChartWidget title={t("reports.charts.dailyPace") || "Daily Checkouts Pace"} icon={TrendingUp} chartRef={(el) => { chartRefs.current["dailyPace"] = el; }}>
             <ResponsiveContainer width="100%" height={200}>
               <AreaChart data={trendData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
                 <defs>
@@ -468,7 +541,7 @@ export function ReportsPage() {
       {activeTab === "Inventory" && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 flex-1">
           {/* Chart 1: Holding Status */}
-          <ChartWidget title={t("reports.charts.copyStatusDist") || "Copy Status Distribution"} icon={Layers}>
+          <ChartWidget title={t("reports.charts.copyStatusDist") || "Copy Status Distribution"} icon={Layers} chartRef={(el) => { chartRefs.current["copyStatusDist"] = el; }}>
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={(copyStatusQuery.data ?? []).map(d => ({ ...d, status: translateLabel(d.status) }))} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
                 <XAxis dataKey="status" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: 'currentColor' }} />
@@ -480,7 +553,7 @@ export function ReportsPage() {
           </ChartWidget>
 
           {/* Chart 2: Item Condition */}
-          <ChartWidget title={t("reports.charts.conditionHealth") || "Physical Item Condition Health"} icon={CheckCircle2}>
+          <ChartWidget title={t("reports.charts.conditionHealth") || "Physical Item Condition Health"} icon={CheckCircle2} chartRef={(el) => { chartRefs.current["conditionHealth"] = el; }}>
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={(conditionQuery.data ?? []).map(d => ({ ...d, condition: translateLabel(d.condition) }))} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
                 <XAxis dataKey="condition" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: 'currentColor' }} />
@@ -492,7 +565,7 @@ export function ReportsPage() {
           </ChartWidget>
 
           {/* Chart 3: Category Inventory Share */}
-          <ChartWidget title={t("reports.charts.categoryShare") || "Category Inventory Share"} icon={BarChart2}>
+          <ChartWidget title={t("reports.charts.categoryShare") || "Category Inventory Share"} icon={BarChart2} chartRef={(el) => { chartRefs.current["categoryShare"] = el; }}>
             <ResponsiveContainer width="100%" height={200}>
               <BarChart data={categoriesList} layout="vertical" margin={{ top: 5, right: 20, left: 20, bottom: 5 }}>
                 <XAxis type="number" hide />
@@ -504,7 +577,7 @@ export function ReportsPage() {
           </ChartWidget>
 
           {/* Chart 4: Media Format Breakdown */}
-          <ChartWidget title={t("reports.charts.formatHoldingsCount") || "Format Holdings Count"} icon={BookOpen}>
+          <ChartWidget title={t("reports.charts.formatHoldingsCount") || "Format Holdings Count"} icon={BookOpen} chartRef={(el) => { chartRefs.current["formatHoldingsCount"] = el; }}>
             <ResponsiveContainer width="100%" height={200}>
               <BarChart data={(itemTypesQuery.data ?? []).map(d => ({ ...d, item_type: translateLabel(d.item_type) }))} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
                 <XAxis dataKey="item_type" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: 'currentColor' }} />
@@ -520,7 +593,7 @@ export function ReportsPage() {
       {activeTab === "Members" && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 flex-1">
           {/* Chart 1: Members by Academic Role */}
-          <ChartWidget title={t("reports.charts.membersByRole") || "Members by Academic Role"} icon={Users}>
+          <ChartWidget title={t("reports.charts.membersByRole") || "Members by Academic Role"} icon={Users} chartRef={(el) => { chartRefs.current["membersByRole"] = el; }}>
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={(memberRolesQuery.data ?? []).map(d => ({ ...d, role: translateLabel(d.role) }))} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
                 <XAxis dataKey="role" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: 'currentColor' }} />
@@ -532,7 +605,7 @@ export function ReportsPage() {
           </ChartWidget>
 
           {/* Chart 2: Most Active Departments */}
-          <ChartWidget title={t("reports.charts.activeDepts") || "Most Active Departments"} icon={BarChart2}>
+          <ChartWidget title={t("reports.charts.activeDepts") || "Most Active Departments"} icon={BarChart2} chartRef={(el) => { chartRefs.current["activeDepts"] = el; }}>
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={dashQuery.data?.activeDepartments ?? []} layout="vertical" margin={{ top: 5, right: 20, left: 20, bottom: 5 }}>
                 <XAxis type="number" hide />
@@ -581,9 +654,9 @@ function MetricCard({ title, value, label, icon: Icon }: { title: string; value:
   );
 }
 
-function ChartWidget({ title, icon: Icon, badge, secondaryBadge, children }: { title: string; icon: any; badge?: string; secondaryBadge?: string; children: React.ReactNode }) {
+function ChartWidget({ title, icon: Icon, badge, secondaryBadge, chartRef, children }: { title: string; icon: any; badge?: string; secondaryBadge?: string; chartRef?: (el: HTMLDivElement | null) => void; children: React.ReactNode }) {
   return (
-    <div className="bg-white dark:bg-[#1d2926] p-5 rounded-2xl border border-black/5 dark:border-white/5 shadow-card flex flex-col">
+    <div className="bg-white dark:bg-[#1d2926] p-5 rounded-2xl border border-black/5 dark:border-white/5 shadow-card flex flex-col min-w-0">
       <div className="flex justify-between items-center mb-4">
         <h3 className="font-bold text-[14px] text-[#122222] dark:text-white flex items-center gap-2">
           <Icon size={16} className="text-[#1a4d40] dark:text-[#1b9277]" /> {title}
@@ -591,7 +664,7 @@ function ChartWidget({ title, icon: Icon, badge, secondaryBadge, children }: { t
         {badge && <span className="text-[10px] font-bold text-[#1a4d40] dark:text-[#1b9277] bg-[#1a4d40]/10 dark:bg-[#1b9277]/15 px-2.5 py-0.5 rounded-full">{badge}</span>}
         {secondaryBadge && <span className="text-[10px] font-bold text-[#b96f3e] bg-[#b96f3e]/10 px-2.5 py-0.5 rounded-full">{secondaryBadge}</span>}
       </div>
-      <div className="flex-1 min-h-[190px]">
+      <div className="flex-1 min-h-[190px] min-w-0 w-full" ref={chartRef}>
         {children}
       </div>
     </div>

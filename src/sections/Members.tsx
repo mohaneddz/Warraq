@@ -414,7 +414,7 @@ export function MembersPage() {
         {/* Search & Filters */}
         <div className="flex items-center gap-3 mb-4">
           <div className="flex-1 relative">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#122222]/40" />
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#122222]/40 dark:text-white/40" />
             <input 
               id="members-page-search"
               type="text" 
@@ -874,7 +874,7 @@ function MemberSidebar({ member, onClose, registerClean }: { member: Member; onC
         <button onClick={onClose} className="text-emerald dark:text-emerald-light hover:bg-emerald/5 p-1 rounded-md transition-colors flex items-center gap-1 text-[13px] font-bold cursor-pointer">
           <ChevronLeft size={16} /> {t("catalog.details.back")}
         </button>
-        <button onClick={onClose} className="text-[#122222]/40 hover:text-[#122222] transition-colors cursor-pointer"><X size={18} /></button>
+        <button onClick={onClose} className="text-[#122222]/40 dark:text-white/40 hover:text-[#122222] dark:hover:text-white transition-colors cursor-pointer"><X size={18} /></button>
       </div>
 
       <div className="flex-1 overflow-auto p-6 flex flex-col items-start space-y-6">
@@ -890,7 +890,7 @@ function MemberSidebar({ member, onClose, registerClean }: { member: Member; onC
           <div>
             <h2 className="text-[17px] font-bold text-[#122222] dark:text-white leading-tight">{member.full_name}</h2>
             <p className="text-[12px] font-semibold text-[#122222]/60 dark:text-white/60 mt-0.5">{formatMemberShortName(member.full_name)}</p>
-            <p className="text-[11px] font-mono text-[#122222]/50 mt-1">{formatMemberNumber(member.member_number)}</p>
+            <p className="text-[11px] font-mono text-[#122222]/50 dark:text-white/50 mt-1">{formatMemberNumber(member.member_number)}</p>
           </div>
           <MemberStatusBadge status={member.status} showLabel={true} />
         </div>
@@ -1058,7 +1058,7 @@ function MemberSidebar({ member, onClose, registerClean }: { member: Member; onC
                         <h4 className="text-[13px] font-bold text-[#122222] dark:text-white truncate leading-snug">{loan.title}</h4>
                         <span className="text-[10px] text-[#122222]/50 dark:text-white/50 block font-mono mt-0.5">{loan.barcode}</span>
                       </div>
-                      <span className={`text-[10px] font-bold ${overdue ? 'text-red-500' : 'text-[#122222]/60'}`}>
+                      <span className={`text-[10px] font-bold ${overdue ? 'text-red-500' : 'text-[#122222]/60 dark:text-white/60'}`}>
                         {overdue ? t("status.overdue") || "Overdue" : t("status.onloan") || "On loan"}
                       </span>
                     </div>
@@ -1090,7 +1090,7 @@ function MemberSidebar({ member, onClose, registerClean }: { member: Member; onC
                 );
               })
             ) : (
-              <p className="text-[13px] text-[#122222]/50 text-center py-6">{t("members.noActiveLoans") || "No books currently checked out."}</p>
+              <p className="text-[13px] text-[#122222]/50 dark:text-white/50 text-center py-6">{t("members.noActiveLoans") || "No books currently checked out."}</p>
             )}
           </div>
         )}
@@ -1116,7 +1116,7 @@ function MemberSidebar({ member, onClose, registerClean }: { member: Member; onC
                 </div>
               ))
             ) : (
-              <p className="text-[13px] text-[#122222]/50 text-center py-6">{t("members.noReservations") || "No reservations placed."}</p>
+              <p className="text-[13px] text-[#122222]/50 dark:text-white/50 text-center py-6">{t("members.noReservations") || "No reservations placed."}</p>
             )}
           </div>
         )}
@@ -1161,7 +1161,7 @@ function MemberIdCardModal({ member, isOpen, onClose }: { member: Member; isOpen
 
           {/* Name, under the emblem rule */}
           <div className="absolute left-[18%] right-[18%] top-[31%] h-[6%] flex items-center justify-center">
-            <span className="text-[11px] font-bold text-[#122222] text-center leading-tight truncate w-full">{member.full_name}</span>
+            <span className="text-[11px] font-bold text-[#122222] dark:text-white text-center leading-tight truncate w-full">{member.full_name}</span>
           </div>
 
           {/* Member number, in the footer band */}
