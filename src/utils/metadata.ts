@@ -1,3 +1,16 @@
+/** Plain `fetch()` never times out on its own — a single unresponsive lookup (dead DNS, a
+ * silently-hanging proxy, etc.) would otherwise stall the whole bulk-enrichment batch forever
+ * on one book with no error and no way out. Aborts and rejects after `timeoutMs` instead. */
+async function fetchWithTimeout(url: string, options: RequestInit = {}, timeoutMs = 12000): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export interface ExternalBookMetadata {
   title: string;
   subtitle?: string;
@@ -104,7 +117,7 @@ export async function fetchBookMetadata(query: string): Promise<ExternalBookMeta
       const googleUrl = queryIsIsbn
         ? `https://www.googleapis.com/books/v1/volumes?q=isbn:${clean}`
         : `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(trimmed)}&maxResults=5`;
-      const response = await fetch(googleUrl);
+      const response = await fetchWithTimeout(googleUrl);
       if (response.ok) {
         const data = await response.json();
         if (data.items && data.items.length > 0) {
@@ -150,7 +163,7 @@ export async function fetchBookMetadata(query: string): Promise<ExternalBookMeta
     try {
       if (queryIsIsbn) {
         const olUrl = `https://openlibrary.org/api/books?bibkeys=ISBN:${clean}&jscmd=data&format=json`;
-        const response = await fetch(olUrl);
+        const response = await fetchWithTimeout(olUrl);
         if (response.ok) {
           const data = await response.json();
           const bookKey = `ISBN:${clean}`;
@@ -185,7 +198,7 @@ export async function fetchBookMetadata(query: string): Promise<ExternalBookMeta
         }
       } else {
         const olUrl = `https://openlibrary.org/search.json?q=${encodeURIComponent(trimmed)}&limit=5`;
-        const response = await fetch(olUrl);
+        const response = await fetchWithTimeout(olUrl);
         if (response.ok) {
           const data = await response.json();
           if (data.docs && data.docs.length > 0) {
@@ -333,7 +346,7 @@ If Google/OpenLibrary returned nothing, use your knowledge about the book "${que
 Return ONLY the JSON object. Do not include any explanations, introduction, markdown blocks, or other text outside the JSON.`;
 
   try {
-    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    const response = await fetchWithTimeout("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${apiKey}`,
@@ -415,7 +428,7 @@ Return ONLY the JSON object. Do not include any explanations, introduction, mark
  * always get something to store rather than nothing. */
 export async function downloadCoverAsBase64(coverUrl: string): Promise<string> {
   try {
-    const response = await fetch(coverUrl);
+    const response = await fetchWithTimeout(coverUrl);
     if (!response.ok) return coverUrl;
     const blob = await response.blob();
     return await new Promise<string>((resolve, reject) => {
