@@ -566,6 +566,7 @@
       "approvalHint": "An admin must accept this request before it enters the queue. Loan duration is set automatically based on scope."
     },
     "alerts": {
+      "updated": "Reservation updated.",
       "bulkCancelled": "Selected reservations cancelled.",
       "bulkCancelFailed": "Failed to cancel reservations.",
       "confirmBulkCancel": "Are you sure you want to cancel {{count}} selected reservation(s)?",
@@ -1168,7 +1169,18 @@
       "invalidJsonMembers": "Invalid JSON: Expected an array of members.",
       "supabaseNote": "Warraq's data now lives in Supabase, which handles automated database backups on its own — there is nothing to export or restore from this desktop app. The tools below only cover moving catalog/member records in and out as JSON.",
       "importBooksDescJson": "Import books from a JSON file containing an array of book objects.",
-      "importMembersDescJson": "Import library members from a JSON file containing an array of member objects."
+      "importMembersDescJson": "Import library members from a JSON file containing an array of member objects.",
+      "supabaseNote2": "Warraq's data lives in Supabase, which handles automated database backups on its own. The full backup below is for taking your own local copy — e.g. before a risky change — and covers rooms, shelves, books, copies, members, reservations, and loans.",
+      "fullBackupTitle": "Full library backup",
+      "fullBackupDesc": "Export every catalog and circulation record to a single JSON file, or restore from one. Restoring re-inserts rows by their original ID, so it's meant for putting data back exactly as it was — not merging with unrelated data.",
+      "fullExportBtn": "Export full backup",
+      "fullRestoreBtn": "Restore from backup",
+      "fullExportSuccess": "Full library backup saved successfully.",
+      "fullExportError": "Could not export backup: {{error}}",
+      "fullRestoreWarn": "This restores every row from the backup file (rooms, shelves, books, copies, members, reservations, loans) by ID, overwriting anything that already exists with the same ID. Continue?",
+      "fullRestoreInvalidFile": "Invalid backup file: missing tables.",
+      "fullRestoreSuccess": "Restored {{count}} rows from backup.",
+      "fullRestoreError": "Could not import backup: {{error}}"
     },
     "database": {
       "title": "Database",
@@ -1296,9 +1308,11 @@
       "developer": "Developer",
       "updates": "Software updates",
       "upToDate": "Warraq is up to date",
+      "updateAvailable": "Update available!",
       "checkBtn": "Check for updates",
       "credits": "Credits",
       "designAndEngineering": "Design & Engineering",
+      "website": "Website",
       "legal": "Legal",
       "terms": "Terms of Service",
       "privacy": "Privacy Policy",

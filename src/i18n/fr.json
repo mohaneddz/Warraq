@@ -566,6 +566,7 @@
       "approvalHint": "Un administrateur doit accepter cette demande avant qu'elle n'entre dans la file d'attente. La durée du prêt est définie automatiquement selon la portée."
     },
     "alerts": {
+      "updated": "Réservation mise à jour.",
       "bulkCancelled": "Réservations sélectionnées annulées.",
       "bulkCancelFailed": "Échec de l'annulation des réservations.",
       "confirmBulkCancel": "Voulez-vous vraiment annuler les {{count}} réservations sélectionnées?",
@@ -1168,7 +1169,18 @@
       "invalidJsonMembers": "JSON invalide: Tableau de membres attendu.",
       "supabaseNote": "Les données de Warraq résident désormais dans Supabase, qui gère lui-même les sauvegardes automatiques de la base de données — il n'y a rien à exporter ou restaurer depuis cette application de bureau. Les outils ci-dessous ne servent qu'à importer/exporter les fiches du catalogue/des membres au format JSON.",
       "importBooksDescJson": "Importer des livres à partir d'un fichier JSON contenant un tableau d'objets livre.",
-      "importMembersDescJson": "Importer des membres de la bibliothèque à partir d'un fichier JSON contenant un tableau d'objets membre."
+      "importMembersDescJson": "Importer des membres de la bibliothèque à partir d'un fichier JSON contenant un tableau d'objets membre.",
+      "supabaseNote2": "Les données de Warraq résident dans Supabase, qui gère lui-même des sauvegardes automatiques. La sauvegarde complète ci-dessous sert à conserver votre propre copie locale — par exemple avant une modification risquée — et couvre les salles, étagères, livres, exemplaires, membres, réservations et prêts.",
+      "fullBackupTitle": "Sauvegarde complète de la bibliothèque",
+      "fullBackupDesc": "Exportez tous les registres de catalogue et de circulation dans un seul fichier JSON, ou restaurez-en un. La restauration réinsère les lignes avec leur ID d'origine, elle est donc destinée à remettre les données exactement comme elles étaient — pas à les fusionner avec d'autres données.",
+      "fullExportBtn": "Exporter la sauvegarde complète",
+      "fullRestoreBtn": "Restaurer depuis une sauvegarde",
+      "fullExportSuccess": "Sauvegarde complète de la bibliothèque enregistrée avec succès.",
+      "fullExportError": "Impossible d'exporter la sauvegarde : {{error}}",
+      "fullRestoreWarn": "Cette action restaure chaque ligne du fichier de sauvegarde (salles, étagères, livres, exemplaires, membres, réservations, prêts) par ID, en écrasant tout ce qui existe déjà avec le même ID. Continuer ?",
+      "fullRestoreInvalidFile": "Fichier de sauvegarde invalide : tables manquantes.",
+      "fullRestoreSuccess": "{{count}} lignes restaurées depuis la sauvegarde.",
+      "fullRestoreError": "Impossible d'importer la sauvegarde : {{error}}"
     },
     "database": {
       "title": "Base de données",
@@ -1296,9 +1308,11 @@
       "developer": "Développeur principal",
       "updates": "Mises à jour",
       "upToDate": "Warraq est à jour",
+      "updateAvailable": "Mise à jour disponible !",
       "checkBtn": "Rechercher des mises à jour",
       "credits": "Crédits",
       "designAndEngineering": "Design et développement",
+      "website": "Site web",
       "legal": "Mentions légales",
       "terms": "Conditions d'utilisation",
       "privacy": "Politique de confidentialité",
