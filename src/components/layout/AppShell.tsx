@@ -5,8 +5,8 @@ import { useEffect, useState, useRef } from "react";
 import { useUiStore } from "../../store/uiStore";
 import { useLibrarySettingsStore } from "../../store/librarySettingsStore";
 import { useAuthStore } from "../../store/authStore";
-import { useQuery } from "@tanstack/react-query";
-import { dashboard, reservations } from "../../data/repositories/library";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { dashboard, reservations, notifications, markAllNotificationsRead } from "../../data/repositories/library";
 import { logout as logoutRequest } from "../../data/auth";
 import { formatDisplayDate } from "../../utils/dates";
 import { useTranslation } from "react-i18next";
@@ -18,13 +18,13 @@ import { toast } from "sonner";
 
 
 const links = [
-  ["/dashboard", "Dashboard", LayoutDashboard], 
-  ["/catalog", "Catalog", BookOpen], 
-  ["/members", "Members", Users], 
-  ["/reservations", "Reservations", CalendarClock], 
-  ["/inventory", "Inventory", Warehouse], 
-  ["/reports", "Reports", ChartNoAxesCombined], 
-  ["/activity", "Activity", ClipboardList], 
+  ["/dashboard", "Dashboard", LayoutDashboard],
+  ["/catalog", "Catalog", BookOpen],
+  ["/members", "Members", Users],
+  ["/reservations", "Reservations", CalendarClock],
+  ["/inventory", "Inventory", Warehouse],
+  ["/reports", "Reports", ChartNoAxesCombined],
+  ["/activity", "Activity", ClipboardList],
   ["/settings", "Settings", Cog]
 ] as const;
 
@@ -33,6 +33,7 @@ export function AppShell() {
   const user = useAuthStore((s) => s.user);
   const setUser = useAuthStore((s) => s.setUser);
   const navigate = useNavigate();
+  const qc = useQueryClient();
   const [showNotifications, setShowNotifications] = useState(false);
 
   const handleSignOut = async () => {
@@ -140,14 +141,29 @@ export function AppShell() {
     ? (resData?.filter(r => r.status === "ready") ?? [])
     : [];
 
-  const totalNotificationsCount = overdueCount + readyReservations.length;
+  // Persisted DB notifications (system alerts, reservation-ready history, etc.)
+  const { data: dbNotifications } = useQuery({ queryKey: ["notifications"], queryFn: () => notifications(50) });
+  const unreadDbNotifications = dbNotifications?.filter((n) => !n.is_read) ?? [];
+
+  const totalNotificationsCount = overdueCount + readyReservations.length + unreadDbNotifications.length;
 
   const notificationPreview = [
     ...overdueList.map((loan) => ({ kind: "overdue" as const, item: loan, date: loan.due_at })),
     ...readyReservations.map((res) => ({ kind: "ready" as const, item: res, date: res.reserved_at || res.requested_at })),
+    ...unreadDbNotifications.map((n) => ({ kind: "db" as const, item: n, date: n.created_at })),
   ]
     .sort((a, b) => new Date(b.date).valueOf() - new Date(a.date).valueOf())
     .slice(0, 3);
+
+  const handleToggleNotifications = () => {
+    const opening = !showNotifications;
+    setShowNotifications(opening);
+    if (opening && unreadDbNotifications.length > 0) {
+      markAllNotificationsRead().then(() => {
+        qc.invalidateQueries({ queryKey: ["notifications"] });
+      });
+    }
+  };
 
   // ── Theme ────────────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -217,10 +233,10 @@ export function AppShell() {
   }, [preferences.autosaveEnabled, preferences.autosaveInterval]);
 
   useEffect(() => {
-    const handler = (event: KeyboardEvent) => { 
-      const target = event.target as HTMLElement | null; 
-      const typing = event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement || Boolean(target?.isContentEditable); 
-      
+    const handler = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      const typing = event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement || Boolean(target?.isContentEditable);
+
       // Ctrl + Shift + S: Collapse / uncollapse sidebar
       if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key.toLowerCase() === "s") {
         event.preventDefault();
@@ -232,18 +248,18 @@ export function AppShell() {
         toggleFullscreen();
       }
 
-      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") { 
-        event.preventDefault(); 
-        setPaletteOpen(true); 
-      } 
-      if (!typing && event.key === "/") { 
-        event.preventDefault(); 
-        document.getElementById("global-search")?.focus(); 
-      } 
-      if (!typing && (event.ctrlKey || event.metaKey) && event.key === ",") navigate("/settings"); 
-    }; 
-    window.addEventListener("keydown", handler); 
-    return () => window.removeEventListener("keydown", handler); 
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setPaletteOpen(true);
+      }
+      if (!typing && event.key === "/") {
+        event.preventDefault();
+        document.getElementById("global-search")?.focus();
+      }
+      if (!typing && (event.ctrlKey || event.metaKey) && event.key === ",") navigate("/settings");
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
   }, [navigate, setPaletteOpen, toggleSidebar]);
 
   const toggleFullscreen = async () => {
@@ -254,9 +270,9 @@ export function AppShell() {
       await appWindow.setFullscreen(!isFS);
     } catch {
       if (!document.fullscreenElement) {
-        document.documentElement.requestFullscreen().catch(() => {});
+        document.documentElement.requestFullscreen().catch(() => { });
       } else {
-        document.exitFullscreen().catch(() => {});
+        document.exitFullscreen().catch(() => { });
       }
     }
   };
@@ -322,8 +338,8 @@ export function AppShell() {
   };
 
 
-  const windowAction = (action: "minimize" | "toggleMaximize" | "close") => { 
-    void import("@tauri-apps/api/window").then(({ getCurrentWindow }) => getCurrentWindow()[action]()); 
+  const windowAction = (action: "minimize" | "toggleMaximize" | "close") => {
+    void import("@tauri-apps/api/window").then(({ getCurrentWindow }) => getCurrentWindow()[action]());
   };
 
   return (
@@ -362,13 +378,11 @@ export function AppShell() {
 
           {/* Resize Handle */}
           {sidebarOpen && (
-            <div 
+            <div
               onMouseDown={startResizing}
-              className={`absolute top-0 bottom-0 w-[6px] cursor-col-resize z-50 hover:bg-[#b96f3e]/40 transition-colors ${
-                isDragging ? "bg-[#b96f3e]" : ""
-              } ${
-                (preferences.locale === "ar") ? "left-0" : "right-0"
-              }`}
+              className={`absolute top-0 bottom-0 w-[6px] cursor-col-resize z-50 hover:bg-[#b96f3e]/40 transition-colors ${isDragging ? "bg-[#b96f3e]" : ""
+                } ${(preferences.locale === "ar") ? "left-0" : "right-0"
+                }`}
             />
           )}
 
@@ -378,13 +392,13 @@ export function AppShell() {
               {sidebarOpen ? (
                 <div className="flex items-center justify-between w-full font-display">
                   <Link to="/dashboard" className="flex min-w-0 items-center gap-3 overflow-hidden">
-                    <img src="/brand/warraq-symbol-cream.png" className="h-10 w-10 shrink-0 object-contain" alt="Warraq"/>
+                    <img src="/brand/warraq-symbol-cream.png" className="h-10 w-10 shrink-0 object-contain" alt="Warraq" />
                     <div className="flex flex-col">
                       <span className="font-display text-[17px] font-bold tracking-[.15em] text-white leading-tight">WARRAQ</span>
                       <span className="text-[14px] text-white/60 font-medium font-arabic mt-0.5">وراق ـ</span>
                     </div>
                   </Link>
-                  <button 
+                  <button
                     onClick={toggleSidebar}
                     className="text-white/60 hover:text-white hover:bg-white/10 p-1.5 rounded transition-colors shrink-0"
                     aria-label="Collapse sidebar"
@@ -394,7 +408,7 @@ export function AppShell() {
                 </div>
               ) : (
                 <div className="flex flex-col items-center gap-4 w-full">
-                  <button 
+                  <button
                     onClick={toggleSidebar}
                     className="text-white/60 hover:text-white hover:bg-white/10 w-10 h-10 rounded-xl flex items-center justify-center transition-colors shrink-0"
                     aria-label="Expand sidebar"
@@ -402,18 +416,18 @@ export function AppShell() {
                     <Menu size={18} />
                   </button>
                   <Link to="/dashboard" className="w-10 h-10 flex items-center justify-center shrink-0">
-                    <img src="/brand/warraq-symbol-cream.png" className="h-8 w-8 object-contain" alt="Warraq"/>
+                    <img src="/brand/warraq-symbol-cream.png" className="h-8 w-8 object-contain" alt="Warraq" />
                   </Link>
                 </div>
               )}
             </div>
-            
+
             {/* Navigation */}
             <nav className={`flex-1 overflow-y-auto no-scrollbar ${sidebarOpen ? "space-y-1.5 pr-2 w-full" : "space-y-2 w-full flex flex-col items-center"}`}>
               {links.map(([to, label, Icon]) => (
-                <NavLink 
-                  key={to} 
-                  to={to} 
+                <NavLink
+                  key={to}
+                  to={to}
                   className={({ isActive }) =>
                     sidebarOpen
                       ? `flex items-center gap-3.5 rounded-lg px-3 py-3 text-[14px] font-medium transition-all duration-200 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#b96f3e] ${isActive ? "bg-gradient-to-r from-[#b96f3e] to-[#a05b2e] text-white shadow-md shadow-[#b96f3e]/20" : "text-white/60 hover:bg-white/5 hover:text-white"}`
@@ -423,7 +437,7 @@ export function AppShell() {
                 >
                   {({ isActive }) => (
                     <>
-                      <Icon size={20} strokeWidth={isActive ? 2.5 : 2}/>
+                      <Icon size={20} strokeWidth={isActive ? 2.5 : 2} />
                       {sidebarOpen && <span>{t("nav." + label.toLowerCase())}</span>}
                     </>
                   )}
@@ -434,7 +448,7 @@ export function AppShell() {
             {/* Bottom Profile */}
             <div className={`pt-4 border-t border-white/10 ${sidebarOpen ? "mt-8" : "mt-auto w-full flex flex-col items-center"}`}>
               {sidebarOpen ? (
-                <div 
+                <div
                   className="relative"
                   onMouseEnter={handleSidebarMouseEnter}
                   onMouseLeave={handleSidebarMouseLeave}
@@ -445,7 +459,7 @@ export function AppShell() {
                         <img src={user?.avatar_path} alt="" className="h-9 w-9 rounded-full object-cover shrink-0" />
                       ) : (
                         <div className="h-9 w-9 rounded-full bg-[#b96f3e] text-white flex items-center justify-center text-[12px] font-bold shrink-0">
-                          {(user?.full_name || "Librarian").substring(0,2).toUpperCase()}
+                          {(user?.full_name || "Librarian").substring(0, 2).toUpperCase()}
                         </div>
                       )}
                       <div className="flex flex-col min-w-0">
@@ -470,12 +484,12 @@ export function AppShell() {
                   )}
                 </div>
               ) : (
-                <div 
+                <div
                   className="relative flex justify-center items-center w-full"
                   onMouseEnter={handleSidebarMouseEnter}
                   onMouseLeave={handleSidebarMouseLeave}
                 >
-                  <button 
+                  <button
                     onClick={() => navigate("/settings")}
                     className="w-10 h-10 rounded-full flex items-center justify-center hover:ring-2 hover:ring-[#b96f3e]/60 transition-all shrink-0"
                     title={user?.full_name || "Librarian"}
@@ -484,7 +498,7 @@ export function AppShell() {
                       <img src={user?.avatar_path} alt="" className="h-9 w-9 rounded-full object-cover shrink-0" />
                     ) : (
                       <div className="h-9 w-9 rounded-full bg-[#b96f3e] text-white flex items-center justify-center text-[12px] font-bold shrink-0">
-                        {(user?.full_name || "Librarian").substring(0,2).toUpperCase()}
+                        {(user?.full_name || "Librarian").substring(0, 2).toUpperCase()}
                       </div>
                     )}
                   </button>
@@ -538,7 +552,7 @@ export function AppShell() {
               <circle cx="50" cy="50" r="48" strokeDasharray="2,2" />
               <circle cx="50" cy="50" r="42" />
               <circle cx="50" cy="50" r="30" strokeDasharray="1,1" />
-              
+
               {/* Rotating square star rosette */}
               <rect x="25" y="25" width="50" height="50" transform="rotate(0 50 50)" />
               <rect x="25" y="25" width="50" height="50" transform="rotate(15 50 50)" />
@@ -546,7 +560,7 @@ export function AppShell() {
               <rect x="25" y="25" width="50" height="50" transform="rotate(45 50 50)" />
               <rect x="25" y="25" width="50" height="50" transform="rotate(60 50 50)" />
               <rect x="25" y="25" width="50" height="50" transform="rotate(75 50 50)" />
-              
+
               <circle cx="50" cy="50" r="15" />
               <circle cx="50" cy="50" r="6" />
             </svg>
@@ -557,11 +571,11 @@ export function AppShell() {
             {/* Search */}
             <div className="flex-1 max-w-2xl relative flex items-center">
               <Search size={18} className="absolute left-4 text-[#122222]/40 dark:text-white/40" />
-              <input 
-                id="global-search" 
-                aria-label="Global search" 
-                placeholder={t("nav.quickSearch")} 
-                className="w-full bg-[#F9F8F4] dark:bg-[#111d1a] border border-black/5 dark:border-white/5 rounded-full py-2.5 pl-11 pr-14 text-[14px] text-[#122222] dark:text-[#f0ebe1] outline-none focus:ring-2 focus:ring-emerald/20 transition-all" 
+              <input
+                id="global-search"
+                aria-label="Global search"
+                placeholder={t("nav.quickSearch")}
+                className="w-full bg-[#F9F8F4] dark:bg-[#111d1a] border border-black/5 dark:border-white/5 rounded-full py-2.5 pl-11 pr-14 text-[14px] text-[#122222] dark:text-[#f0ebe1] outline-none focus:ring-2 focus:ring-emerald/20 transition-all"
                 onKeyDown={(e) => { if (e.key === "Enter") navigate("/catalog?q=" + encodeURIComponent(e.currentTarget.value)); }}
               />
               <div className="absolute right-3 flex items-center justify-center w-8 h-6 shrink-0 whitespace-nowrap bg-white dark:bg-[#1d2926] border border-black/10 dark:border-white/10 rounded text-[11px] font-medium text-[#122222]/60 dark:text-white/60 cursor-pointer shadow-sm" onClick={() => setPaletteOpen(true)}>
@@ -573,8 +587,8 @@ export function AppShell() {
             <div className="flex items-center gap-6 ml-6 relative">
               {/* Notification Bell Button */}
               <div className="relative">
-                <button 
-                  onClick={() => setShowNotifications(!showNotifications)}
+                <button
+                  onClick={handleToggleNotifications}
                   className="relative text-[#122222]/60 hover:text-[#122222] dark:text-white/60 dark:hover:text-white transition-colors p-1.5 rounded-lg border border-transparent hover:border-black/10 dark:hover:border-white/10 hover:bg-black/5 dark:hover:bg-white/5"
                   aria-label="Notifications"
                 >
@@ -593,11 +607,24 @@ export function AppShell() {
                     <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-[#1d2926] rounded-xl border border-black/10 dark:border-white/10 shadow-2xl z-50 text-[13px] overflow-hidden">
                       <h4 className="font-bold text-[#122222] dark:text-white p-4 pb-3 border-b border-black/5 dark:border-white/5 flex justify-between items-center">
                         <span>{t("nav.notifications")}</span>
-                        {totalNotificationsCount > 0 && <span className="text-[10px] text-red-500 font-bold bg-red-500/10 px-2 py-0.5 rounded">{t("nav.overdueCount", { count: totalNotificationsCount })}</span>}
+                        {totalNotificationsCount > 0 && <span className="text-[10px] text-red-500 font-bold bg-red-500/10 px-2 py-0.5 rounded truncate">{t("nav.overdueCount", { count: totalNotificationsCount })}</span>}
                       </h4>
                       <div className="space-y-2 max-h-60 overflow-y-auto p-3 no-scrollbar">
                         {notificationPreview.length > 0 ? (
-                          notificationPreview.map(({ kind, item }) => kind === "overdue" ? (
+                          notificationPreview.map(({ kind, item }) => kind === "db" ? (
+                            <div
+                              key={`db-${item.id}`}
+                              onClick={() => {
+                                navigate(item.link || "/notifications");
+                                setShowNotifications(false);
+                              }}
+                              className="p-2 rounded-lg hover:bg-emerald/5 dark:hover:bg-emerald-light/10 transition-colors cursor-pointer border border-black/5 dark:border-white/5"
+                            >
+                              <div className="font-bold text-[#122222] dark:text-white truncate">{item.title}</div>
+                              {item.body && <div className="text-[11px] text-[#122222]/60 dark:text-white/60 mt-0.5 truncate">{item.body}</div>}
+                              <div className="text-[10px] text-[#122222]/40 dark:text-white/40 font-bold mt-1">{formatDisplayDate(item.created_at)}</div>
+                            </div>
+                          ) : kind === "overdue" ? (
                             <div
                               key={`overdue-${item.id}`}
                               onClick={() => {
@@ -643,11 +670,11 @@ export function AppShell() {
                   </>
                 )}
               </div>
-              
+
               <div className="h-6 w-px bg-black/5 dark:bg-white/5"></div>
-              
+
               {/* Profile Dropdown */}
-              <div 
+              <div
                 className="relative"
                 onMouseEnter={handleTopbarMouseEnter}
                 onMouseLeave={handleTopbarMouseLeave}
@@ -685,19 +712,19 @@ export function AppShell() {
               <div className="relative flex items-center gap-1.5 bg-black/5 dark:bg-white/5 px-2.5 py-1.5 rounded-md hover:bg-black/10 transition-colors cursor-pointer">
                 <span className="text-[13px] font-semibold text-[#122222] dark:text-white uppercase">{preferences.locale}</span>
                 <ChevronDown size={14} className="text-[#122222]/40 dark:text-white/40" />
-                <select 
-                  value={preferences.locale} 
+                <select
+                  value={preferences.locale}
                   onChange={(e) => {
                     const locale = e.target.value as "en" | "fr" | "ar";
                     updatePreferences({ locale });
                     document.documentElement.lang = locale;
                     document.documentElement.dir = locale === "ar" ? "rtl" : "ltr";
                   }}
-                  className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                  className="absolute inset-0 opacity-0 cursor-pointer w-full h-full bg-white text-[#122222] dark:bg-[#1d2926] dark:text-white"
                 >
-                  <option value="en">English (EN)</option>
-                  <option value="fr">Français (FR)</option>
-                  <option value="ar">العربية (AR)</option>
+                  <option value="en" className="bg-white text-[#122222] dark:bg-[#1d2926] dark:text-white">English (EN)</option>
+                  <option value="fr" className="bg-white text-[#122222] dark:bg-[#1d2926] dark:text-white">Français (FR)</option>
+                  <option value="ar" className="bg-white text-[#122222] dark:bg-[#1d2926] dark:text-white">العربية (AR)</option>
                 </select>
               </div>
             </div>
@@ -705,7 +732,7 @@ export function AppShell() {
 
           {/* Page Content */}
           <div className="flex-1 overflow-auto p-8 relative z-10">
-            <Outlet/>
+            <Outlet />
           </div>
         </main>
       </div>
@@ -742,12 +769,12 @@ function ProfileCard({
   };
 
   // Card classes
-  const alignmentClass = position === "topbar" 
+  const alignmentClass = position === "topbar"
     ? (isRtl ? "left-0 top-[100%] mt-2" : "right-0 top-[100%] mt-2")
     : (isRtl ? "right-[100%] bottom-0 mr-4" : "left-[100%] bottom-0 ml-4");
 
   return (
-    <div 
+    <div
       className={`absolute ${alignmentClass} w-64 bg-white dark:bg-[#1d2926] border border-black/10 dark:border-white/10 rounded-2xl p-4 shadow-2xl z-50 text-[13px] text-[#122222] dark:text-[#f0ebe1] transition-all`}
       onClick={(e) => e.stopPropagation()}
     >
@@ -772,7 +799,7 @@ function ProfileCard({
       {/* Action Links */}
       <div className="mt-3 space-y-1">
         <h4 className={`text-[10px] font-bold text-[#122222]/40 dark:text-white/40 uppercase tracking-wider mb-1.5 px-1 ${isRtl ? "text-right" : "text-left"}`}>{t("profileCard.quickActions")}</h4>
-        
+
         {/* Sign Out */}
         <button
           onClick={() => {
@@ -790,7 +817,7 @@ function ProfileCard({
         </button>
 
         {/* Settings */}
-        <button 
+        <button
           onClick={() => {
             navigate("/settings");
             onClose();
@@ -807,7 +834,7 @@ function ProfileCard({
         </button>
 
         {/* Toggle Theme */}
-        <button 
+        <button
           onClick={toggleTheme}
           className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-[#122222]/80 dark:text-[#f0ebe1]/80 hover:bg-[#b96f3e]/10 hover:text-[#b96f3e] dark:hover:bg-white/5 dark:hover:text-white transition-all group ${isRtl ? "text-right flex-row-reverse" : "text-left"}`}
         >
@@ -822,7 +849,7 @@ function ProfileCard({
         </button>
 
         {/* Command Palette */}
-        <button 
+        <button
           onClick={() => {
             setPaletteOpen(true);
             onClose();
@@ -837,15 +864,6 @@ function ProfileCard({
           </div>
           <span className="text-[10px] text-[#122222]/40 dark:text-white/40 font-semibold bg-black/5 dark:bg-white/5 px-1.5 py-0.5 rounded">⌘K</span>
         </button>
-      </div>
-
-      {/* Footer Info */}
-      <div className={`mt-4 pt-3 border-t border-black/5 dark:border-white/5 flex items-center justify-between text-[10px] text-[#122222]/40 dark:text-white/40 ${isRtl ? "flex-row-reverse" : ""}`}>
-        <span>Warraq v0.1.0</span>
-        <span className="flex items-center gap-1 font-semibold text-emerald-600 dark:text-emerald-light">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-          {t("profileCard.localWorkspace")}
-        </span>
       </div>
     </div>
   );
