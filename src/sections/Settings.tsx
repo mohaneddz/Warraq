@@ -709,17 +709,17 @@ function BackupTab() {
 
       const backup = await exportLibraryBackup();
       await writeTextFile(path, JSON.stringify(backup, null, 2));
-      toast.success(t("settings.backup.fullExportSuccess") || "Full library backup saved successfully.");
+      toast.success(t("settings.backup.fullExportSuccess", "Full library backup saved successfully.") as string);
     } catch (err: any) {
       console.error(err);
-      toast.error(t("settings.backup.fullExportError") || `Could not export backup: ${err.message || String(err)}`);
+      toast.error(t("settings.backup.fullExportError", "Could not export backup: {{error}}", { error: err.message || String(err) }) as string);
     } finally {
       setExportingBackup(false);
     }
   };
 
   const handleImportFullBackup = async () => {
-    if (!confirm(t("settings.backup.fullRestoreWarn") || "This restores every row from the backup file (rooms, shelves, books, copies, members, reservations, loans) by ID, overwriting anything that already exists with the same ID. Continue?")) {
+    if (!confirm(t("settings.backup.fullRestoreWarn", "This restores every row from the backup file (rooms, shelves, books, copies, members, reservations, loans) by ID, overwriting anything that already exists with the same ID. Continue?") as string)) {
       return;
     }
     try {
@@ -734,16 +734,16 @@ function BackupTab() {
       const text = await readTextFile(file);
       const backup = JSON.parse(text);
       if (!backup?.tables || typeof backup.tables !== "object") {
-        toast.error(t("settings.backup.fullRestoreError") || "Invalid backup file: missing tables.");
+        toast.error(t("settings.backup.fullRestoreInvalidFile", "Invalid backup file: missing tables.") as string);
         return;
       }
 
       const counts = await importLibraryBackup(backup);
       const total = Object.values(counts).reduce((a, b) => a + b, 0);
-      toast.success(t("settings.backup.fullRestoreSuccess", { count: total }) || `Restored ${total} rows from backup.`);
+      toast.success(t("settings.backup.fullRestoreSuccess", "Restored {{count}} rows from backup.", { count: total }) as string);
     } catch (err: any) {
       console.error(err);
-      toast.error(t("settings.backup.fullRestoreError") || `Could not import backup: ${err.message || String(err)}`);
+      toast.error(t("settings.backup.fullRestoreError", "Could not import backup: {{error}}", { error: err.message || String(err) }) as string);
     } finally {
       setImportingBackup(false);
     }
@@ -1761,7 +1761,7 @@ function DesktopTab({ prefs, update }: TabProps) {
             <p className="text-[12px] text-[#122222]/60 dark:text-white/60 mt-0.5">
               v1.0.0
               {updateStatus === "uptodate" && <span className="text-[#1a4d40] dark:text-[#1b9277] font-bold ml-2">✓ {t("settings.about.upToDate")}</span>}
-              {updateStatus === "available" && <span className="text-[#b96f3e] font-bold ml-2">Update available!</span>}
+              {updateStatus === "available" && <span className="text-[#b96f3e] font-bold ml-2">{t("settings.about.updateAvailable", "Update available!")}</span>}
             </p>
           </div>
           <button
@@ -1826,7 +1826,7 @@ function AboutTab() {
             <div className="flex flex-col items-end mt-1 sm:mt-0">
               <span className="text-[13px] font-semibold text-[#122222] dark:text-white">MANAA Mohaned</span>
               <div className="flex gap-2.5 mt-1 text-[11px] font-medium text-[#1a4d40] dark:text-[#1b9277]">
-                <a href="https://mohaned.space/" target="_blank" rel="noopener noreferrer" className="hover:underline">Website</a>
+                <a href="https://mohaned.space/" target="_blank" rel="noopener noreferrer" className="hover:underline">{t("settings.about.website", "Website")}</a>
                 <span className="text-black/20 dark:text-white/20">•</span>
                 <a href="https://github.com/mohaneddz" target="_blank" rel="noopener noreferrer" className="hover:underline">GitHub</a>
                 <span className="text-black/20 dark:text-white/20">•</span>

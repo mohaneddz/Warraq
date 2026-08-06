@@ -1059,7 +1059,7 @@ function MemberSidebar({ member, onClose, registerClean }: { member: Member; onC
                         <span className="text-[10px] text-[#122222]/50 dark:text-white/50 block font-mono mt-0.5">{loan.barcode}</span>
                       </div>
                       <span className={`text-[10px] font-bold ${overdue ? 'text-red-500' : 'text-[#122222]/60 dark:text-white/60'}`}>
-                        {overdue ? t("status.overdue") || "Overdue" : t("status.onloan") || "On loan"}
+                        {overdue ? t("reports.statusLabels.overdue", "Overdue") : t("reports.statusLabels.onloan", "On loan")}
                       </span>
                     </div>
                     <div className="text-[11px] text-[#122222]/65 dark:text-white/65">
