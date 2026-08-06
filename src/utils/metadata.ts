@@ -12,6 +12,7 @@ export interface ExternalBookMetadata {
   cover_url?: string | null;
   isbn10?: string | null;
   isbn13?: string | null;
+  dewey_code?: string | null;
   /**
    * Fields Google Books/OpenLibrary did not return (used to show a clear "needs manual
    * entry" hint instead of silently leaving the field blank with no explanation — see
@@ -167,6 +168,7 @@ export async function fetchBookMetadata(query: string): Promise<ExternalBookMeta
             const publisherNames = info.publishers ? info.publishers.map((p: any) => p.name).join(", ") : "";
             const categoryNames = info.subjects ? info.subjects.slice(0, 3).map((s: any) => s.name).join(", ") : "";
             const cover = info.cover?.large || info.cover?.medium || info.cover?.small || `https://covers.openlibrary.org/b/isbn/${clean}-L.jpg`;
+            const deweyCode = info.classifications?.dewey_decimal_class?.[0] || null;
             olMeta = {
               title: info.title || "",
               subtitle: info.subtitle || "",
@@ -176,7 +178,8 @@ export async function fetchBookMetadata(query: string): Promise<ExternalBookMeta
               category: categoryNames,
               cover_url: cover,
               isbn10: clean.length === 10 ? clean : null,
-              isbn13: clean.length === 13 ? clean : null
+              isbn13: clean.length === 13 ? clean : null,
+              dewey_code: deweyCode
             };
           }
         }
@@ -272,6 +275,7 @@ export async function fetchBookMetadata(query: string): Promise<ExternalBookMeta
     cover_url,
     isbn10: finalIsbn10,
     isbn13: finalIsbn13,
+    dewey_code: googleMeta.dewey_code || olMeta.dewey_code || null,
     unresolvedFields
   };
 }
@@ -300,6 +304,7 @@ export async function enrichMetadataWithGroq(
       cover_url: existingMetadata.cover_url || null,
       isbn10: existingMetadata.isbn10 || null,
       isbn13: existingMetadata.isbn13 || null,
+      dewey_code: existingMetadata.dewey_code || null,
       unresolvedFields: existingMetadata.unresolvedFields || []
     };
   }
@@ -322,6 +327,7 @@ Specifically, you MUST return a valid JSON object with the following keys and va
 - "publicationYear": number (The 4-digit publication year of the book, as a number, or null if unknown)
 - "isbn10": string (The 10-digit ISBN of the book containing only digits and X, or empty string if unknown)
 - "isbn13": string (The 13-digit ISBN of the book containing only digits, or empty string if unknown)
+- "dewey_code": string (Your best-estimate Dewey Decimal Classification number for this book's primary subject, e.g. "823.912" for a modern English novel, or empty string if you cannot reasonably estimate one. This is a librarian's estimate, not necessarily the exact number assigned by a cataloger.)
 
 If Google/OpenLibrary returned nothing, use your knowledge about the book "${queryOrIsbn}" to fill in all the details.
 Return ONLY the JSON object. Do not include any explanations, introduction, markdown blocks, or other text outside the JSON.`;
@@ -377,6 +383,7 @@ Return ONLY the JSON object. Do not include any explanations, introduction, mark
         cover_url: existingMetadata.cover_url || null,
         isbn10: parsed.isbn10 || existingMetadata.isbn10 || null,
         isbn13: parsed.isbn13 || existingMetadata.isbn13 || null,
+        dewey_code: parsed.dewey_code || existingMetadata.dewey_code || null,
         unresolvedFields
       };
     }
@@ -398,6 +405,27 @@ Return ONLY the JSON object. Do not include any explanations, introduction, mark
     cover_url: existingMetadata.cover_url || null,
     isbn10: existingMetadata.isbn10 || null,
     isbn13: existingMetadata.isbn13 || null,
+    dewey_code: existingMetadata.dewey_code || null,
     unresolvedFields: existingMetadata.unresolvedFields || []
   };
+}
+
+/** Fetches an image URL and converts it to a base64 data URL for storage as `cover_path`.
+ * Falls back to returning the raw URL if the fetch fails (e.g. CORS/network issue), so callers
+ * always get something to store rather than nothing. */
+export async function downloadCoverAsBase64(coverUrl: string): Promise<string> {
+  try {
+    const response = await fetch(coverUrl);
+    if (!response.ok) return coverUrl;
+    const blob = await response.blob();
+    return await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(blob);
+    });
+  } catch (err) {
+    console.error("Cover image download failed", err);
+    return coverUrl;
+  }
 }

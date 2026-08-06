@@ -8,6 +8,7 @@ import {
   getColumns, createColumn, deleteColumn,
 } from "../data/repositories/library";
 import { Modal, Input, Button, StatusBadge, ItemTypeBadge } from "../components/ui/primitives";
+import { CopyEditModal } from "../components/CopyEditModal";
 import { toast } from "sonner";
 import { queryClient } from "../app/providers";
 import type { Copy, Room, Shelf } from "../types";
@@ -831,42 +832,6 @@ export function InventoryPage() {
         </div>
       )}
     </div>
-  );
-}
-
-function CopyEditModal({ copy, onClose, shelves }: { copy: Copy & { title: string }; onClose: () => void; shelves: Shelf[] }) {
-  const { t } = useTranslation();
-  const currentShelf = shelves.find(s => s.code.toUpperCase() === (copy.shelf ?? "").toUpperCase());
-  const form = useForm({ defaultValues: { shelfId: currentShelf?.id ?? "", condition: copy.condition, status: copy.status } });
-  const mutation = useMutation({
-    mutationFn: (v: { shelfId: string; condition: string; status: string }) => updateCopy(copy.id, { shelfId: v.shelfId || null, condition: v.condition, status: v.status as Copy["status"] }),
-    onSuccess: () => { toast.success("Copy updated."); onClose(); },
-    onError: (err: any) => toast.error(err.message),
-  });
-
-  return (
-    <Modal isOpen={true} onClose={onClose} title={`Edit Copy: ${copy.barcode}`}>
-      <form onSubmit={form.handleSubmit(v => mutation.mutate(v))} className="space-y-4 text-[13px]">
-        <div><p className="text-[10px] text-[#122222]/40 uppercase tracking-wider font-semibold">{t("catalog.headers.title")}</p><p className="font-semibold mt-0.5">{copy.title}</p></div>
-        <label className="text-[11px] font-semibold text-[#122222]/60 block">Shelf
-          <select {...form.register("shelfId")} className="field-select text-[13px] py-2 px-3 mt-1 font-semibold w-full bg-white dark:bg-[#1d2926] border border-black/10 rounded-lg outline-none">
-            <option value="">None (Unassigned)</option>
-            {shelves.map(s => <option key={s.id} value={s.id}>{s.room} · Col {s.column_number} — {s.shelf_type === "floor" ? `${FLOOR_SHELF_CODE} Floor` : `Shelf ${s.code}`}</option>)}
-          </select>
-        </label>
-        <label className="text-[11px] font-semibold text-[#122222]/60 block">Condition
-          <select {...form.register("condition")} className="field-select text-[13px] py-2 px-3 mt-1 font-semibold w-full bg-white dark:bg-[#1d2926] border border-black/10 rounded-lg outline-none">
-            {["mint", "good", "fair", "worn", "damaged"].map(v => <option key={v} value={v}>{v.charAt(0).toUpperCase() + v.slice(1)}</option>)}
-          </select>
-        </label>
-        <label className="text-[11px] font-semibold text-[#122222]/60 block">Status
-          <select {...form.register("status")} className="field-select text-[13px] py-2 px-3 mt-1 font-semibold w-full bg-white dark:bg-[#1d2926] border border-black/10 rounded-lg outline-none">
-            <option value="available">Available</option><option value="on-loan">On Loan</option><option value="reserved">Reserved</option><option value="repair">In Repair</option><option value="lost">Lost</option>
-          </select>
-        </label>
-        <div className="flex gap-2 justify-end pt-4 border-t border-black/5"><Button type="button" variant="ghost" onClick={onClose}>Cancel</Button><Button type="submit" disabled={mutation.isPending}>Save Changes</Button></div>
-      </form>
-    </Modal>
   );
 }
 

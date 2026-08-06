@@ -6,16 +6,17 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Plus, Search,
   ChevronLeft, ChevronRight, X, Clock, Edit2, Trash2, MapPin, Sparkles,
-  Eye, Copy, CalendarClock
+  Eye, Copy, CalendarClock, Pencil
 } from "lucide-react";
 import { useContextMenu } from "../components/ui/ContextMenu";
+import { CopyEditModal } from "../components/CopyEditModal";
 
 import {
   books, saveBook, updateBook, deleteBook, getCopiesForBook,
   addCopy, deleteCopy, auditLog,
   getShelves
 } from "../data/repositories/library";
-import type { Book } from "../types";
+import type { Book, Copy as BookCopy } from "../types";
 import { FLOOR_SHELF_CODE } from "../types";
 import { Modal, Input, Button, StatusBadge, ItemTypeBadge, ItemTypeSelect } from "../components/ui/primitives";
 import { toast } from "sonner";
@@ -24,7 +25,7 @@ import {
   cleanAccession, cleanText, formatIsbn
 } from "../utils/isbn";
 import { queryClient } from "../app/providers";
-import { fetchBookMetadata, enrichMetadataWithGroq } from "../utils/metadata";
+import { fetchBookMetadata, enrichMetadataWithGroq, downloadCoverAsBase64 } from "../utils/metadata";
 import { useUiStore } from "../store/uiStore";
 import { useLocation, useNavigate } from "react-router-dom";
 
@@ -55,6 +56,7 @@ const bookSchema = z.object({
   category: z.string().optional(),
   publication_year: z.union([z.string(), z.number()]).optional().nullable(),
   call_number: z.string().optional(),
+  dewey_code: z.string().optional(),
   barcode: z.string().optional(),
   accession: z.string().optional(),
   description: z.string().optional(),
@@ -292,6 +294,10 @@ function TypeSpecificFields({
               <Input {...registerClean(form, "call_number", cleanText)} placeholder="e.g. Q123.A4" className="mt-1" />
             </label>
           </div>
+          <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">
+            {t("catalog.details.deweyCode")}
+            <Input {...registerClean(form, "dewey_code", cleanText)} placeholder="e.g. 823.912" className="mt-1" />
+          </label>
         </>
       );
   }
@@ -406,7 +412,7 @@ export function CatalogPage() {
 
   const addForm = useForm<BookValues>({
     resolver: zodResolver(bookSchema),
-    defaultValues: { title: "", item_type: "book", subtitle: "", arabic_title: "", tags: "", author: "", isbn: "", language: "English", publisher: "", category: "", barcode: "", accession: "", description: "", cover_path: null }
+    defaultValues: { title: "", item_type: "book", subtitle: "", arabic_title: "", tags: "", author: "", isbn: "", language: "English", publisher: "", category: "", call_number: "", dewey_code: "", barcode: "", accession: "", description: "", cover_path: null }
   });
   const watchedTags = addForm.watch("tags");
 
@@ -441,6 +447,7 @@ export function CatalogPage() {
         author: author,
         publication_year: values.publication_year ? Number(values.publication_year) : null,
         call_number: callNumber,
+        dewey_code: values.dewey_code ? cleanText(values.dewey_code) : null,
         barcode: values.barcode ? cleanBarcode(values.barcode) : "",
         accession: values.accession ? cleanAccession(values.accession) : "",
         description: values.description ? cleanText(values.description) : null,
@@ -535,31 +542,20 @@ export function CatalogPage() {
         if (retrievedIsbn) {
           addForm.setValue("isbn", formatIsbn(retrievedIsbn));
         }
+        if (meta.dewey_code && !addForm.getValues("dewey_code")) {
+          addForm.setValue("dewey_code", meta.dewey_code);
+        }
 
         // Download cover url and convert to base64. Awaited so this can't land after the
         // lookup's `finally` clears the loading state and the rest of the form is already
         // considered settled — that race previously let the cover fall out of sync with
         // everything else that autofill just set.
         if (meta.cover_url) {
-          try {
-            toast.loading(t("catalog.alerts.downloadingCover") || "Downloading book cover image...", { id: toastId });
-            const response = await fetch(meta.cover_url);
-            if (response.ok) {
-              const blob = await response.blob();
-              const base64data = await new Promise<string>((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onloadend = () => resolve(reader.result as string);
-                reader.onerror = () => reject(reader.error);
-                reader.readAsDataURL(blob);
-              });
-              addForm.setValue("cover_path", base64data);
-              toast.success(t("catalog.alerts.coverDownloaded") || "Book cover downloaded!", { id: toastId });
-            } else {
-              addForm.setValue("cover_path", meta.cover_url);
-            }
-          } catch (e) {
-            console.error("Cover image download failed", e);
-            addForm.setValue("cover_path", meta.cover_url);
+          toast.loading(t("catalog.alerts.downloadingCover") || "Downloading book cover image...", { id: toastId });
+          const downloaded = await downloadCoverAsBase64(meta.cover_url);
+          addForm.setValue("cover_path", downloaded);
+          if (downloaded.startsWith("data:")) {
+            toast.success(t("catalog.alerts.coverDownloaded") || "Book cover downloaded!", { id: toastId });
           }
         }
       }
@@ -1089,6 +1085,7 @@ function BookSidebar({ book, onClose, registerClean }: { book: Book; onClose: ()
   const [activeTab, setActiveTab] = useState<"details" | "copies">("details");
   const [isEditing, setIsEditing] = useState(false);
   const [addCopyOpen, setAddCopyOpen] = useState(false);
+  const [editingCopy, setEditingCopy] = useState<BookCopy | null>(null);
 
   // Queries
   const { data: copiesList, refetch: refetchCopies } = useQuery({
@@ -1128,6 +1125,7 @@ function BookSidebar({ book, onClose, registerClean }: { book: Book; onClose: ()
       language: book.language || "English",
       publication_year: book.publication_year ? String(book.publication_year) : "",
       call_number: book.call_number || "",
+      dewey_code: book.dewey_code || "",
       description: book.description || "",
       cover_path: book.cover_path || "",
       issue_number: parsedMetadata.issue_number || "",
@@ -1166,6 +1164,7 @@ function BookSidebar({ book, onClose, registerClean }: { book: Book; onClose: ()
       language: book.language || "English",
       publication_year: book.publication_year ? String(book.publication_year) : "",
       call_number: book.call_number || "",
+      dewey_code: book.dewey_code || "",
       description: book.description || "",
       cover_path: book.cover_path || "",
       issue_number: parsedMetadata.issue_number || "",
@@ -1221,6 +1220,7 @@ function BookSidebar({ book, onClose, registerClean }: { book: Book; onClose: ()
         language: cleanText(values.language),
         publication_year: values.publication_year ? Number(values.publication_year) : null,
         call_number: callNumber,
+        dewey_code: values.dewey_code ? cleanText(values.dewey_code) : null,
         description: values.description ? cleanText(values.description) : null,
         cover_path: values.cover_path || null,
         metadata: metadataJson
@@ -1344,6 +1344,7 @@ function BookSidebar({ book, onClose, registerClean }: { book: Book; onClose: ()
                 <InfoRow label={t("catalog.details.pubYear")} value={book.publication_year ? String(book.publication_year) : "—"} />
                 <InfoRow label={t("catalog.details.callNumber")} value={book.call_number || "—"} />
               </div>
+              <InfoRow label={t("catalog.details.deweyCode")} value={book.dewey_code || "—"} />
               <InfoRow label={t("catalog.details.isbn10")} value={formatIsbn(book.isbn10) || "—"} />
               <InfoRow label={t("catalog.details.isbn13")} value={formatIsbn(book.isbn13) || "—"} />
 
@@ -1452,6 +1453,12 @@ function BookSidebar({ book, onClose, registerClean }: { book: Book; onClose: ()
                   <div className="flex items-center gap-3">
                     <StatusBadge value={copy.status} />
                     <button
+                      onClick={() => setEditingCopy(copy)}
+                      className="text-[#122222]/50 dark:text-white/50 hover:text-emerald cursor-pointer"
+                    >
+                      <Pencil size={14} />
+                    </button>
+                    <button
                       onClick={() => {
                         if (confirm(t("catalog.alerts.confirmArchiveCopy") || "Are you sure you want to delete this copy?")) {
                           deleteCopyMutation.mutate(copy.id);
@@ -1500,6 +1507,14 @@ function BookSidebar({ book, onClose, registerClean }: { book: Book; onClose: ()
                   </div>
                 </form>
               </Modal>
+            )}
+
+            {editingCopy && (
+              <CopyEditModal
+                copy={editingCopy}
+                onClose={() => { setEditingCopy(null); refetchCopies(); }}
+                shelves={allShelves}
+              />
             )}
           </div>
         )}
