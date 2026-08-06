@@ -97,8 +97,8 @@ export function ActivityPage() {
           l.actor.toLowerCase().includes(q) ||
           l.entity_type.toLowerCase().includes(q) ||
           l.entity_id.toLowerCase().includes(q) ||
-          (l.after_json && l.after_json.toLowerCase().includes(q)) ||
-          (l.before_json && l.before_json.toLowerCase().includes(q));
+          jsonToText(l.after_json).toLowerCase().includes(q) ||
+          jsonToText(l.before_json).toLowerCase().includes(q);
         if (!matches) return false;
       }
       // Date filter
@@ -152,7 +152,7 @@ export function ActivityPage() {
         Action: l.action,
         "Entity Type": l.entity_type,
         "Entity ID": l.entity_id,
-        Details: l.after_json || ""
+        Details: jsonToText(l.after_json)
       }));
 
       const csvContent = Papa.unparse(csvData);
@@ -377,7 +377,7 @@ export function ActivityPage() {
                         </div>
                       </td>
                       <td className="px-6 py-3 text-[#122222]/80 dark:text-white/80 max-w-xs">
-                        <div className="truncate font-medium text-[12px]" title={item.after_json || ""}>
+                        <div className="truncate font-medium text-[12px]" title={jsonToText(item.after_json)}>
                           {formatSummaryDetails(detailsObj, item.after_json)}
                         </div>
                       </td>
@@ -433,17 +433,35 @@ function ActionBadge({ action }: { action: string }) {
   );
 }
 
-function parseJsonDetails(jsonStr?: string | null): any {
-  if (!jsonStr) return null;
+/** `after_json`/`before_json` are jsonb columns, so Supabase returns them already parsed as an
+ * object/array — not a JSON string — for any log written after the column type was set. Handle
+ * both shapes so older string-encoded rows still parse instead of crashing. */
+function parseJsonDetails(value: unknown): any {
+  if (value == null) return null;
+  if (typeof value === "string") {
+    try {
+      return JSON.parse(value);
+    } catch (_) {
+      return null;
+    }
+  }
+  return value;
+}
+
+/** Renders a jsonb payload as plain text, for search matching, CSV export, and tooltips —
+ * never returns the raw object itself, which React can't render as a child. */
+function jsonToText(value: unknown): string {
+  if (value == null) return "";
+  if (typeof value === "string") return value;
   try {
-    return JSON.parse(jsonStr);
+    return JSON.stringify(value);
   } catch (_) {
-    return null;
+    return String(value);
   }
 }
 
-function formatSummaryDetails(obj: any, raw?: string | null): string {
-  if (!obj) return raw || "—";
+function formatSummaryDetails(obj: any, raw?: unknown): string {
+  if (!obj) return jsonToText(raw) || "—";
   if (obj.title) return `Title: ${obj.title}`;
   if (obj.book_title) return `Book: ${obj.book_title}`;
   if (obj.full_name) return `Member: ${obj.full_name} (${obj.member_number || ""})`;
@@ -519,7 +537,7 @@ function ActivityDetailsModal({ log, onClose }: { log: any | null; onClose: () =
             </div>
           ) : (
             <pre className="bg-[#fcfbf8] dark:bg-[#111d1a] p-3 rounded-xl text-[11px] font-mono text-[#122222]/70 dark:text-white/70 overflow-x-auto">
-              {log.after_json || "No payload metadata stored."}
+              {jsonToText(log.after_json) || "No payload metadata stored."}
             </pre>
           )}
         </div>
