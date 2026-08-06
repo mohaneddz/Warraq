@@ -6,7 +6,7 @@ import { useTranslation } from "react-i18next";
 import {
   BookOpen, CalendarClock, ClipboardList, Cog, LayoutDashboard, Search,
   Users, Warehouse, Moon, Sun, Plus,
-  Globe, Shield, Database, Zap, BookMarked, Bell
+  Globe, Database, Zap, BookMarked, Bell
 } from "lucide-react";
 
 export function CommandPalette() {
@@ -64,8 +64,7 @@ export function CommandPalette() {
     { label: t("commandPalette.actions.localization"), subtitle: t("commandPalette.actions.localizationSub"), route: "/settings?tab=localization", icon: Globe },
     { label: t("commandPalette.actions.rules"), subtitle: t("commandPalette.actions.rulesSub"), route: "/settings?tab=rules", icon: BookMarked },
     { label: t("commandPalette.actions.backupTab"), subtitle: t("commandPalette.actions.backupTabSub"), route: "/settings?tab=backup", icon: Database },
-    { label: t("commandPalette.actions.integrations"), subtitle: t("commandPalette.actions.integrationsSub"), route: "/settings?tab=integrations", icon: Zap },
-    { label: t("commandPalette.actions.secrets"), subtitle: t("commandPalette.actions.secretsSub"), route: "/settings?tab=secrets", icon: Shield }
+    { label: t("commandPalette.actions.integrations"), subtitle: t("commandPalette.actions.integrationsSub"), route: "/settings?tab=integrations", icon: Zap }
   ];
 
   return createPortal(

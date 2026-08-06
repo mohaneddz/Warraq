@@ -1,18 +1,20 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLocation } from "react-router-dom";
 import {
   Settings as SettingsIcon, Search, CheckCircle2, ChevronRight,
-  BookOpen, Database, UserCircle, Monitor, Globe, Bell, Shield,
+  BookOpen, Database, UserCircle, Monitor, Globe, Bell,
   HardDrive, Info, Zap, Key, RefreshCw, Trash2, Download, Upload,
   Eye, EyeOff, Copy, Check, AlertTriangle, Clock, MapPin,
   FileText, Palette, Type, BookMarked,
   Server, Cpu, FolderOpen, ExternalLink, Wifi, WifiOff,
-  LayoutGrid, Save, Users as UsersIcon, Plus, ShieldCheck, Ban, KeyRound, Pencil
+  LayoutGrid, Save, Users as UsersIcon, Plus, ShieldCheck, Ban, KeyRound, Pencil, Sparkles
 } from "lucide-react";
 import { useUiStore } from "../store/uiStore";
 import { useLibrarySettingsStore } from "../store/librarySettingsStore";
 import { useAuthStore } from "../store/authStore";
 import { changeOwnPassword, listUsers, createUser, updateUser, resetPassword, deleteUser } from "../data/auth";
+import { books as fetchAllBooks } from "../data/repositories/library";
+import { findEnrichableBooks, enrichAllBooks, type EnrichProgress } from "../utils/enrichment";
 import type { PublicUser, UserRole, UserStatus } from "../types";
 import { Button, Input, Modal } from "../components/ui/primitives";
 import { useTranslation } from "react-i18next";
@@ -25,7 +27,7 @@ import { toast } from "sonner";
 type Tab =
   | "General" | "Library Profile" | "Localization" | "Appearance"
   | "Rules" | "Notifications"
-  | "Backup & Restore" | "Database" | "Integrations & AI" | "Secrets & Keys" | "Users"
+  | "Backup & Restore" | "Database" | "Integrations & AI" | "Users"
   | "Desktop & Data" | "About";
 
 const tabIcons: Record<Tab, React.ComponentType<{ size?: number; className?: string }>> = {
@@ -38,7 +40,6 @@ const tabIcons: Record<Tab, React.ComponentType<{ size?: number; className?: str
   "Backup & Restore": HardDrive,
   "Database": Database,
   "Integrations & AI": Zap,
-  "Secrets & Keys": Shield,
   "Users": UsersIcon,
   "Desktop & Data": Monitor,
   "About": Info,
@@ -68,7 +69,7 @@ export function SettingsPage() {
         backup: "Backup & Restore",
         database: "Database",
         integrations: "Integrations & AI",
-        secrets: "Secrets & Keys",
+        secrets: "Integrations & AI",
         desktop: "Desktop & Data",
         about: "About",
         users: "Users"
@@ -83,7 +84,7 @@ export function SettingsPage() {
   const allTabs: { group: string; items: Tab[] }[] = [
     { group: "General", items: ["General", "Library Profile", "Localization", "Appearance"] },
     { group: "Circulation", items: ["Rules", "Notifications"] },
-    { group: "Data & Security", items: ["Backup & Restore", "Database", "Integrations & AI", "Secrets & Keys", ...(isAdmin ? (["Users"] as Tab[]) : [])] },
+    { group: "Data & Security", items: ["Backup & Restore", "Database", "Integrations & AI", ...(isAdmin ? (["Users"] as Tab[]) : [])] },
     { group: "System", items: ["Desktop & Data", "About"] },
   ];
 
@@ -185,7 +186,6 @@ export function SettingsPage() {
           {activeTab === "Backup & Restore" && <BackupTab />}
           {activeTab === "Database" && <DatabaseTab />}
           {activeTab === "Integrations & AI" && <IntegrationsTab prefs={preferences} update={updatePreferences} />}
-          {activeTab === "Secrets & Keys" && <SecretsTab prefs={preferences} update={updatePreferences} />}
           {activeTab === "Users" && isAdmin && <UsersTab />}
           {activeTab === "Desktop & Data" && <DesktopTab prefs={preferences} update={updatePreferences} />}
           {activeTab === "About" && <AboutTab />}
@@ -595,6 +595,15 @@ function RulesTab({ prefs, update }: LibraryTabProps) {
         </p>
       </Card>
 
+      <Card title={t("settings.rules.shelvingTitle", "Shelving")} icon={<BookMarked size={16} className="text-[#1a4d40] dark:text-[#1b9277]" />}>
+        <Field label={t("settings.rules.shelfRowCount", "Shelf rows per bookcase column (A–…)")}>
+          <NumberInput value={prefs.shelf_row_count} min={1} max={20} onChange={v => update({ shelf_row_count: v })} />
+        </Field>
+        <p className="text-[11px] text-[#122222]/50 dark:text-white/50 mt-3">
+          {t("settings.rules.shelfRowCountHelp", "Every bookcase column gets a ground-level shelf plus this many lettered rows (A, B, C…), stacked bottom to top. Raise this if your bookcases are taller — existing columns keep their current rows.")}
+        </p>
+      </Card>
+
       <Card title={t("settings.rules.gracePeriodTitle", "Grace Period")} icon={<Clock size={16} className="text-[#1a4d40] dark:text-[#1b9277]" />}>
         <div className="flex items-center justify-between pb-4 mb-4 border-b border-black/5 dark:border-white/5">
           <div>
@@ -682,6 +691,63 @@ function BackupTab() {
   const { t } = useTranslation();
   const [importingBooks, setImportingBooks] = useState(false);
   const [importingMembers, setImportingMembers] = useState(false);
+  const [exportingBackup, setExportingBackup] = useState(false);
+  const [importingBackup, setImportingBackup] = useState(false);
+
+  const handleExportFullBackup = async () => {
+    try {
+      setExportingBackup(true);
+      const { save } = await import("@tauri-apps/plugin-dialog");
+      const { writeTextFile } = await import("@tauri-apps/plugin-fs");
+      const { exportLibraryBackup } = await import("../data/repositories/library");
+
+      const path = await save({
+        defaultPath: `warraq-backup-${new Date().toISOString().slice(0, 10)}.json`,
+        filters: [{ name: "JSON", extensions: ["json"] }]
+      });
+      if (!path) return;
+
+      const backup = await exportLibraryBackup();
+      await writeTextFile(path, JSON.stringify(backup, null, 2));
+      toast.success(t("settings.backup.fullExportSuccess") || "Full library backup saved successfully.");
+    } catch (err: any) {
+      console.error(err);
+      toast.error(t("settings.backup.fullExportError") || `Could not export backup: ${err.message || String(err)}`);
+    } finally {
+      setExportingBackup(false);
+    }
+  };
+
+  const handleImportFullBackup = async () => {
+    if (!confirm(t("settings.backup.fullRestoreWarn") || "This restores every row from the backup file (rooms, shelves, books, copies, members, reservations, loans) by ID, overwriting anything that already exists with the same ID. Continue?")) {
+      return;
+    }
+    try {
+      setImportingBackup(true);
+      const { open } = await import("@tauri-apps/plugin-dialog");
+      const { readTextFile } = await import("@tauri-apps/plugin-fs");
+      const { importLibraryBackup } = await import("../data/repositories/library");
+
+      const file = await open({ filters: [{ name: "JSON", extensions: ["json"] }] });
+      if (!file) return;
+
+      const text = await readTextFile(file);
+      const backup = JSON.parse(text);
+      if (!backup?.tables || typeof backup.tables !== "object") {
+        toast.error(t("settings.backup.fullRestoreError") || "Invalid backup file: missing tables.");
+        return;
+      }
+
+      const counts = await importLibraryBackup(backup);
+      const total = Object.values(counts).reduce((a, b) => a + b, 0);
+      toast.success(t("settings.backup.fullRestoreSuccess", { count: total }) || `Restored ${total} rows from backup.`);
+    } catch (err: any) {
+      console.error(err);
+      toast.error(t("settings.backup.fullRestoreError") || `Could not import backup: ${err.message || String(err)}`);
+    } finally {
+      setImportingBackup(false);
+    }
+  };
 
   const handleImportBooks = async () => {
     try {
@@ -789,9 +855,33 @@ function BackupTab() {
       <div className="bg-[#1a4d40]/5 dark:bg-[#1b9277]/5 border border-[#1a4d40]/10 dark:border-[#1b9277]/10 rounded-2xl p-5 flex items-start gap-3 mb-6">
         <Info size={16} className="text-[#1a4d40] dark:text-[#1b9277] shrink-0 mt-0.5" />
         <p className="text-[12px] text-[#1a4d40] dark:text-[#1b9277] leading-relaxed">
-          {t("settings.backup.supabaseNote", "Warraq's data now lives in Supabase, which handles automated database backups on its own — there is nothing to export or restore from this desktop app. The tools below only cover moving catalog/member records in and out as JSON.")}
+          {t("settings.backup.supabaseNote2", "Warraq's data lives in Supabase, which handles automated database backups on its own. The full backup below is for taking your own local copy — e.g. before a risky change — and covers rooms, shelves, books, copies, members, reservations, and loans.")}
         </p>
       </div>
+
+      <Card title={t("settings.backup.fullBackupTitle", "Full library backup")} icon={<HardDrive size={16} className="text-[#1a4d40] dark:text-[#1b9277]" />}>
+        <p className="text-[12px] text-[#122222]/70 dark:text-white/70 mb-4 font-normal">
+          {t("settings.backup.fullBackupDesc", "Export every catalog and circulation record to a single JSON file, or restore from one. Restoring re-inserts rows by their original ID, so it's meant for putting data back exactly as it was — not merging with unrelated data.")}
+        </p>
+        <div className="flex flex-wrap gap-3">
+          <button
+            onClick={handleExportFullBackup}
+            disabled={exportingBackup || importingBackup}
+            className="flex items-center gap-2 bg-[#1a4d40] text-white px-5 py-2.5 rounded-lg font-bold text-[13px] hover:bg-[#1a4d40]/90 transition-colors shadow-sm disabled:opacity-50 cursor-pointer"
+          >
+            {exportingBackup ? <RefreshCw size={15} className="animate-spin" /> : <Download size={15} />}
+            {t("settings.backup.fullExportBtn", "Export full backup")}
+          </button>
+          <button
+            onClick={handleImportFullBackup}
+            disabled={exportingBackup || importingBackup}
+            className="flex items-center gap-2 border border-[#1a4d40]/25 text-[#1a4d40] dark:text-[#1b9277] dark:border-[#1b9277]/25 px-5 py-2.5 rounded-lg font-bold text-[13px] hover:bg-black/5 dark:hover:bg-white/5 transition-colors disabled:opacity-50 cursor-pointer"
+          >
+            {importingBackup ? <RefreshCw size={15} className="animate-spin" /> : <Upload size={15} />}
+            {t("settings.backup.fullRestoreBtn", "Restore from backup")}
+          </button>
+        </div>
+      </Card>
 
       <Card title={t("settings.backup.importBooksTitle", "Import books")} icon={<BookOpen size={16} className="text-[#1a4d40] dark:text-[#1b9277]" />}>
         <p className="text-[12px] text-[#122222]/70 dark:text-white/70 mb-4 font-normal">
@@ -942,10 +1032,62 @@ function IntegrationsTab({ prefs, update }: TabProps) {
   const [showKey, setShowKey] = useState(false);
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<"ok" | "fail" | null>(null);
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [visibleKey, setVisibleKey] = useState<string | null>(null);
+
+  const secrets = [
+    { id: "openai", label: t("settings.integrations.openaiKey") || "OpenAI API Key", value: prefs.openAIKey, placeholder: t("settings.secrets.secretPlaceholder") || "Not set", onClear: () => update({ openAIKey: "" }) },
+    { id: "groq", label: t("settings.integrations.groqKey") || "Groq API Key", value: prefs.groqApiKey, placeholder: t("settings.secrets.secretPlaceholder") || "Not set", onClear: () => update({ groqApiKey: "" }) },
+  ];
+
+  const handleCopyKey = (id: string, value: string) => {
+    void navigator.clipboard.writeText(value);
+    setCopiedKey(id);
+    setTimeout(() => setCopiedKey(null), 2000);
+  };
 
   const [showGroqKey, setShowGroqKey] = useState(false);
   const [testingGroq, setTestingGroq] = useState(false);
   const [testGroqResult, setTestGroqResult] = useState<"ok" | "fail" | null>(null);
+
+  const [enriching, setEnriching] = useState(false);
+  const [enrichLog, setEnrichLog] = useState<EnrichProgress[]>([]);
+  const [enrichTotal, setEnrichTotal] = useState(0);
+  const enrichCancelRef = useRef(false);
+
+  const handleStartEnrichment = async () => {
+    const confirmed = confirm(
+      t(
+        "settings.integrations.enrichConfirm",
+        "This looks up every book that's missing a cover, ISBN, Dewey code, or Arabic title against Google Books/Open Library (and Groq, if enabled) and fills in only the blank fields, one book at a time. It will make many external network requests and can take a while for a large catalog. Continue?"
+      )
+    );
+    if (!confirmed) return;
+
+    enrichCancelRef.current = false;
+    setEnrichLog([]);
+    setEnriching(true);
+    try {
+      const allBooks = await fetchAllBooks();
+      const targets = findEnrichableBooks(allBooks);
+      setEnrichTotal(targets.length);
+      if (targets.length === 0) {
+        toast.info(t("settings.integrations.enrichNone", "Every book already has a cover, ISBN, Dewey code, and Arabic title."));
+        return;
+      }
+      await enrichAllBooks(
+        targets,
+        { groqApiKey: prefs.groqEnabled ? prefs.groqApiKey : undefined },
+        (progress) => setEnrichLog((prev) => [...prev, progress]),
+        () => enrichCancelRef.current
+      );
+      toast.success(t("settings.integrations.enrichDone", "Bulk enrichment finished."));
+    } catch (err: any) {
+      toast.error(err?.message || String(err));
+    } finally {
+      setEnriching(false);
+    }
+  };
 
   const handleTest = async () => {
     if (!prefs.openAIKey) return;
@@ -1083,6 +1225,62 @@ function IntegrationsTab({ prefs, update }: TabProps) {
       </div>
 
       <h3 className="font-bold text-[13px] text-[#122222]/80 dark:text-white/80 uppercase tracking-wider mb-4 border-b border-black/5 dark:border-white/5 pb-2">
+        {t("settings.secrets.keysTitle", "API Keys")}
+      </h3>
+      <Card title={t("settings.secrets.keysTitle", "API Keys")} icon={<Key size={16} className="text-[#1a4d40]" />}>
+        <div className="space-y-3">
+          {secrets.map(secret => (
+            <div key={secret.id} className="p-4 bg-[#fcfbf8] dark:bg-[#111d1a] rounded-xl border border-black/5 dark:border-white/5">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <Key size={13} className="text-[#b96f3e]" />
+                  <span className="font-bold text-[13px] text-[#122222] dark:text-white">{secret.label}</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  {secret.value && (
+                    <>
+                      <button
+                        onClick={() => setVisibleKey(visibleKey === secret.id ? null : secret.id)}
+                        className="p-1.5 rounded hover:bg-black/5 dark:hover:bg-white/5 text-[#122222]/40 dark:text-white/40 hover:text-[#122222] dark:hover:text-white transition-colors"
+                        title={t("settings.secrets.toggleVisibility", "Toggle visibility") as string}
+                      >
+                        {visibleKey === secret.id ? <EyeOff size={13} /> : <Eye size={13} />}
+                      </button>
+                      <button
+                        onClick={() => handleCopyKey(secret.id, secret.value)}
+                        className="p-1.5 rounded hover:bg-black/5 dark:hover:bg-white/5 text-[#122222]/40 dark:text-white/40 hover:text-[#1a4d40] dark:hover:text-[#1b9277] transition-colors"
+                        title={t("settings.secrets.copyKey", "Copy") as string}
+                      >
+                        {copiedKey === secret.id ? <Check size={13} className="text-[#1a4d40]" /> : <Copy size={13} />}
+                      </button>
+                      <button
+                        onClick={secret.onClear}
+                        className="p-1.5 rounded hover:bg-red-50 dark:hover:bg-red-900/20 text-[#122222]/40 dark:text-white/40 hover:text-red-500 transition-colors"
+                        title={t("settings.secrets.removeKey", "Remove key") as string}
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+              <p className="font-mono text-[12px] text-[#122222]/50 dark:text-white/40 break-all">
+                {!secret.value
+                  ? <span className="italic">{secret.placeholder}</span>
+                  : visibleKey === secret.id
+                    ? secret.value
+                    : secret.value.slice(0, 4) + "•".repeat(Math.max(0, secret.value.length - 8)) + secret.value.slice(-4)
+                }
+              </p>
+              {!secret.value && (
+                <p className="text-[11px] text-[#122222]/30 dark:text-white/30 mt-1">{t("settings.secrets.secretHelp")}</p>
+              )}
+            </div>
+          ))}
+        </div>
+      </Card>
+
+      <h3 className="font-bold text-[13px] text-[#122222]/80 dark:text-white/80 uppercase tracking-wider mb-4 mt-8 border-b border-black/5 dark:border-white/5 pb-2">
         External Catalog Lookup
       </h3>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-8">
@@ -1117,104 +1315,61 @@ function IntegrationsTab({ prefs, update }: TabProps) {
         </Card>
       </div>
 
-      <SaveButton label={t("settings.integrations.saveBtn")} />
-    </div>
-  );
-}
-
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// 11. SECRETS & KEYS TAB
-// ═══════════════════════════════════════════════════════════════════════════════
-function SecretsTab({ prefs, update }: TabProps) {
-  const { t } = useTranslation();
-  const [copiedKey, setCopiedKey] = useState<string | null>(null);
-  const [visibleKey, setVisibleKey] = useState<string | null>(null);
-
-  const secrets = [
-    { id: "openai", label: "OpenAI API Key", value: prefs.openAIKey, placeholder: "Not set", onClear: () => update({ openAIKey: "" }) },
-    { id: "groq", label: "Groq API Key", value: prefs.groqApiKey, placeholder: "Not set", onClear: () => update({ groqApiKey: "" }) },
-  ];
-
-  const handleCopy = (id: string, value: string) => {
-    void navigator.clipboard.writeText(value);
-    setCopiedKey(id);
-    setTimeout(() => setCopiedKey(null), 2000);
-  };
-
-  return (
-    <div className="max-w-2xl">
-      <PageHeader title={t("settings.secrets.title")} desc={t("settings.secrets.desc")} />
-
-      <div className="bg-[#1a4d40]/5 dark:bg-[#1b9277]/5 border border-[#1a4d40]/10 dark:border-[#1b9277]/10 rounded-2xl p-5 flex items-start gap-3 mb-6">
-        <Shield size={16} className="text-[#1a4d40] dark:text-[#1b9277] shrink-0 mt-0.5" />
-        <p className="text-[12px] text-[#1a4d40] dark:text-[#1b9277]">
-          {t("settings.secrets.desc")}
+      <h3 className="font-bold text-[13px] text-[#122222]/80 dark:text-white/80 uppercase tracking-wider mb-4 border-b border-black/5 dark:border-white/5 pb-2">
+        {t("settings.integrations.enrichSectionTitle", "Bulk Enrich Existing Books")}
+      </h3>
+      <Card title={t("settings.integrations.enrichTitle", "Fill in missing book data")} icon={<Sparkles size={16} className="text-[#1a4d40] dark:text-[#1b9277]" />}>
+        <p className="text-[12px] text-[#122222]/70 dark:text-white/70 mb-4 font-normal leading-normal">
+          {t(
+            "settings.integrations.enrichDesc",
+            "Goes through every book missing a cover, ISBN, Dewey code, or Arabic title and looks it up one at a time via Google Books/Open Library, plus Groq for Arabic translation and a best-estimate Dewey code if enabled above. Existing values are never overwritten."
+          )}
         </p>
-      </div>
-
-      <Card title={t("settings.secrets.keysTitle")} icon={<Key size={16} className="text-[#1a4d40]" />}>
-        {secrets.length === 0 ? (
-          <div className="text-center py-8">
-            <Key size={32} className="mx-auto text-[#122222]/20 dark:text-white/20 mb-3" />
-            <p className="text-[13px] text-[#122222]/50 dark:text-white/50">{t("settings.secrets.secretPlaceholder")}</p>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {secrets.map(secret => (
-              <div key={secret.id} className="p-4 bg-[#fcfbf8] dark:bg-[#111d1a] rounded-xl border border-black/5 dark:border-white/5">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <Key size={13} className="text-[#b96f3e]" />
-                    <span className="font-bold text-[13px] text-[#122222] dark:text-white">{secret.label}</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    {secret.value && (
-                      <>
-                        <button
-                          onClick={() => setVisibleKey(visibleKey === secret.id ? null : secret.id)}
-                          className="p-1.5 rounded hover:bg-black/5 dark:hover:bg-white/5 text-[#122222]/40 dark:text-white/40 hover:text-[#122222] dark:hover:text-white transition-colors"
-                          title="Toggle visibility"
-                        >
-                          {visibleKey === secret.id ? <EyeOff size={13} /> : <Eye size={13} />}
-                        </button>
-                        <button
-                          onClick={() => handleCopy(secret.id, secret.value)}
-                          className="p-1.5 rounded hover:bg-black/5 dark:hover:bg-white/5 text-[#122222]/40 dark:text-white/40 hover:text-[#1a4d40] dark:hover:text-[#1b9277] transition-colors"
-                          title="Copy"
-                        >
-                          {copiedKey === secret.id ? <Check size={13} className="text-[#1a4d40]" /> : <Copy size={13} />}
-                        </button>
-                        <button
-                          onClick={secret.onClear}
-                          className="p-1.5 rounded hover:bg-red-50 dark:hover:bg-red-900/20 text-[#122222]/40 dark:text-white/40 hover:text-red-500 transition-colors"
-                          title="Remove key"
-                        >
-                          <Trash2 size={13} />
-                        </button>
-                      </>
-                    )}
-                  </div>
+        <div className="flex items-center gap-3 mb-4">
+          <button
+            onClick={handleStartEnrichment}
+            disabled={enriching}
+            className="flex items-center gap-2 bg-[#1a4d40] text-white px-5 py-2.5 rounded-lg font-bold text-[13px] hover:bg-[#1a4d40]/90 transition-colors shadow-sm disabled:opacity-50 cursor-pointer"
+          >
+            {enriching ? <RefreshCw size={15} className="animate-spin" /> : <Sparkles size={15} />}
+            {enriching ? t("settings.integrations.enrichRunning", "Enriching…") : t("settings.integrations.enrichStart", "Start Enrichment")}
+          </button>
+          {enriching && (
+            <button
+              onClick={() => { enrichCancelRef.current = true; }}
+              className="flex items-center gap-2 border border-black/10 dark:border-white/10 px-4 py-2.5 rounded-lg font-bold text-[13px] text-[#122222] dark:text-white hover:bg-black/5 dark:hover:bg-white/5 transition-colors cursor-pointer"
+            >
+              {t("settings.integrations.enrichCancel", "Cancel")}
+            </button>
+          )}
+          {enrichTotal > 0 && (
+            <span className="text-[12px] font-semibold text-[#122222]/60 dark:text-white/60">
+              {t("settings.integrations.enrichProgress", "{{done}} of {{total}} processed", { done: enrichLog.length, total: enrichTotal })}
+            </span>
+          )}
+        </div>
+        {enrichLog.length > 0 && (
+          <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1 border-t border-black/5 dark:border-white/5 pt-3">
+            {enrichLog.map((entry, idx) => (
+              <div key={`${entry.book.id}-${idx}`} className="flex items-start gap-2 text-[12px] py-1">
+                {entry.status === "success" && <CheckCircle2 size={14} className="text-[#1a4d40] dark:text-[#1b9277] shrink-0 mt-0.5" />}
+                {entry.status === "skipped" && <Info size={14} className="text-[#122222]/40 dark:text-white/40 shrink-0 mt-0.5" />}
+                {entry.status === "error" && <AlertTriangle size={14} className="text-red-500 shrink-0 mt-0.5" />}
+                <div>
+                  <span className="font-semibold text-[#122222] dark:text-white">{entry.book.title}</span>
+                  <span className="text-[#122222]/60 dark:text-white/60"> — {entry.message}</span>
                 </div>
-                <p className="font-mono text-[12px] text-[#122222]/50 dark:text-white/40 break-all">
-                  {!secret.value
-                    ? <span className="italic">{secret.placeholder}</span>
-                    : visibleKey === secret.id
-                      ? secret.value
-                      : secret.value.slice(0, 4) + "•".repeat(Math.max(0, secret.value.length - 8)) + secret.value.slice(-4)
-                  }
-                </p>
-                {!secret.value && (
-                  <p className="text-[11px] text-[#122222]/30 dark:text-white/30 mt-1">{t("settings.secrets.secretHelp")}</p>
-                )}
               </div>
             ))}
           </div>
         )}
       </Card>
+
+      <SaveButton label={t("settings.integrations.saveBtn")} />
     </div>
   );
 }
+
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // 11B. USERS TAB (admin only)
@@ -1723,7 +1878,6 @@ function RightHelp({ tab }: { tab: Tab }) {
     "Backup & Restore": <HardDrive size={16} className="text-[#b96f3e]" />,
     "Database": <Database size={16} className="text-[#1a4d40]" />,
     "Integrations & AI": <Zap size={16} className="text-[#b96f3e]" />,
-    "Secrets & Keys": <Shield size={16} className="text-[#1a4d40]" />,
     "Users": <UsersIcon size={16} className="text-[#1a4d40]" />,
     "Desktop & Data": <Monitor size={16} className="text-[#b96f3e]" />,
     "About": <Info size={16} className="text-[#1a4d40]" />,
