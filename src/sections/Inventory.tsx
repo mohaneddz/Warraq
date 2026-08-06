@@ -315,26 +315,26 @@ export function InventoryPage() {
 
   const renameRoomMutation = useMutation({
     mutationFn: ({ id, name }: { id: string; name: string }) => renameRoom(id, name),
-    onSuccess: () => { toast.success("Room renamed."); roomsQuery.refetch(); },
+    onSuccess: () => { toast.success(t("inventory.roomRenamed", "Room renamed.")); roomsQuery.refetch(); },
     onError: (err: any) => toast.error(err.message),
   });
 
   const deleteRoomMutation = useMutation({
     mutationFn: (id: string) => deleteRoom(id),
-    onSuccess: () => { toast.success("Room removed."); setSelectedRoomId(null); roomsQuery.refetch(); shelvesQuery.refetch(); },
+    onSuccess: () => { toast.success(t("inventory.roomRemoved", "Room removed.")); setSelectedRoomId(null); roomsQuery.refetch(); shelvesQuery.refetch(); },
     onError: (err: any) => toast.error(err.message),
   });
 
   const updateShelfMutation = useMutation({
     mutationFn: (v: { id: string; capacity: number; notes?: string | null }) => updateShelf(v.id, { capacity: v.capacity, notes: v.notes }),
-    onSuccess: () => { toast.success("Shelf updated."); setEditingShelf(null); invalidate(); shelvesQuery.refetch(); },
+    onSuccess: () => { toast.success(t("inventory.shelfUpdated", "Shelf updated.")); setEditingShelf(null); invalidate(); shelvesQuery.refetch(); },
     onError: (err: any) => toast.error(err.message),
   });
 
   const startScanningSession = (e: React.FormEvent) => {
     e.preventDefault();
     const clean = cleanText(targetShelf);
-    if (!clean) { toast.warning("Please specify a shelf code."); return; }
+    if (!clean) { toast.warning(t("inventory.alerts.specifyShelf", "Please specify a shelf code.") as string); return; }
     setTargetShelf(clean.toUpperCase());
     setScannedItems([]);
     setScanInitOpen(false);
@@ -347,15 +347,15 @@ export function InventoryPage() {
     if (sessionPaused) return;
     const barcode = cleanBarcode(barcodeInput);
     if (!barcode) return;
-    if (scannedItems.some(i => i.barcode === barcode)) { toast.warning("Already scanned this session."); setBarcodeInput(""); return; }
+    if (scannedItems.some(i => i.barcode === barcode)) { toast.warning(t("inventory.alerts.alreadyScanned", "This barcode has already been scanned in this session.") as string); setBarcodeInput(""); return; }
     const matched = allCopies.find(c => c.barcode.toUpperCase() === barcode || c.accession_number.toUpperCase() === barcode);
     if (matched) {
       const isCorrect = (matched.shelf?.trim().toUpperCase() ?? "") === targetShelf;
       setScannedItems(prev => [{ barcode, title: matched.title, item_type: matched.item_type || "book", currentShelf: matched.shelf ?? "Unassigned", result: isCorrect ? "found" : "misplaced", copyId: matched.id }, ...prev]);
-      toast.success(`Scanned: ${matched.title}`);
+      toast.success(t("inventory.alerts.scannedSuccess", "Scanned: {{title}}", { title: matched.title }) as string);
     } else {
       setScannedItems(prev => [{ barcode, title: "Unknown Item", currentShelf: "Unknown", result: "unknown" }, ...prev]);
-      toast.error(`Barcode/Index "${barcode}" not found.`);
+      toast.error(t("inventory.alerts.notRecognized", "Barcode \"{{barcode}}\" not recognized in system.", { barcode }) as string);
     }
     setBarcodeInput("");
   };
@@ -366,13 +366,13 @@ export function InventoryPage() {
       const targetShelfRow = allShelves.find(s => s.code.toUpperCase() === targetShelf);
       for (const item of misplaced) await updateCopy(item.copyId!, { shelfId: targetShelfRow?.id ?? null });
     },
-    onSuccess: () => { toast.success("Shelf scan complete. Item positions updated."); setActiveSession(false); setScannedItems([]); setTargetShelf(""); invalidate(); },
+    onSuccess: () => { toast.success(t("inventory.alerts.auditComplete", "Audit complete. Locations updated for misplaced books.") as string); setActiveSession(false); setScannedItems([]); setTargetShelf(""); invalidate(); },
     onError: (err: any) => toast.error(err.message),
   });
 
   const bulkArchiveMutation = useMutation({
     mutationFn: async () => { for (const id of selectedIds) await deleteCopy(id); },
-    onSuccess: () => { invalidate(); toast.success("Selected copies archived."); setSelectedIds([]); },
+    onSuccess: () => { invalidate(); toast.success(t("inventory.alerts.bulkArchived", "Selected copies archived.") as string); setSelectedIds([]); },
     onError: (err: any) => toast.error(err.message),
   });
 
@@ -440,7 +440,7 @@ export function InventoryPage() {
             <div className="flex items-center gap-2 mb-3 pb-2 border-b border-black/5 dark:border-white/5">
               <Library size={14} className="text-emerald" />
               <span className="font-bold text-[11px] uppercase tracking-wider text-[#122222]/70 dark:text-white/70 flex-1">{t("inventory.rooms", "Rooms")}</span>
-              <button onClick={() => setManageRoomsOpen(true)} title="Manage rooms" className="p-1 rounded-md hover:bg-black/5 dark:hover:bg-white/5 text-[#122222]/40 dark:text-white/40 hover:text-emerald transition-colors cursor-pointer"><Pencil size={11} /></button>
+              <button onClick={() => setManageRoomsOpen(true)} title={t("inventory.manageRoomsTooltip", "Manage rooms") as string} className="p-1 rounded-md hover:bg-black/5 dark:hover:bg-white/5 text-[#122222]/40 dark:text-white/40 hover:text-emerald transition-colors cursor-pointer"><Pencil size={11} /></button>
             </div>
             <div className="text-[12px] font-medium space-y-1">
               {rooms.map(room => (
@@ -474,7 +474,7 @@ export function InventoryPage() {
             </div>
             <select value={conditionFilter} onChange={e => setConditionFilter(e.target.value)} className="bg-[#fcfcfc] dark:bg-[#111d1a] border border-black/8 rounded-lg py-2 px-3 text-[12px] outline-none cursor-pointer">
               <option value="all">{t("inventory.allConditions", "All conditions")}</option>
-              <option value="mint">Mint</option><option value="good">Good</option><option value="fair">Fair</option><option value="worn">Worn</option><option value="damaged">Damaged</option>
+              <option value="mint">{t("catalog.condition.mint", "Mint")}</option><option value="good">{t("catalog.condition.good", "Good")}</option><option value="fair">{t("catalog.condition.fair", "Fair")}</option><option value="worn">{t("catalog.condition.worn", "Worn")}</option><option value="damaged">{t("catalog.condition.damaged", "Damaged")}</option>
             </select>
             <div className="flex rounded-lg border border-black/8 overflow-hidden">
               <button onClick={() => setView("grid")} className={`px-3 py-2 cursor-pointer transition-colors ${view === "grid" ? "bg-emerald text-white" : "bg-[#fcfcfc] dark:bg-[#111d1a] text-[#122222]/60 dark:text-white/60"}`}><LayoutGrid size={13} /></button>
@@ -494,9 +494,9 @@ export function InventoryPage() {
             )}
 
             <div className="hidden lg:flex items-center gap-3 text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 pl-2">
-              <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#478574]"/>Good</span>
-              <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#d2ae96]"/>Repair</span>
-              <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#a87c5f]"/>Missing</span>
+              <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#478574]"/>{t("inventory.legendGood", "Good")}</span>
+              <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#d2ae96]"/>{t("inventory.legendRepair", "Repair")}</span>
+              <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#a87c5f]"/>{t("inventory.legendMissing", "Missing")}</span>
             </div>
           </div>
 
@@ -611,7 +611,7 @@ export function InventoryPage() {
                     <thead className="bg-[#fcfbf8] dark:bg-[#111d1a] border-b border-black/5 text-[11px] font-bold text-[#122222]/50 dark:text-white/50 uppercase tracking-wider">
                       <tr>
                         <th className="px-5 py-3 w-8"><input type="checkbox" checked={selectedIds.length === filteredCopies.length && filteredCopies.length > 0} onChange={e => setSelectedIds(e.target.checked ? filteredCopies.map(c => c.id) : [])} className="cursor-pointer" /></th>
-                        <th className="px-5 py-3">Barcode</th><th className="px-5 py-3">Type</th><th className="px-5 py-3">Title</th><th className="px-5 py-3">Shelf</th><th className="px-5 py-3">Condition</th><th className="px-5 py-3">Status</th>
+                        <th className="px-5 py-3">{t("inventory.barcodeHeader", "Barcode")}</th><th className="px-5 py-3">{t("catalog.headers.type", "Type")}</th><th className="px-5 py-3">{t("catalog.headers.title", "Title")}</th><th className="px-5 py-3">{t("catalog.details.shelfLabel", "Shelf")}</th><th className="px-5 py-3">{t("catalog.details.copyCondition", "Condition")}</th><th className="px-5 py-3">{t("status", "Status")}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-black/5">
@@ -621,7 +621,7 @@ export function InventoryPage() {
                           <td className="px-5 py-3 font-mono font-bold text-[12px] text-[#122222] dark:text-white whitespace-nowrap">{copy.barcode}</td>
                           <td className="px-5 py-3"><ItemTypeBadge type={copy.item_type} /></td>
                           <td className="px-5 py-3 font-semibold text-[#122222]/80 dark:text-white/80"><div className="line-clamp-2" title={copy.title}>{copy.title}</div></td>
-                          <td className="px-5 py-3">{copy.shelf ? <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#1a4d40]/10 text-[#1a4d40] dark:text-[#1b9277] font-bold text-[11px]"><MapPin size={10} /> {copy.shelf}</span> : <span className="text-[#122222]/30 dark:text-white/30 text-[11px]">Unassigned</span>}</td>
+                          <td className="px-5 py-3">{copy.shelf ? <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#1a4d40]/10 text-[#1a4d40] dark:text-[#1b9277] font-bold text-[11px]"><MapPin size={10} /> {copy.shelf}</span> : <span className="text-[#122222]/30 dark:text-white/30 text-[11px]">{t("inventory.unassigned", "Unassigned")}</span>}</td>
                           <td className="px-5 py-3"><span className={`capitalize text-[11px] font-semibold px-2 py-0.5 rounded-full ${copy.condition === "damaged" ? "bg-[#f2ddc9] text-[#8a6249] dark:bg-[#a87c5f]/20 dark:text-[#c99b7d]" : copy.condition === "worn" ? "bg-[#f9eedd] text-[#ab8264] dark:bg-[#d2ae96]/15 dark:text-[#d2ae96]" : "bg-[#10b981]/10 text-[#1a4d40] dark:text-[#1b9277]"}`}>{copy.condition}</span></td>
                           <td className="px-5 py-3"><StatusBadge value={copy.status} /></td>
                         </tr>
@@ -629,7 +629,7 @@ export function InventoryPage() {
                     </tbody>
                   </table>
                   <div className="p-3 border-t border-black/5 flex items-center justify-between text-[12px] text-[#122222]/60 dark:text-white/60 font-semibold bg-[#fcfbf8] dark:bg-[#111d1a]">
-                    <span>Showing {Math.min(filteredCopies.length, (listPage - 1) * itemsPerPage + 1)}–{Math.min(filteredCopies.length, listPage * itemsPerPage)} of {filteredCopies.length}</span>
+                    <span>{t("catalog.showing", "Showing {{start}} to {{end}} of {{total}} results", { start: Math.min(filteredCopies.length, (listPage - 1) * itemsPerPage + 1), end: Math.min(filteredCopies.length, listPage * itemsPerPage), total: filteredCopies.length })}</span>
                     <div className="flex items-center gap-1">
                       <button onClick={() => setListPage(p => Math.max(1, p - 1))} disabled={listPage === 1} className="w-7 h-7 rounded flex items-center justify-center hover:bg-black/5 disabled:opacity-30 cursor-pointer"><ChevronLeft size={14} /></button>
                       <span className="px-2">{listPage} / {totalPages}</span>
@@ -638,7 +638,7 @@ export function InventoryPage() {
                   </div>
                 </>
               ) : (
-                <div className="flex flex-col items-center justify-center py-20 text-[#122222]/40 dark:text-white/40"><BookCopy size={40} className="mb-4 opacity-30" /><p className="font-bold">No copies found</p></div>
+                <div className="flex flex-col items-center justify-center py-20 text-[#122222]/40 dark:text-white/40"><BookCopy size={40} className="mb-4 opacity-30" /><p className="font-bold">{t("inventory.noCopiesFound", "No copies found")}</p></div>
               )}
             </div>
           )}
@@ -648,29 +648,29 @@ export function InventoryPage() {
           <div className="w-80 shrink-0">
             <div className="bg-white dark:bg-[#1d2926] rounded-xl border border-black/8 shadow-card p-5 sticky top-4 flex flex-col gap-4">
               <div className="flex items-center justify-between pb-2 border-b border-black/5">
-                <span className="text-[11px] font-bold text-[#1a4d40] dark:text-[#1b9277] uppercase tracking-wider">Scanning in progress</span>
-                <button onClick={() => setSessionPaused(p => !p)} className="flex items-center gap-1 text-[11px] font-bold text-[#122222]/60 dark:text-white/60 hover:text-[#122222] dark:hover:text-white cursor-pointer bg-black/5 dark:bg-white/5 px-2.5 py-1 rounded-lg">{sessionPaused ? <><Play size={11} /> Resume</> : <><Pause size={11} /> Pause</>}</button>
+                <span className="text-[11px] font-bold text-[#1a4d40] dark:text-[#1b9277] uppercase tracking-wider">{t("inventory.scanningInProgress", "Scanning in progress")}</span>
+                <button onClick={() => setSessionPaused(p => !p)} className="flex items-center gap-1 text-[11px] font-bold text-[#122222]/60 dark:text-white/60 hover:text-[#122222] dark:hover:text-white cursor-pointer bg-black/5 dark:bg-white/5 px-2.5 py-1 rounded-lg">{sessionPaused ? <><Play size={11} /> {t("inventory.resume", "Resume")}</> : <><Pause size={11} /> {t("inventory.pause", "Pause")}</>}</button>
               </div>
               <h3 className="font-bold text-[18px]">Shelf {targetShelf}</h3>
               <div>
-                <div className="flex justify-between items-end mb-1"><span className="text-[11px] font-bold text-[#122222]/50 dark:text-white/50 uppercase tracking-wider">Scanning progress</span><span className="text-[13px] font-bold text-[#1a4d40] dark:text-[#1b9277]">{Math.min(scanPct, 100)}%</span></div>
-                <div className="text-[18px] font-bold mb-2">{scannedItems.length} <span className="text-[13px] font-semibold text-[#122222]/50 dark:text-white/50">/ {scanTarget} copies scanned</span></div>
+                <div className="flex justify-between items-end mb-1"><span className="text-[11px] font-bold text-[#122222]/50 dark:text-white/50 uppercase tracking-wider">{t("inventory.scanningProgressLabel", "Scanning progress")}</span><span className="text-[13px] font-bold text-[#1a4d40] dark:text-[#1b9277]">{Math.min(scanPct, 100)}%</span></div>
+                <div className="text-[18px] font-bold mb-2">{scannedItems.length} <span className="text-[13px] font-semibold text-[#122222]/50 dark:text-white/50">{t("inventory.copiesScannedSuffix", "/ {{target}} copies scanned", { target: scanTarget })}</span></div>
                 <div className="h-2 bg-black/5 rounded-full overflow-hidden"><div className="h-full bg-[#a87c5f] rounded-full transition-all duration-500" style={{ width: `${Math.min(scanPct, 100)}%` }} /></div>
               </div>
               <div className="p-3 bg-[#122222]/[0.02] rounded-xl border border-black/5">
-                <div className="flex items-center justify-between mb-2"><div className="flex items-center gap-1.5 text-[11px] font-semibold text-[#122222]/60 dark:text-white/60"><Wifi size={11} className="text-[#1a4d40]" /> Scanner input</div><span className="text-[10px] font-bold text-[#10b981]">Connected ●</span></div>
+                <div className="flex items-center justify-between mb-2"><div className="flex items-center gap-1.5 text-[11px] font-semibold text-[#122222]/60 dark:text-white/60"><Wifi size={11} className="text-[#1a4d40]" /> {t("inventory.scannerInputLabel", "Scanner input")}</div><span className="text-[10px] font-bold text-[#10b981]">{t("statusConnected", "Connected")} ●</span></div>
                 <form onSubmit={handleBarcodeSubmit}>
-                  <input ref={scanInputRef} type="text" value={barcodeInput} onChange={e => setBarcodeInput(e.target.value)} disabled={sessionPaused} placeholder="Scan barcode or Accession..." className="w-full bg-white dark:bg-[#111d1a] border border-black/10 rounded-lg py-2 px-3 text-[12px] outline-none focus:border-emerald disabled:opacity-50" />
+                  <input ref={scanInputRef} type="text" value={barcodeInput} onChange={e => setBarcodeInput(e.target.value)} disabled={sessionPaused} placeholder={t("inventory.scanBarcodePlaceholder", "Scan barcode or Accession...") as string} className="w-full bg-white dark:bg-[#111d1a] border border-black/10 rounded-lg py-2 px-3 text-[12px] outline-none focus:border-emerald disabled:opacity-50" />
                 </form>
               </div>
               <div className="grid grid-cols-3 gap-2 border-t border-b border-black/5 py-3">
-                {[{ label: "On shelf", val: sessionFound, color: "#478574" }, { label: "Wrong shelf", val: sessionMisplaced, color: SHELF_WARN }, { label: "Not found", val: sessionUnknown, color: SHELF_ALERT }].map(s => (
+                {[{ label: t("inventory.onShelfLabel", "On shelf"), val: sessionFound, color: "#478574" }, { label: t("inventory.wrongShelfLabel", "Wrong shelf"), val: sessionMisplaced, color: SHELF_WARN }, { label: t("inventory.notFoundLabel", "Not found"), val: sessionUnknown, color: SHELF_ALERT }].map(s => (
                   <div key={s.label} className="text-center"><div className="text-[18px] font-bold" style={{ color: s.color }}>{s.val}</div><div className="text-[10px] font-bold text-[#122222]/70 dark:text-white/70">{s.label}</div></div>
                 ))}
               </div>
               <div className="flex gap-2 pt-2">
-                <button onClick={() => { if (confirm("Discard scanning session?")) { setActiveSession(false); setScannedItems([]); } }} className="flex-1 py-2 text-center rounded-lg border border-black/10 text-[12px] font-bold text-[#122222]/60 dark:text-white/60 hover:bg-black/5 cursor-pointer transition-colors">Cancel</button>
-                <button onClick={() => finishMutation.mutate()} disabled={finishMutation.isPending} className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg bg-[#1a4d40] text-white text-[12px] font-bold hover:bg-[#1a4d40]/90 cursor-pointer transition-colors disabled:opacity-50"><Check size={13} /> Finish shelf</button>
+                <button onClick={() => { if (confirm(t("inventory.alerts.confirmDiscardSession", "Discard all scanning progress in this session?") as string)) { setActiveSession(false); setScannedItems([]); } }} className="flex-1 py-2 text-center rounded-lg border border-black/10 text-[12px] font-bold text-[#122222]/60 dark:text-white/60 hover:bg-black/5 cursor-pointer transition-colors">{t("cancel", "Cancel")}</button>
+                <button onClick={() => finishMutation.mutate()} disabled={finishMutation.isPending} className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg bg-[#1a4d40] text-white text-[12px] font-bold hover:bg-[#1a4d40]/90 cursor-pointer transition-colors disabled:opacity-50"><Check size={13} /> {t("inventory.finishShelf", "Finish shelf")}</button>
               </div>
             </div>
           </div>
@@ -686,13 +686,13 @@ export function InventoryPage() {
               </div>
               {selectedShelfDetails.notes && <div className="p-3 bg-black/[0.01] border border-black/5 rounded-lg text-[12px] text-[#122222]/70 dark:text-white/70 italic">{selectedShelfDetails.notes}</div>}
               <div>
-                <div className="flex justify-between items-center mb-1"><span className="text-[11px] font-bold text-[#122222]/40 dark:text-white/40 uppercase tracking-wider">Books on shelf</span><span className="text-[12px] font-bold text-[#b96f3e]">{selectedShelfDetails.copiesList.length} / {selectedShelfDetails.capacity}</span></div>
+                <div className="flex justify-between items-center mb-1"><span className="text-[11px] font-bold text-[#122222]/40 dark:text-white/40 uppercase tracking-wider">{t("inventory.booksOnShelf", "Books on shelf")}</span><span className="text-[12px] font-bold text-[#b96f3e]">{selectedShelfDetails.copiesList.length} / {selectedShelfDetails.capacity}</span></div>
                 <div className="h-2 bg-black/5 rounded-full overflow-hidden"><div className="h-full rounded-full transition-all" style={{ width: `${Math.min((selectedShelfDetails.copiesList.length / selectedShelfDetails.capacity) * 100, 100)}%`, backgroundColor: occupancyColor(selectedShelfDetails.copiesList.length / selectedShelfDetails.capacity) }} /></div>
               </div>
               <div className="flex flex-col gap-2">
-                <div className="flex items-center justify-between"><div className="text-[11px] font-bold text-[#122222]/40 dark:text-white/40 uppercase tracking-wider">Placed items</div><button onClick={() => handleOpenBrowseModal(selectedShelfDetails)} className="text-[11px] font-bold text-emerald hover:underline flex items-center gap-1 cursor-pointer"><Plus size={12} /> Add items</button></div>
+                <div className="flex items-center justify-between"><div className="text-[11px] font-bold text-[#122222]/40 dark:text-white/40 uppercase tracking-wider">{t("inventory.placedItems", "Placed items")}</div><button onClick={() => handleOpenBrowseModal(selectedShelfDetails)} className="text-[11px] font-bold text-emerald hover:underline flex items-center gap-1 cursor-pointer"><Plus size={12} /> {t("inventory.addItemsBtn", "Add items")}</button></div>
                 <div className="space-y-1.5 max-h-60 overflow-y-auto pr-1 no-scrollbar border-t border-black/5 pt-2">
-                  {selectedShelfDetails.copiesList.length === 0 ? <p className="text-center py-6 text-[12px] text-[#122222]/40 dark:text-white/40">No items currently placed on this shelf.</p> : selectedShelfDetails.copiesList.map((c) => (
+                  {selectedShelfDetails.copiesList.length === 0 ? <p className="text-center py-6 text-[12px] text-[#122222]/40 dark:text-white/40">{t("inventory.noItemsPlaced", "No items currently placed on this shelf.")}</p> : selectedShelfDetails.copiesList.map((c) => (
                     <div key={c.id} onClick={() => setSelectedCopy(c as Copy & { title: string })} className="flex items-center justify-between p-2 rounded-lg bg-black/[0.01] border border-black/5 hover:bg-emerald/5 cursor-pointer transition-all">
                       <div className="min-w-0 pr-2 flex-1"><div className="flex items-center gap-1.5 mb-0.5"><span className="font-semibold text-[12px] truncate" title={c.title}>{c.title}</span><ItemTypeBadge type={c.item_type} /></div><div className="font-mono text-[9px] text-[#122222]/40 dark:text-white/40">{c.barcode}</div></div>
                       <span className={`text-[9px] font-bold capitalize px-1.5 py-0.5 rounded-full shrink-0 ${c.condition === "damaged" ? "bg-[#f2ddc9] text-[#8a6249]" : "bg-emerald/10 text-[#1a4d40]"}`}>{c.condition}</span>
@@ -701,8 +701,8 @@ export function InventoryPage() {
                 </div>
               </div>
               <div className="pt-2 border-t border-black/5 flex gap-2 w-full">
-                <button onClick={() => handleOpenBrowseModal(selectedShelfDetails)} className="flex-1 py-2 text-center rounded-xl bg-white dark:bg-[#111d1a] border border-black/10 dark:border-white/10 hover:bg-black/5 dark:hover:bg-white/5 hover:text-emerald text-[12px] font-bold cursor-pointer flex items-center justify-center gap-1.5 transition-colors"><Plus size={14} /> Add Books</button>
-                <button onClick={() => handleOpenEditShelf(selectedShelfDetails)} className="flex-1 py-2 text-center rounded-xl bg-emerald hover:bg-emerald/90 text-white text-[12px] font-bold cursor-pointer">Edit</button>
+                <button onClick={() => handleOpenBrowseModal(selectedShelfDetails)} className="flex-1 py-2 text-center rounded-xl bg-white dark:bg-[#111d1a] border border-black/10 dark:border-white/10 hover:bg-black/5 dark:hover:bg-white/5 hover:text-emerald text-[12px] font-bold cursor-pointer flex items-center justify-center gap-1.5 transition-colors"><Plus size={14} /> {t("inventory.addBooksBtn", "Add Books")}</button>
+                <button onClick={() => handleOpenEditShelf(selectedShelfDetails)} className="flex-1 py-2 text-center rounded-xl bg-emerald hover:bg-emerald/90 text-white text-[12px] font-bold cursor-pointer">{t("edit", "Edit")}</button>
               </div>
             </div>
           </div>
@@ -711,21 +711,21 @@ export function InventoryPage() {
 
       {selectedCopy && <CopyEditModal copy={selectedCopy} onClose={() => { setSelectedCopy(null); invalidate(); }} shelves={allShelves} />}
 
-      <Modal isOpen={browseModalOpen} onClose={() => setBrowseModalOpen(false)} title={`Add / Assign Items to Shelf ${targetShelfForBrowse?.code ?? ""}`} size="xl">
+      <Modal isOpen={browseModalOpen} onClose={() => setBrowseModalOpen(false)} title={t("inventory.addAssignTitle", "Add / Assign Items to Shelf {{code}}", { code: targetShelfForBrowse?.code ?? "" }) as string} size="xl">
         <div className="space-y-4 text-[13px]">
           <div className="flex items-center justify-between bg-[#fcfbf8] dark:bg-[#111d1a] p-3 rounded-xl border border-black/5 dark:border-white/5">
-            <div className="text-[12px] text-[#122222]/70 dark:text-white/70">Browse your library catalog to place items onto shelf <span className="font-bold text-emerald font-mono">{targetShelfForBrowse?.code}</span>.</div>
-            {targetShelfForBrowse && <span className="text-[11px] font-bold px-2.5 py-1 rounded-md bg-emerald/10 text-emerald shrink-0">Occupancy: {allCopies.filter(c => c.shelf_id === targetShelfForBrowse.id).length} / {targetShelfForBrowse.capacity}</span>}
+            <div className="text-[12px] text-[#122222]/70 dark:text-white/70">{t("inventory.browseHint", "Browse your library catalog to place items onto shelf {{code}}.", { code: targetShelfForBrowse?.code ?? "" })}</div>
+            {targetShelfForBrowse && <span className="text-[11px] font-bold px-2.5 py-1 rounded-md bg-emerald/10 text-emerald shrink-0">{t("inventory.occupancyLabel", "Occupancy: {{count}} / {{capacity}}", { count: allCopies.filter(c => c.shelf_id === targetShelfForBrowse.id).length, capacity: targetShelfForBrowse.capacity })}</span>}
           </div>
           <div className="flex gap-3 items-center">
-            <div className="flex-1 relative"><Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#122222]/40 dark:text-white/40" /><Input type="text" value={browseSearch} onChange={(e) => setBrowseSearch(e.target.value)} placeholder="Search items by title, author, barcode, accession number..." className="pl-9 text-[13px] py-2" /></div>
+            <div className="flex-1 relative"><Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#122222]/40 dark:text-white/40" /><Input type="text" value={browseSearch} onChange={(e) => setBrowseSearch(e.target.value)} placeholder={t("inventory.browseSearchPlaceholder", "Search items by title, author, barcode, accession number...") as string} className="pl-9 text-[13px] py-2" /></div>
             <select value={browseTypeFilter} onChange={(e) => setBrowseTypeFilter(e.target.value)} className="bg-white dark:bg-[#1d2926] border border-black/10 dark:border-white/10 rounded-lg py-2 px-3 text-[13px] font-semibold text-[#122222] dark:text-white outline-none focus:border-emerald cursor-pointer">
-              <option value="all">All Types</option><option value="book">Book</option><option value="fyp">FYP / PFE</option><option value="journal">Journal</option><option value="other">Other</option>
+              <option value="all">{t("inventory.allTypesOption", "All Types")}</option><option value="book">{t("itemTypes.book", "Book")}</option><option value="fyp">{t("itemTypes.fyp", "FYP / PFE")}</option><option value="journal">{t("itemTypes.journal", "Journal")}</option><option value="other">{t("itemTypes.other", "Other")}</option>
             </select>
           </div>
           <div className="max-h-[460px] overflow-y-auto pr-1 space-y-2.5 no-scrollbar">
             {filteredBrowseCopies.length === 0 ? (
-              <div className="text-center py-12 text-[#122222]/40 dark:text-white/40"><BookCopy size={36} className="mx-auto mb-2 opacity-30" /><p className="font-bold text-[14px]">No matching items found</p></div>
+              <div className="text-center py-12 text-[#122222]/40 dark:text-white/40"><BookCopy size={36} className="mx-auto mb-2 opacity-30" /><p className="font-bold text-[14px]">{t("inventory.noMatchingItems", "No matching items found")}</p></div>
             ) : filteredBrowseCopies.map((c) => {
               const isCurrentShelf = targetShelfForBrowse ? c.shelf_id === targetShelfForBrowse.id : false;
               const isOtherShelf = c.shelf && !isCurrentShelf;
@@ -737,21 +737,21 @@ export function InventoryPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-0.5"><h4 className="font-bold text-[14px] text-[#122222] dark:text-white truncate" title={c.title}>{c.title}</h4><ItemTypeBadge type={c.item_type} /></div>
                     {c.author && <p className="text-[12px] text-[#122222]/60 dark:text-white/60 truncate mb-1">{c.author}</p>}
-                    <div className="flex items-center gap-2.5 text-[11px] text-[#122222]/50 dark:text-white/50 font-mono"><span>Barcode: <strong className="text-[#122222]/80 dark:text-white/80">{c.barcode}</strong></span><span>·</span><span>Accession: <strong className="text-[#122222]/80 dark:text-white/80">{c.accession_number}</strong></span></div>
+                    <div className="flex items-center gap-2.5 text-[11px] text-[#122222]/50 dark:text-white/50 font-mono"><span>{t("inventory.barcodeInline", "Barcode:")} <strong className="text-[#122222]/80 dark:text-white/80">{c.barcode}</strong></span><span>·</span><span>{t("inventory.accessionInline", "Accession:")} <strong className="text-[#122222]/80 dark:text-white/80">{c.accession_number}</strong></span></div>
                   </div>
                   <div className="flex items-center gap-3 shrink-0">
-                    {isCurrentShelf ? <span className="text-[11px] font-bold text-emerald bg-emerald/10 px-2.5 py-1 rounded-md">Placed on this shelf</span> : isOtherShelf ? <span className="text-[11px] font-semibold text-[#8a6249] dark:text-[#d2ae96] bg-[#f9eedd] dark:bg-[#d2ae96]/15 px-2.5 py-1 rounded-md">Shelf {c.shelf}</span> : <span className="text-[11px] text-[#122222]/40 dark:text-white/40 bg-black/5 dark:bg-white/5 px-2.5 py-1 rounded-md font-semibold">Unassigned</span>}
+                    {isCurrentShelf ? <span className="text-[11px] font-bold text-emerald bg-emerald/10 px-2.5 py-1 rounded-md">{t("inventory.placedOnShelf", "Placed on this shelf")}</span> : isOtherShelf ? <span className="text-[11px] font-semibold text-[#8a6249] dark:text-[#d2ae96] bg-[#f9eedd] dark:bg-[#d2ae96]/15 px-2.5 py-1 rounded-md">{t("inventory.shelfLetter", "Shelf {{code}}", { code: c.shelf })}</span> : <span className="text-[11px] text-[#122222]/40 dark:text-white/40 bg-black/5 dark:bg-white/5 px-2.5 py-1 rounded-md font-semibold">{t("inventory.unassigned", "Unassigned")}</span>}
                     {isCurrentShelf ? (
-                      <Button variant="ghost" className="text-[12px] text-red-500 hover:bg-red-500/10 py-1.5 px-3" onClick={async () => { await updateCopy(c.id, { shelfId: null }); toast.success(`Removed "${c.title}" from shelf`); invalidate(); shelvesQuery.refetch(); }}>Remove</Button>
+                      <Button variant="ghost" className="text-[12px] text-red-500 hover:bg-red-500/10 py-1.5 px-3" onClick={async () => { await updateCopy(c.id, { shelfId: null }); toast.success(t("inventory.removedToast", "Removed \"{{title}}\" from shelf", { title: c.title }) as string); invalidate(); shelvesQuery.refetch(); }}>{t("inventory.remove", "Remove")}</Button>
                     ) : (
-                      <Button variant="primary" className="text-[12px] py-1.5 px-3" onClick={async () => { if (!targetShelfForBrowse) return; await updateCopy(c.id, { shelfId: targetShelfForBrowse.id }); toast.success(`Assigned "${c.title}" to shelf ${targetShelfForBrowse.code}`); invalidate(); shelvesQuery.refetch(); }}><Plus size={13} /> Add to Shelf</Button>
+                      <Button variant="primary" className="text-[12px] py-1.5 px-3" onClick={async () => { if (!targetShelfForBrowse) return; await updateCopy(c.id, { shelfId: targetShelfForBrowse.id }); toast.success(t("inventory.assignedToast", "Assigned \"{{title}}\" to shelf {{code}}", { title: c.title, code: targetShelfForBrowse.code }) as string); invalidate(); shelvesQuery.refetch(); }}><Plus size={13} /> {t("inventory.addToShelfBtn", "Add to Shelf")}</Button>
                     )}
                   </div>
                 </div>
               );
             })}
           </div>
-          <div className="flex justify-end pt-3 border-t border-black/5 dark:border-white/5"><Button variant="secondary" onClick={() => setBrowseModalOpen(false)}>Done</Button></div>
+          <div className="flex justify-end pt-3 border-t border-black/5 dark:border-white/5"><Button variant="secondary" onClick={() => setBrowseModalOpen(false)}>{t("inventory.done", "Done")}</Button></div>
         </div>
       </Modal>
 
@@ -774,7 +774,7 @@ export function InventoryPage() {
               </div>
             </div>
             <div className="flex gap-2 justify-end pt-4 border-t border-black/5">
-              <Button type="button" variant="ghost" onClick={() => setNewColumnOpen(false)}>Cancel</Button>
+              <Button type="button" variant="ghost" onClick={() => setNewColumnOpen(false)}>{t("cancel", "Cancel")}</Button>
               <Button type="submit" disabled={createColumnMutation.isPending}>{createColumnMutation.isPending ? t("inventory.creatingColumn", "Creating...") : t("inventory.createColumn", "Create Column")}</Button>
             </div>
           </form>
@@ -782,34 +782,34 @@ export function InventoryPage() {
       )}
 
       {editingShelf && (
-        <Modal isOpen={!!editingShelf} onClose={() => setEditingShelf(null)} title={editingShelf.shelf_type === "floor" ? "Edit Floor Shelf" : `Edit Shelf: ${editingShelf.code}`}>
+        <Modal isOpen={!!editingShelf} onClose={() => setEditingShelf(null)} title={editingShelf.shelf_type === "floor" ? (t("inventory.editFloorShelfTitle", "Edit Floor Shelf") as string) : (t("inventory.editShelfTitle", "Edit Shelf: {{code}}", { code: editingShelf.code }) as string)}>
           <form onSubmit={editShelfForm.handleSubmit(v => updateShelfMutation.mutate({ ...v, id: editingShelf.id }))} className="space-y-4 text-[13px]">
-            <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">Shelf Capacity<Input type="number" {...editShelfForm.register("capacity", { valueAsNumber: true })} min={1} required className="mt-1" /></label>
-            <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">Notes (Optional)<Input {...editShelfForm.register("notes")} className="mt-1" /></label>
+            <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">{t("inventory.shelfCapacityLabel", "Shelf Capacity")}<Input type="number" {...editShelfForm.register("capacity", { valueAsNumber: true })} min={1} required className="mt-1" /></label>
+            <label className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 block">{t("inventory.notesOptional", "Notes (optional)")}<Input {...editShelfForm.register("notes")} className="mt-1" /></label>
             <div className="flex gap-2 justify-end pt-4 border-t border-black/5">
-              <Button type="button" variant="ghost" onClick={() => setEditingShelf(null)}>Cancel</Button>
-              <Button type="submit" disabled={updateShelfMutation.isPending}>Save Changes</Button>
+              <Button type="button" variant="ghost" onClick={() => setEditingShelf(null)}>{t("cancel", "Cancel")}</Button>
+              <Button type="submit" disabled={updateShelfMutation.isPending}>{t("inventory.saveChanges", "Save Changes")}</Button>
             </div>
           </form>
         </Modal>
       )}
 
       {scanInitOpen && (
-        <Modal isOpen={scanInitOpen} onClose={() => setScanInitOpen(false)} title="Scan Shelf Barcodes">
+        <Modal isOpen={scanInitOpen} onClose={() => setScanInitOpen(false)} title={t("inventory.scanShelfBarcodesTitle", "Scan Shelf Barcodes") as string}>
           <form onSubmit={startScanningSession} className="space-y-4">
-            <p className="text-[13px] text-[#122222]/70 dark:text-white/70 font-semibold">Enter or select a shelf code to scan. Scanned barcodes will highlight whether they are misplaced or correctly positioned on this shelf.</p>
-            <div><label className="text-[11px] font-bold text-[#122222]/60 dark:text-white/60 uppercase block mb-1.5">Target Shelf Code</label><Input type="text" placeholder="e.g. A, S" value={targetShelf} onChange={e => setTargetShelf(e.target.value)} required /></div>
+            <p className="text-[13px] text-[#122222]/70 dark:text-white/70 font-semibold">{t("inventory.scanInstructions", "Enter the shelf location code you want to scan to begin the reconciliation process.")}</p>
+            <div><label className="text-[11px] font-bold text-[#122222]/60 dark:text-white/60 uppercase block mb-1.5">{t("inventory.targetShelfCode", "Target Shelf Code")}</label><Input type="text" placeholder={t("inventory.shelfCodePlaceholder", "e.g. A, S") as string} value={targetShelf} onChange={e => setTargetShelf(e.target.value)} required /></div>
             {allShelves.length > 0 && (
               <div>
-                <p className="text-[11px] font-bold text-[#122222]/50 dark:text-white/50 uppercase mb-2">Or click to select a shelf:</p>
+                <p className="text-[11px] font-bold text-[#122222]/50 dark:text-white/50 uppercase mb-2">{t("inventory.orSelectShelfHint", "Or click to select a shelf:")}</p>
                 <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
                   {allShelves.map((b) => (
-                    <button key={b.id} type="button" onClick={() => setTargetShelf(b.code)} className={`px-3 py-1.5 rounded-lg text-[12px] font-bold border border-solid cursor-pointer transition-all ${targetShelf.toUpperCase() === b.code.toUpperCase() ? "border-emerald bg-emerald/10 text-emerald" : "border-transparent bg-[#122222]/[0.03] dark:bg-white/[0.03] text-[#122222]/70 dark:text-white/70 hover:bg-[#122222]/[0.06]"}`}>{b.code} <span className="opacity-50">({b.room} · Col {b.column_number})</span></button>
+                    <button key={b.id} type="button" onClick={() => setTargetShelf(b.code)} className={`px-3 py-1.5 rounded-lg text-[12px] font-bold border border-solid cursor-pointer transition-all ${targetShelf.toUpperCase() === b.code.toUpperCase() ? "border-emerald bg-emerald/10 text-emerald" : "border-transparent bg-[#122222]/[0.03] dark:bg-white/[0.03] text-[#122222]/70 dark:text-white/70 hover:bg-[#122222]/[0.06]"}`}>{b.code} <span className="opacity-50">({b.room} · {t("inventory.columnLabel", "Column {{number}}", { number: b.column_number })})</span></button>
                   ))}
                 </div>
               </div>
             )}
-            <div className="flex gap-2 justify-end pt-4 border-t border-black/5"><Button type="button" variant="ghost" onClick={() => setScanInitOpen(false)}>Cancel</Button><Button type="submit">Begin Session</Button></div>
+            <div className="flex gap-2 justify-end pt-4 border-t border-black/5"><Button type="button" variant="ghost" onClick={() => setScanInitOpen(false)}>{t("cancel", "Cancel")}</Button><Button type="submit">{t("inventory.beginSession", "Begin Scanning")}</Button></div>
           </form>
         </Modal>
       )}
@@ -817,7 +817,7 @@ export function InventoryPage() {
       {manageRoomsOpen && (
         <ManageRoomsModal rooms={rooms} onClose={() => setManageRoomsOpen(false)}
           onRename={(id, name) => renameRoomMutation.mutate({ id, name })}
-          onDelete={(id) => { if (confirm("Delete this room? This only works if it has no shelved copies.")) deleteRoomMutation.mutate(id); }}
+          onDelete={(id) => { if (confirm(t("inventory.deleteRoomConfirm", "Delete this room? This only works if it has no shelved copies.") as string)) deleteRoomMutation.mutate(id); }}
           onCreate={(name, notes) => createRoomMutation.mutate({ name, notes })}
           creating={createRoomMutation.isPending}
         />
@@ -825,10 +825,10 @@ export function InventoryPage() {
 
       {selectedIds.length > 0 && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-white/95 dark:bg-[#1d2926]/95 backdrop-blur-md px-6 py-3 rounded-full border border-black/10 shadow-lg flex items-center gap-5 z-50">
-          <span className="text-[13px] font-semibold text-[#122222] dark:text-white">{selectedIds.length} copies selected</span>
+          <span className="text-[13px] font-semibold text-[#122222] dark:text-white">{t("inventory.bulk.selectedCount", { count: selectedIds.length })}</span>
           <div className="h-4 w-px bg-black/10" />
-          <button onClick={() => setSelectedIds([])} className="text-[12px] font-bold text-[#122222]/60 dark:text-white/60 hover:underline cursor-pointer">Deselect all</button>
-          <button onClick={() => { if (confirm(`Archive ${selectedIds.length} copies?`)) bulkArchiveMutation.mutate(); }} className="flex items-center gap-1.5 text-[12px] font-bold bg-red-500 hover:bg-red-600 text-white px-4 py-1.5 rounded-full transition-colors cursor-pointer"><Trash2 size={12} /> Archive Selected</button>
+          <button onClick={() => setSelectedIds([])} className="text-[12px] font-bold text-[#122222]/60 dark:text-white/60 hover:underline cursor-pointer">{t("inventory.deselectAll", "Deselect all")}</button>
+          <button onClick={() => { if (confirm(t("inventory.archiveConfirm", "Archive {{count}} copies?", { count: selectedIds.length }) as string)) bulkArchiveMutation.mutate(); }} className="flex items-center gap-1.5 text-[12px] font-bold bg-red-500 hover:bg-red-600 text-white px-4 py-1.5 rounded-full transition-colors cursor-pointer"><Trash2 size={12} /> {t("inventory.archiveSelectedBtn", "Archive Selected")}</button>
         </div>
       )}
     </div>
@@ -885,7 +885,7 @@ function ManageRoomsModal({ rooms, onClose, onRename, onDelete, onCreate, creati
           </button>
         )}
       </div>
-      <div className="flex justify-end pt-4 mt-2 border-t border-black/5"><Button variant="ghost" onClick={onClose}>Close</Button></div>
+      <div className="flex justify-end pt-4 mt-2 border-t border-black/5"><Button variant="ghost" onClick={onClose}>{t("inventory.close", "Close")}</Button></div>
     </Modal>
   );
 }
