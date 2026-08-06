@@ -737,11 +737,12 @@
     "subtitle": "Exporter des résumés, des statistiques de bibliothèque et des feuilles Excel.",
     "refreshReports": "Actualiser les rapports",
     "refreshed": "Rapports actualisés avec succès",
-    "printReport": "Imprimer le rapport",
+    "printReport": "Exporter le rapport en PDF",
     "copySummary": "Copier le résumé statistique",
     "copiedSummary": "Résumé des statistiques copié dans le presse-papiers",
     "exportCSV": "Exporter en CSV",
     "csvExported": "Rapport CSV exporté avec succès",
+    "pdfExported": "Rapport PDF généré avec succès",
     "range": "Période :",
     "ranges": {
       "7d": "7 derniers jours",
@@ -794,7 +795,7 @@
       "activeDepts": "Départements les plus actifs",
       "vsLastPeriodSuffix": "par rapport à la période précédente"
     },
-    "print": "Imprimer",
+    "print": "Exporter en PDF",
     "thisMonth": "Ce Mois",
     "activityChartTitle": "Activité des Prêts (Jours récents)",
     "loadingStats": "Chargement des stats...",

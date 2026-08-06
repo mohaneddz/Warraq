@@ -12,8 +12,10 @@ import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useUiStore } from "../store/uiStore";
+import { useLibrarySettingsStore } from "../store/librarySettingsStore";
 import { useContextMenu } from "../components/ui/ContextMenu";
 import { toast } from "sonner";
+import { generateReportsPdf } from "../utils/reportsPdf";
 
 function countBy<T extends string>(values: (T | null | undefined)[], fallback: string): { name: string; count: number }[] {
   const counts = new Map<string, number>();
@@ -27,6 +29,7 @@ function countBy<T extends string>(values: (T | null | undefined)[], fallback: s
 export function ReportsPage() {
   const { t } = useTranslation();
   const prefs = useUiStore((state) => state.preferences);
+  const librarySettings = useLibrarySettingsStore((s) => s.settings);
   const [activeTab, setActiveTab] = useState<"Overview" | "Circulation" | "Inventory" | "Members">("Overview");
   const [timeRange, setTimeRange] = useState<"7d" | "30d" | "1y" | "all">("30d");
 
@@ -143,9 +146,9 @@ export function ReportsPage() {
       },
       {
         id: "print-reports",
-        label: t("reports.printReport", "Print Report Page"),
+        label: t("reports.printReport", "Export PDF Report"),
         icon: Printer,
-        onClick: () => window.print(),
+        onClick: handleExportPdf,
       },
       { divider: true },
       {
@@ -177,6 +180,80 @@ export function ReportsPage() {
     link.click();
     document.body.removeChild(link);
     toast.success(t("reports.csvExported") || "CSV Report exported successfully");
+  };
+
+  // Builds a purpose-made PDF — not a screenshot of the app page — with the same four
+  // sections as the on-screen tabs (Overview, Circulation, Inventory Health, Member Activity),
+  // each rendered as its own page with a clean header, KPI strip, and data tables.
+  const handleExportPdf = () => {
+    const rangeLabels: Record<typeof timeRange, string> = {
+      "7d": (t("reports.ranges.7d") || "Last 7 Days") as string,
+      "30d": (t("reports.ranges.30d") || "Last 30 Days") as string,
+      "1y": (t("reports.ranges.1y") || "This Year") as string,
+      "all": (t("reports.ranges.all") || "All Time") as string,
+    };
+
+    generateReportsPdf({
+      libraryName: librarySettings.library_name || "Warraq Library",
+      librarySubtitle: (t("reports.title", "Analytics & Reports") as string),
+      generatedAt: new Date(),
+      rangeLabel: rangeLabels[timeRange],
+      locale: prefs.locale,
+      kpis: [
+        { label: (t("reports.metrics.totalCheckouts") || "Total Checkouts") as string, value: stats.totalLoans.toLocaleString(prefs.locale), sub: (t("reports.metrics.totalCheckoutsSub") || "All-time loan transactions") as string },
+        { label: (t("reports.metrics.activeBorrowers") || "Active Borrowers") as string, value: stats.activeMembers.toLocaleString(prefs.locale), sub: (t("reports.metrics.activeBorrowersSub") || "Registered active members") as string },
+        { label: (t("reports.metrics.overdueRate") || "Overdue Rate") as string, value: stats.overdueRate, sub: `${stats.overdueLoansCount} overdue of ${stats.openLoansCount} open` },
+        { label: (t("reports.metrics.physicalHoldings") || "Physical Holdings") as string, value: stats.totalCopies.toLocaleString(prefs.locale), sub: `Across ${stats.totalTitles} catalog titles` },
+      ],
+      sections: [
+        {
+          id: "overview",
+          title: (t("reports.tabs.overview") || "Overview") as string,
+          subtitle: (t("reports.subtitle", "Comprehensive intelligence, holdings stats, and circulation metrics") as string),
+          tables: [
+            { title: (t("reports.charts.circulationTrend") || "Circulation Activity Trend") as string, columns: ["Day", "Circulation"], rows: trendData.map(d => [d.name, d.circulation]) },
+            { title: (t("reports.charts.topCategories") || "Top Borrowed Categories") as string, columns: ["Category", "Loans"], rows: categoriesList.map(c => [c.name, c.value]) },
+          ],
+        },
+        {
+          id: "circulation",
+          title: (t("reports.tabs.circulation") || "Circulation") as string,
+          subtitle: "Loan fulfillment, peak hours, and collection type breakdown",
+          tables: [
+            {
+              title: (t("reports.charts.fulfillmentStatus") || "Loan Fulfillment Status") as string, columns: ["Status", "Count"], rows: [
+                [translateLabel("Returned"), stats.returnedLoans],
+                [translateLabel("Open Active"), stats.openLoansCount],
+                [translateLabel("Overdue"), stats.overdueLoansCount],
+              ]
+            },
+            { title: (t("reports.charts.peakHours") || "Peak Circulation Hours") as string, columns: ["Time", "Checkouts", "Returns"], rows: (dashQuery.data?.circulationRhythm ?? []).map(r => [r.time, r.checkouts, r.returns]) },
+            { title: (t("reports.charts.mediaTypeDist") || "Collection Media Type Distribution") as string, columns: ["Type", "Count"], rows: (itemTypesQuery.data ?? []).map(d => [translateLabel(d.item_type), d.count]) },
+          ],
+        },
+        {
+          id: "inventory",
+          title: (t("reports.tabs.inventory") || "Inventory Health") as string,
+          subtitle: "Copy status, condition, and category share across the collection",
+          tables: [
+            { title: (t("reports.charts.copyStatusDist") || "Copy Status Distribution") as string, columns: ["Status", "Count"], rows: (copyStatusQuery.data ?? []).map(d => [translateLabel(d.status), d.count]) },
+            { title: (t("reports.charts.conditionHealth") || "Physical Item Condition Health") as string, columns: ["Condition", "Count"], rows: (conditionQuery.data ?? []).map(d => [translateLabel(d.condition), d.count]) },
+            { title: (t("reports.charts.categoryShare") || "Category Inventory Share") as string, columns: ["Category", "Copies"], rows: categoriesList.map(c => [c.name, c.value]) },
+          ],
+        },
+        {
+          id: "members",
+          title: (t("reports.tabs.members") || "Member Activity") as string,
+          subtitle: "Membership roles and departmental engagement",
+          tables: [
+            { title: (t("reports.charts.membersByRole") || "Members by Academic Role") as string, columns: ["Role", "Count"], rows: (memberRolesQuery.data ?? []).map(d => [translateLabel(d.role), d.count]) },
+            { title: (t("reports.charts.activeDepts") || "Most Active Departments") as string, columns: ["Department", "Loans"], rows: (dashQuery.data?.activeDepartments ?? []).map((d: any) => [d.name, d.count]) },
+          ],
+        },
+      ],
+    });
+
+    toast.success((t("reports.pdfExported", "PDF report generated successfully") as string));
   };
 
   // Helper for localized status/condition/role names in charts
@@ -221,11 +298,11 @@ export function ReportsPage() {
           >
             <Download size={15} className="text-[#1a4d40] dark:text-[#1b9277]" /> {t("reports.exportCSV") || "Export CSV"}
           </button>
-          <button 
-            onClick={() => window.print()}
+          <button
+            onClick={handleExportPdf}
             className="flex items-center gap-2 bg-[#1a4d40] dark:bg-[#1b9277] text-white px-4 py-2 rounded-xl font-bold text-[12px] hover:opacity-90 transition-colors shadow-md cursor-pointer"
           >
-            <Printer size={15} /> {t("reports.print") || "Print Report"}
+            <Printer size={15} /> {t("reports.print") || "Export PDF"}
           </button>
         </div>
       </div>
