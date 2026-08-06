@@ -1,6 +1,7 @@
 import { useState, useRef, DragEvent, ChangeEvent, useEffect } from "react";
 import { Upload, X, Edit } from "lucide-react";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 
 interface ImageUploadProps {
   value?: string | null;
@@ -22,6 +23,7 @@ function uint8ArrayToBase64(bytes: Uint8Array): string {
 
 
 export function ImageUpload({ value, onChange, shape = "cover", label, fallbackInitials }: ImageUploadProps) {
+  const { t } = useTranslation();
   const [isDragOver, setIsDragOver] = useState(false);
   const [loading, setLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -65,7 +67,7 @@ export function ImageUpload({ value, onChange, shape = "cover", label, fallbackI
 
   const handleFile = async (file: File) => {
     if (!file.type.startsWith("image/")) {
-      toast.error("Please upload an image file (PNG, JPG, WEBP).");
+      toast.error(t("common.uploadImageFileType", "Please upload an image file (PNG, JPG, WEBP).") as string);
       return;
     }
 
@@ -79,7 +81,7 @@ export function ImageUpload({ value, onChange, shape = "cover", label, fallbackI
       };
       reader.readAsDataURL(file);
     } catch {
-      toast.error("Failed to read image file.");
+      toast.error(t("common.readImageFailed", "Failed to read image file.") as string);
     } finally {
       setLoading(false);
     }
@@ -285,7 +287,7 @@ export function ImageUpload({ value, onChange, shape = "cover", label, fallbackI
               <div className="absolute inset-0 bg-black/45 opacity-0 hover:opacity-100 transition-opacity duration-200 flex items-center justify-center gap-1.5 p-1">
                 <button
                   type="button"
-                  title="Recrop image"
+                  title={t("common.recropImage", "Recrop image") as string}
                   onClick={(e) => {
                     e.stopPropagation();
                     handleRecrop();
@@ -296,7 +298,7 @@ export function ImageUpload({ value, onChange, shape = "cover", label, fallbackI
                 </button>
                 <button
                   type="button"
-                  title="Upload new image"
+                  title={t("common.uploadNewImage", "Upload new image") as string}
                   onClick={(e) => {
                     e.stopPropagation();
                     triggerSelect();
@@ -355,7 +357,7 @@ export function ImageUpload({ value, onChange, shape = "cover", label, fallbackI
             type="button"
             onClick={handleRemove}
             className="absolute -top-1.5 -right-1.5 z-20 p-1.5 bg-red-600 hover:bg-red-700 text-white rounded-full transition-colors shadow-md hover:scale-105"
-            title="Remove image"
+            title={t("common.removeImage", "Remove image") as string}
           >
             <X size={12} />
           </button>
@@ -426,7 +428,7 @@ export function ImageUpload({ value, onChange, shape = "cover", label, fallbackI
             {/* Zoom Slider */}
             <div className="w-full mt-5 space-y-1">
               <div className="flex justify-between text-[11px] font-bold text-[#122222]/60 dark:text-white/60">
-                <span>Zoom</span>
+                <span>{t("common.zoom", "Zoom")}</span>
                 <span>{Math.round(zoom * 100)}%</span>
               </div>
               <input

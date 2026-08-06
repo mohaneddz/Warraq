@@ -94,15 +94,15 @@ export function CopyEditModal({ copy, onClose, shelves }: { copy: Copy & { title
         </div>
         <label className="text-[11px] font-semibold text-[#122222]/60 block">{t("catalog.details.copyCondition", "Condition")}
           <select {...form.register("condition")} className="field-select text-[13px] py-2 px-3 mt-1 font-semibold w-full bg-white dark:bg-[#1d2926] border border-black/10 rounded-lg outline-none">
-            {["mint", "good", "fair", "worn", "damaged"].map(v => <option key={v} value={v}>{v.charAt(0).toUpperCase() + v.slice(1)}</option>)}
+            {["mint", "good", "fair", "worn", "damaged"].map(v => <option key={v} value={v}>{t(`catalog.condition.${v}`, v.charAt(0).toUpperCase() + v.slice(1))}</option>)}
           </select>
         </label>
         <label className="text-[11px] font-semibold text-[#122222]/60 block">{t("inventory.status", "Status")}
           <select {...form.register("status")} className="field-select text-[13px] py-2 px-3 mt-1 font-semibold w-full bg-white dark:bg-[#1d2926] border border-black/10 rounded-lg outline-none">
-            <option value="available">Available</option><option value="on-loan">On Loan</option><option value="reserved">Reserved</option><option value="repair">In Repair</option><option value="lost">Lost</option>
+            <option value="available">{t("reports.statusLabels.available", "Available")}</option><option value="on-loan">{t("reports.statusLabels.onloan", "On Loan")}</option><option value="reserved">{t("reports.statusLabels.reserved", "Reserved")}</option><option value="repair">{t("reports.statusLabels.repair", "In Repair")}</option><option value="lost">{t("reports.statusLabels.lost", "Lost")}</option>
           </select>
         </label>
-        <div className="flex gap-2 justify-end pt-4 border-t border-black/5"><Button type="button" variant="ghost" onClick={onClose}>Cancel</Button><Button type="submit" disabled={mutation.isPending}>Save Changes</Button></div>
+        <div className="flex gap-2 justify-end pt-4 border-t border-black/5"><Button type="button" variant="ghost" onClick={onClose}>{t("cancel", "Cancel")}</Button><Button type="submit" disabled={mutation.isPending}>{t("inventory.saveChanges", "Save Changes")}</Button></div>
       </form>
     </Modal>
   );
