@@ -420,11 +420,17 @@ export async function notifications(limit = 100): Promise<AppNotification[]> {
 }
 
 export async function markNotificationRead(notificationId: string): Promise<void> {
-  await supabase.from("notifications").update({ is_read: true }).eq("id", notificationId);
+  const updated = unwrap(await supabase.from("notifications").update({ is_read: true }).eq("id", notificationId).select("id")) as unknown[];
+  // A Postgres RLS policy that silently excludes the row (rather than erroring) still reports
+  // success with zero rows affected — surface that case explicitly instead of letting the UI
+  // believe the notification is read when the database never actually changed.
+  if (updated.length === 0) {
+    throw new Error("Notification could not be marked as read (no matching row was updated — check permissions).");
+  }
 }
 
 export async function markAllNotificationsRead(): Promise<void> {
-  await supabase.from("notifications").update({ is_read: true }).eq("is_read", false);
+  unwrap(await supabase.from("notifications").update({ is_read: true }).eq("is_read", false).select("id"));
 }
 
 export async function getRooms(): Promise<Room[]> {

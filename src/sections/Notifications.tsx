@@ -1,8 +1,9 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { Bell, BellRing, CalendarClock, CheckCheck, Clock, Search, Info } from "lucide-react";
+import { toast } from "sonner";
 
 import { dashboard, reservations, notifications, markNotificationRead, markAllNotificationsRead } from "../data/repositories/library";
 import { useLibrarySettingsStore } from "../store/librarySettingsStore";
@@ -60,14 +61,30 @@ export function NotificationsPage() {
   const { data: history, isLoading: historyLoading } = useQuery({ queryKey: ["notifications"], queryFn: () => notifications(200) });
 
   const handleMarkRead = async (id: string) => {
-    await markNotificationRead(id);
-    qc.invalidateQueries({ queryKey: ["notifications"] });
+    try {
+      await markNotificationRead(id);
+      qc.invalidateQueries({ queryKey: ["notifications"] });
+    } catch (err: any) {
+      toast.error(err?.message || String(err));
+    }
   };
 
   const handleMarkAllRead = async () => {
-    await markAllNotificationsRead();
-    qc.invalidateQueries({ queryKey: ["notifications"] });
+    try {
+      await markAllNotificationsRead();
+      qc.invalidateQueries({ queryKey: ["notifications"] });
+    } catch (err: any) {
+      toast.error(err?.message || String(err));
+    }
   };
+
+  // Opening the notifications page marks all persisted notifications as seen.
+  useEffect(() => {
+    if (history?.some((n) => !n.is_read)) {
+      handleMarkAllRead();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [history]);
 
   const rows: NotificationRow[] = useMemo(() => {
     const overdueRows: NotificationRow[] = overdueList.map((loan) => ({

@@ -159,9 +159,9 @@ export function AppShell() {
     const opening = !showNotifications;
     setShowNotifications(opening);
     if (opening && unreadDbNotifications.length > 0) {
-      markAllNotificationsRead().then(() => {
-        qc.invalidateQueries({ queryKey: ["notifications"] });
-      });
+      markAllNotificationsRead()
+        .then(() => qc.invalidateQueries({ queryKey: ["notifications"] }))
+        .catch((err) => toast.error(err?.message || String(err)));
     }
   };
 
