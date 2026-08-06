@@ -556,7 +556,7 @@ export function AppShell() {
           <div className="h-[72px] bg-white border-b border-black/5 dark:bg-[#1d2926] dark:border-white/5 flex items-center justify-between px-8 z-30 shadow-sm sticky top-0">
             {/* Search */}
             <div className="flex-1 max-w-2xl relative flex items-center">
-              <Search size={18} className="absolute left-4 text-[#122222]/40" />
+              <Search size={18} className="absolute left-4 text-[#122222]/40 dark:text-white/40" />
               <input 
                 id="global-search" 
                 aria-label="Global search" 

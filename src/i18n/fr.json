@@ -814,6 +814,38 @@
       "registeredBorrowers": "Emprunteurs inscrits",
       "overdueVsOpen": "Retards vs prêts ouverts",
       "physicalHoldings": "Exemplaires physiques"
+    },
+    "statusLabels": {
+      "available": "Disponible",
+      "onloan": "Emprunté",
+      "reserved": "Réservé",
+      "repair": "En réparation",
+      "lost": "Perdu",
+      "archived": "Archivé",
+      "returned": "Retourné",
+      "openActive": "Prêt en cours",
+      "overdue": "En retard"
+    },
+    "columns": {
+      "day": "Jour",
+      "circulation": "Circulation",
+      "category": "Catégorie",
+      "loans": "Prêts",
+      "status": "Statut",
+      "count": "Nombre",
+      "time": "Heure",
+      "checkouts": "Emprunts",
+      "returns": "Retours",
+      "type": "Type",
+      "role": "Rôle",
+      "department": "Département",
+      "copies": "Exemplaires",
+      "condition": "État"
+    },
+    "sectionSubtitles": {
+      "circulation": "Suivi des prêts, heures de pointe et répartition par type de collection",
+      "inventory": "État des exemplaires, condition et répartition par catégorie",
+      "members": "Rôles des membres et engagement par département"
     }
   },
   "notificationsPage": {

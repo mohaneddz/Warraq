@@ -814,6 +814,38 @@
       "registeredBorrowers": "Registered borrowers",
       "overdueVsOpen": "Overdue vs open loans",
       "physicalHoldings": "Physical holdings"
+    },
+    "statusLabels": {
+      "available": "Available",
+      "onloan": "On Loan",
+      "reserved": "Reserved",
+      "repair": "In Maintenance",
+      "lost": "Lost",
+      "archived": "Archived",
+      "returned": "Returned",
+      "openActive": "Active Loan",
+      "overdue": "Overdue"
+    },
+    "columns": {
+      "day": "Day",
+      "circulation": "Circulation",
+      "category": "Category",
+      "loans": "Loans",
+      "status": "Status",
+      "count": "Count",
+      "time": "Time",
+      "checkouts": "Checkouts",
+      "returns": "Returns",
+      "type": "Type",
+      "role": "Role",
+      "department": "Department",
+      "copies": "Copies",
+      "condition": "Condition"
+    },
+    "sectionSubtitles": {
+      "circulation": "Loan fulfillment, peak hours, and collection type breakdown",
+      "inventory": "Copy status, condition, and category share across the collection",
+      "members": "Membership roles and departmental engagement"
     }
   },
   "notificationsPage": {

@@ -834,6 +834,38 @@
       "registeredBorrowers": "المستعيرون المسجلون",
       "overdueVsOpen": "الكتب المتأخرة مقارنة بالمعارة",
       "physicalHoldings": "مجموع المقتنيات الفعلية"
+    },
+    "statusLabels": {
+      "available": "متوفر",
+      "onloan": "معار",
+      "reserved": "محجوز",
+      "repair": "قيد الصيانة",
+      "lost": "مفقود",
+      "archived": "مؤرشف",
+      "returned": "تم الإرجاع",
+      "openActive": "إعارة نشطة",
+      "overdue": "متأخر"
+    },
+    "columns": {
+      "day": "اليوم",
+      "circulation": "التداول",
+      "category": "الفئة",
+      "loans": "الإعارات",
+      "status": "الحالة",
+      "count": "العدد",
+      "time": "الوقت",
+      "checkouts": "الإعارات",
+      "returns": "الإرجاعات",
+      "type": "النوع",
+      "role": "الصفة",
+      "department": "القسم",
+      "copies": "النسخ",
+      "condition": "الحالة الفيزيائية"
+    },
+    "sectionSubtitles": {
+      "circulation": "إتمام الإعارات، أوقات الذروة، وتوزيع أنواع المقتنيات",
+      "inventory": "حالة النسخ، جودتها، وتوزيع الفئات عبر المجموعة",
+      "members": "أدوار الأعضاء والتفاعل حسب القسم"
     }
   },
   "notificationsPage": {

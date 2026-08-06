@@ -737,7 +737,7 @@ export function CatalogPage() {
         {/* Search & Filters */}
         <div className="flex items-center gap-3 mb-4">
           <div className="flex-1 relative">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#122222]/40" />
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#122222]/40 dark:text-white/40" />
             <input
               id="catalog-page-search"
               type="text"
@@ -1277,7 +1277,7 @@ function BookSidebar({ book, onClose, registerClean }: { book: Book; onClose: ()
         <button onClick={onClose} className="text-emerald dark:text-emerald-light hover:bg-emerald/5 p-1 rounded-md transition-colors flex items-center gap-1 text-[13px] font-bold cursor-pointer">
           <ChevronLeft size={16} /> {t("catalog.details.back")}
         </button>
-        <button onClick={onClose} className="text-[#122222]/40 hover:text-[#122222] transition-colors cursor-pointer"><X size={18} /></button>
+        <button onClick={onClose} className="text-[#122222]/40 dark:text-white/40 hover:text-[#122222] dark:hover:text-white transition-colors cursor-pointer"><X size={18} /></button>
       </div>
 
       <div className="flex-1 overflow-auto p-6 flex flex-col items-start space-y-6 [scrollbar-gutter:stable]">
