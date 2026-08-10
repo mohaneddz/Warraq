@@ -28,12 +28,27 @@
   "bundle": {
     "active": true,
     "targets": "all",
+    "publisher": "Mustapha Bacha Hospital Library",
+    "copyright": "Copyright © 2026 Mustapha Bacha Hospital Library",
+    "shortDescription": "Warraq Library Management System",
+    "longDescription": "Desktop library management system for catalogue, circulation, inventory, member records, and reporting.",
+    "category": "Education",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
+    ],
+    "windows": {
+      "webviewInstallMode": {
+        "type": "downloadBootstrapper"
+      },
+      "nsis": {
+        "installMode": "both",
+        "languages": ["English", "Arabic", "French"],
+        "displayLanguageSelector": true
+      }
+    }
   }
 }
