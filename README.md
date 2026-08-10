@@ -2,7 +2,7 @@
   Warraq — Library Management System
 </h1>
 
-Warraq is a desktop system for the Mustapha Bacha Hospital library. It supports catalogue work, circulation, inventory, member records, reporting, and configurable metadata integrations, backed by a shared Supabase (Postgres) database — the same data a future public catalog website will read.
+Warraq is a desktop system for the Mustapha Bacha Hospital library. It supports catalogue work, circulation, inventory, member records, reporting, and configurable metadata integrations, backed by a shared Supabase (Postgres) database — the same data the [public catalog website](../Website) reads.
 
 ---
 
