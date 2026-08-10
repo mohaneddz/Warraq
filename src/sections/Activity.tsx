@@ -208,7 +208,7 @@ export function ActivityPage() {
             <Activity size={18} />
           </div>
           <div>
-            <div className="text-[11px] font-semibold text-[#122222]/50 dark:text-white/50 uppercase">Total Logged</div>
+            <div className="text-[11px] font-semibold text-[#122222]/50 dark:text-white/50 uppercase">{t("activity.stats.totalLogged") || "Total Logged"}</div>
             <div className="text-[16px] font-bold text-[#122222] dark:text-white">{metrics.total}</div>
           </div>
         </div>
@@ -218,7 +218,7 @@ export function ActivityPage() {
             <Clock size={18} />
           </div>
           <div>
-            <div className="text-[11px] font-semibold text-[#122222]/50 dark:text-white/50 uppercase">Loans & Circulation</div>
+            <div className="text-[11px] font-semibold text-[#122222]/50 dark:text-white/50 uppercase">{t("activity.stats.loansCirculation") || "Loans & Circulation"}</div>
             <div className="text-[16px] font-bold text-[#122222] dark:text-white">{metrics.loans}</div>
           </div>
         </div>
@@ -228,7 +228,7 @@ export function ActivityPage() {
             <Tag size={18} />
           </div>
           <div>
-            <div className="text-[11px] font-semibold text-[#122222]/50 dark:text-white/50 uppercase">Reservations</div>
+            <div className="text-[11px] font-semibold text-[#122222]/50 dark:text-white/50 uppercase">{t("activity.stats.reservations") || "Reservations"}</div>
             <div className="text-[16px] font-bold text-[#122222] dark:text-white">{metrics.reservations}</div>
           </div>
         </div>
@@ -238,7 +238,7 @@ export function ActivityPage() {
             <User size={18} />
           </div>
           <div>
-            <div className="text-[11px] font-semibold text-[#122222]/50 dark:text-white/50 uppercase">Members</div>
+            <div className="text-[11px] font-semibold text-[#122222]/50 dark:text-white/50 uppercase">{t("activity.stats.members") || "Members"}</div>
             <div className="text-[16px] font-bold text-[#122222] dark:text-white">{metrics.members}</div>
           </div>
         </div>
@@ -248,7 +248,7 @@ export function ActivityPage() {
             <BookOpen size={18} />
           </div>
           <div>
-            <div className="text-[11px] font-semibold text-[#122222]/50 dark:text-white/50 uppercase">Catalog & Copies</div>
+            <div className="text-[11px] font-semibold text-[#122222]/50 dark:text-white/50 uppercase">{t("activity.stats.catalogCopies") || "Catalog & Copies"}</div>
             <div className="text-[16px] font-bold text-[#122222] dark:text-white">{metrics.catalog}</div>
           </div>
         </div>
@@ -279,7 +279,7 @@ export function ActivityPage() {
               className="bg-transparent text-[13px] font-semibold text-[#122222]/70 dark:text-white/70 outline-none cursor-pointer"
             />
             {dateFilter && (
-              <button onClick={() => setDateFilter("")} className="text-red-500 hover:text-red-700 ml-1 text-xs cursor-pointer">Clear</button>
+              <button onClick={() => setDateFilter("")} className="text-red-500 hover:text-red-700 ml-1 text-xs cursor-pointer">{t("activity.clear") || "Clear"}</button>
             )}
           </div>
 
@@ -289,7 +289,7 @@ export function ActivityPage() {
             onChange={(e) => setEntityFilter(e.target.value)}
             className="bg-white dark:bg-[#1d2926] border border-black/10 dark:border-white/10 rounded-xl py-2 px-3 text-[13px] font-semibold text-[#122222]/70 dark:text-white/70 outline-none cursor-pointer hover:border-emerald/30 transition-colors"
           >
-            <option value="All Entities">All Entities</option>
+            <option value="All Entities">{t("activity.allEntities") || "All Entities"}</option>
             {entityTypesList.map(ent => (
               <option key={ent} value={ent}>{ent.toUpperCase()}</option>
             ))}
@@ -334,8 +334,8 @@ export function ActivityPage() {
                   <th className="px-6 py-3">{t("activity.actor") || "Operator"}</th>
                   <th className="px-6 py-3">{t("activity.action") || "Action"}</th>
                   <th className="px-6 py-3">{t("activity.entity") || "Target Entity"}</th>
-                  <th className="px-6 py-3">Details / Context</th>
-                  <th className="px-6 py-3 w-16 text-right">Inspect</th>
+                  <th className="px-6 py-3">{t("activity.detailsContext") || "Details / Context"}</th>
+                  <th className="px-6 py-3 w-16 text-right">{t("activity.inspect") || "Inspect"}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-black/5 dark:divide-white/5">
@@ -378,7 +378,7 @@ export function ActivityPage() {
                       </td>
                       <td className="px-6 py-3 text-[#122222]/80 dark:text-white/80 max-w-xs">
                         <div className="truncate font-medium text-[12px]" title={jsonToText(item.after_json)}>
-                          {formatSummaryDetails(detailsObj, item.after_json)}
+                          {formatSummaryDetails(detailsObj, item.after_json, t)}
                         </div>
                       </td>
                       <td className="px-6 py-3 text-right">
@@ -460,18 +460,20 @@ function jsonToText(value: unknown): string {
   }
 }
 
-function formatSummaryDetails(obj: any, raw?: unknown): string {
+function formatSummaryDetails(obj: any, raw?: unknown, t?: (key: string, opts?: any) => string): string {
+  const tr = t || ((_key: string, _opts: any) => "");
   if (!obj) return jsonToText(raw) || "—";
-  if (obj.title) return `Title: ${obj.title}`;
-  if (obj.book_title) return `Book: ${obj.book_title}`;
-  if (obj.full_name) return `Member: ${obj.full_name} (${obj.member_number || ""})`;
-  if (obj.member_name) return `Member: ${obj.member_name}`;
-  if (obj.code) return `Shelf Code: ${obj.code} (${obj.section || ""})`;
-  if (obj.copyIds) return `Copies: ${Array.isArray(obj.copyIds) ? obj.copyIds.join(", ") : obj.copyIds}`;
+  if (obj.title) return tr("activity.summary.title", { value: obj.title }) || `Title: ${obj.title}`;
+  if (obj.book_title) return tr("activity.summary.book", { value: obj.book_title }) || `Book: ${obj.book_title}`;
+  if (obj.full_name) return tr("activity.summary.member", { name: obj.full_name, number: obj.member_number || "" }) || `Member: ${obj.full_name} (${obj.member_number || ""})`;
+  if (obj.member_name) return tr("activity.summary.memberName", { value: obj.member_name }) || `Member: ${obj.member_name}`;
+  if (obj.code) return tr("activity.summary.shelfCode", { code: obj.code, section: obj.section || "" }) || `Shelf Code: ${obj.code} (${obj.section || ""})`;
+  if (obj.copyIds) return tr("activity.summary.copies", { value: Array.isArray(obj.copyIds) ? obj.copyIds.join(", ") : obj.copyIds }) || `Copies: ${Array.isArray(obj.copyIds) ? obj.copyIds.join(", ") : obj.copyIds}`;
   return JSON.stringify(obj);
 }
 
 function ActivityDetailsModal({ log, onClose }: { log: any | null; onClose: () => void }) {
+  const { t } = useTranslation();
   if (!log) return null;
   const detailsObj = parseJsonDetails(log.after_json);
 
@@ -479,14 +481,14 @@ function ActivityDetailsModal({ log, onClose }: { log: any | null; onClose: () =
     <Modal
       isOpen={!!log}
       onClose={onClose}
-      title="Audit Log Entry Details"
+      title={t("activity.modal.title") || "Audit Log Entry Details"}
       size="md"
     >
       <div className="space-y-5 text-[13px]">
         {/* Header Summary */}
         <div className="bg-[#fcfbf8] dark:bg-[#111d1a] border border-black/10 dark:border-white/10 p-4 rounded-2xl flex items-center justify-between">
           <div>
-            <div className="text-[11px] uppercase tracking-wider font-bold text-[#122222]/50 dark:text-white/50">Audit Action</div>
+            <div className="text-[11px] uppercase tracking-wider font-bold text-[#122222]/50 dark:text-white/50">{t("activity.modal.action") || "Audit Action"}</div>
             <div className="font-bold text-[15px] text-[#122222] dark:text-white flex items-center gap-2 mt-0.5">
               <ActionBadge action={log.action} />
             </div>
@@ -502,17 +504,17 @@ function ActivityDetailsModal({ log, onClose }: { log: any | null; onClose: () =
         {/* Metadata Grid */}
         <div className="grid grid-cols-2 gap-3 text-[12px]">
           <div className="border border-black/10 dark:border-white/10 rounded-xl p-3 bg-white dark:bg-[#1d2926]">
-            <span className="text-[11px] font-bold text-[#122222]/50 dark:text-white/50 uppercase block mb-1">Operator / Actor</span>
+            <span className="text-[11px] font-bold text-[#122222]/50 dark:text-white/50 uppercase block mb-1">{t("activity.modal.operator") || "Operator / Actor"}</span>
             <span className="font-semibold text-[#122222] dark:text-white">{log.actor}</span>
           </div>
 
           <div className="border border-black/10 dark:border-white/10 rounded-xl p-3 bg-white dark:bg-[#1d2926]">
-            <span className="text-[11px] font-bold text-[#122222]/50 dark:text-white/50 uppercase block mb-1">Entity Type</span>
+            <span className="text-[11px] font-bold text-[#122222]/50 dark:text-white/50 uppercase block mb-1">{t("activity.modal.entityType") || "Entity Type"}</span>
             <span className="font-bold uppercase text-emerald dark:text-emerald-light">{log.entity_type}</span>
           </div>
 
           <div className="col-span-2 border border-black/10 dark:border-white/10 rounded-xl p-3 bg-white dark:bg-[#1d2926]">
-            <span className="text-[11px] font-bold text-[#122222]/50 dark:text-white/50 uppercase block mb-1">Full Entity ID</span>
+            <span className="text-[11px] font-bold text-[#122222]/50 dark:text-white/50 uppercase block mb-1">{t("activity.modal.entityId") || "Full Entity ID"}</span>
             <span className="font-mono text-[12px] text-[#122222] dark:text-white select-all">{log.entity_id}</span>
           </div>
         </div>
@@ -521,7 +523,7 @@ function ActivityDetailsModal({ log, onClose }: { log: any | null; onClose: () =
         <div className="border border-black/10 dark:border-white/10 rounded-2xl p-4 bg-white dark:bg-[#1d2926] space-y-2">
           <h4 className="text-[12px] font-bold uppercase tracking-wider text-[#122222]/60 dark:text-white/60 flex items-center gap-1.5">
             <Info size={14} className="text-emerald" />
-            Payload Metadata & Parameters
+            {t("activity.modal.payload") || "Payload Metadata & Parameters"}
           </h4>
 
           {detailsObj ? (
@@ -537,14 +539,14 @@ function ActivityDetailsModal({ log, onClose }: { log: any | null; onClose: () =
             </div>
           ) : (
             <pre className="bg-[#fcfbf8] dark:bg-[#111d1a] p-3 rounded-xl text-[11px] font-mono text-[#122222]/70 dark:text-white/70 overflow-x-auto">
-              {jsonToText(log.after_json) || "No payload metadata stored."}
+              {jsonToText(log.after_json) || t("activity.modal.noPayload") || "No payload metadata stored."}
             </pre>
           )}
         </div>
 
         <div className="pt-2 flex justify-end">
           <Button type="button" onClick={onClose}>
-            Close
+            {t("activity.modal.close") || "Close"}
           </Button>
         </div>
       </div>
