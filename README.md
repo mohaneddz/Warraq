@@ -182,4 +182,4 @@ This only imports **books** — the source `.docx` files contain no FYP (PFE) or
 
 ## License
 
-This project is licensed under the [PolyForm Noncommercial License 1.0.0](file:///d:/Programming/Tauri/Projects/Warraq/LICENSE). It may be used, modified, and shared strictly for non-commercial purposes. Any commercial use, sale, integration into paid software, or paid service usage is prohibited.
+This project is licensed under the [PolyForm Noncommercial License 1.0.0](./LICENSE). It may be used, modified, and shared strictly for non-commercial purposes. Any commercial use, sale, integration into paid software, or paid service usage is prohibited.
