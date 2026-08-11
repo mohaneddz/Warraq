@@ -4,6 +4,8 @@
 
 Warraq is a desktop system for the Mustapha Bacha Hospital library. It supports catalogue work, circulation, inventory, member records, reporting, and configurable metadata integrations, backed by a shared Supabase (Postgres) database — the same data the [public catalog website](../Website) reads.
 
+**Status:** The most actively developed project in the portfolio. Core workflows (catalogue, circulation, inventory, members, reservations, reporting) are working, with recent commits polishing localization, notifications, and cover-image backfill. No Windows 7 support (WebView2 dependency). Catalog import currently covers books only — no FYP/journal import path yet.
+
 ---
 
 ## Tech Used
