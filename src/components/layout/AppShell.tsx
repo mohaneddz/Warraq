@@ -226,14 +226,19 @@ export function AppShell() {
   }, [preferences.closeToTray]);
 
   // ── Autosave interval ─────────────────────────────────────────────────────
+  // Preferences already persist on every change, so this is a periodic safety flush: it writes
+  // the live in-memory store state back to storage on the configured interval, guarding against a
+  // corrupted/externally-cleared localStorage entry rather than re-writing a possibly-stale value.
   useEffect(() => {
     if (!preferences.autosaveEnabled) return;
     const ms = Math.max(10, preferences.autosaveInterval) * 1000;
     const id = setInterval(() => {
-      // Persist current preferences snapshot (already in localStorage via updatePreferences,
-      // but this ensures any pending changes are flushed)
-      const snap = localStorage.getItem("warraq-preferences");
-      if (snap) localStorage.setItem("warraq-preferences", snap);
+      try {
+        const live = useUiStore.getState().preferences;
+        localStorage.setItem("warraq-preferences", JSON.stringify(live));
+      } catch {
+        /* storage unavailable — nothing to flush */
+      }
     }, ms);
     return () => clearInterval(id);
   }, [preferences.autosaveEnabled, preferences.autosaveInterval]);

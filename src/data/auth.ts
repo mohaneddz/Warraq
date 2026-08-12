@@ -137,7 +137,18 @@ export async function resetPassword(id: string, newPassword: string): Promise<vo
   await invoke("admin_reset_password", { accessToken: access_token, userId: id, newPassword });
 }
 
-export async function changeOwnPassword(_currentPassword: string, newPassword: string): Promise<void> {
+export async function changeOwnPassword(currentPassword: string, newPassword: string): Promise<void> {
+  if (currentPassword === newPassword) {
+    throw new Error("The new password must be different from your current password.");
+  }
+  // Re-authenticate first so a left-open session can't be used to silently reset the password
+  // without knowing the current one (the form used to accept any value for the current password).
+  const { data: userData } = await supabase.auth.getUser();
+  const email = userData.user?.email;
+  if (!email) throw new Error("You must be signed in to change your password.");
+  const { error: verifyError } = await supabase.auth.signInWithPassword({ email, password: currentPassword });
+  if (verifyError) throw new Error("Your current password is incorrect.");
+
   const { error } = await supabase.auth.updateUser({ password: newPassword });
   if (error) throw new Error(error.message);
   await supabase.rpc("clear_must_change_password");
