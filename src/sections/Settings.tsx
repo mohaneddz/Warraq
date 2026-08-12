@@ -1029,14 +1029,10 @@ function DatabaseTab() {
 // ═══════════════════════════════════════════════════════════════════════════════
 function IntegrationsTab({ prefs, update }: TabProps) {
   const { t } = useTranslation();
-  const [showKey, setShowKey] = useState(false);
-  const [testing, setTesting] = useState(false);
-  const [testResult, setTestResult] = useState<"ok" | "fail" | null>(null);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [visibleKey, setVisibleKey] = useState<string | null>(null);
 
   const secrets = [
-    { id: "openai", label: t("settings.integrations.openaiKey") || "OpenAI API Key", value: prefs.openAIKey, placeholder: t("settings.secrets.secretPlaceholder") || "Not set", onClear: () => update({ openAIKey: "" }) },
     { id: "groq", label: t("settings.integrations.groqKey") || "Groq API Key", value: prefs.groqApiKey, placeholder: t("settings.secrets.secretPlaceholder") || "Not set", onClear: () => update({ groqApiKey: "" }) },
   ];
 
@@ -1089,30 +1085,13 @@ function IntegrationsTab({ prefs, update }: TabProps) {
     }
   };
 
-  const handleTest = async () => {
-    if (!prefs.openAIKey) return;
-    setTesting(true);
-    setTestResult(null);
-    try {
-      const res = await fetch("https://api.openai.com/v1/models", {
-        headers: { Authorization: `Bearer \${prefs.openAIKey}` },
-      });
-      setTestResult(res.ok ? "ok" : "fail");
-    } catch {
-      setTestResult("fail");
-    } finally {
-      setTesting(false);
-      setTimeout(() => setTestResult(null), 5000);
-    }
-  };
-
   const handleTestGroq = async () => {
     if (!prefs.groqApiKey) return;
     setTestingGroq(true);
     setTestGroqResult(null);
     try {
       const res = await fetch("https://api.groq.com/openai/v1/models", {
-        headers: { Authorization: `Bearer \${prefs.groqApiKey}` },
+        headers: { Authorization: `Bearer ${prefs.groqApiKey}` },
       });
       setTestGroqResult(res.ok ? "ok" : "fail");
     } catch {
@@ -1130,53 +1109,7 @@ function IntegrationsTab({ prefs, update }: TabProps) {
       <h3 className="font-bold text-[13px] text-[#122222]/80 dark:text-white/80 uppercase tracking-wider mb-4 border-b border-black/5 dark:border-white/5 pb-2">
         AI Enrichment Engines
       </h3>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-8">
-        {/* OpenAI Card */}
-        <Card title={t("settings.integrations.openaiTitle", "OpenAI Enrichment")} icon={<Zap size={16} className="text-[#1a4d40] dark:text-[#1b9277]" />}>
-          <div className="flex items-center justify-between pb-3 mb-3 border-b border-black/5 dark:border-white/5">
-            <div>
-              <p className="font-bold text-[13px] text-[#122222] dark:text-white">{t("settings.integrations.openaiToggleLabel", "Enable OpenAI Enrichment")}</p>
-              <p className="text-[11px] text-[#122222]/60 dark:text-white/60 mt-0.5">{t("settings.integrations.openaiToggleDesc", "Activate GPT-4o auto-classification and translations.")}</p>
-            </div>
-            <Toggle checked={prefs.openAIEnabled} onChange={v => update({ openAIEnabled: v })} />
-          </div>
-          <div className={`transition-all duration-200 ${prefs.openAIEnabled ? "opacity-100" : "opacity-40 pointer-events-none"}`}>
-            <p className="text-[12px] text-[#122222]/70 dark:text-white/70 mb-4 font-normal leading-normal">
-              {t("settings.integrations.aiDesc")}
-            </p>
-            <Field label={t("settings.integrations.openaiKey")}>
-              <div className="flex gap-2">
-                <div className="relative flex-1">
-                  <input
-                    type={showKey ? "text" : "password"}
-                    defaultValue={prefs.openAIKey}
-                    disabled={!prefs.openAIEnabled}
-                    placeholder={t("settings.integrations.openaiPlaceholder")}
-                    onBlur={e => update({ openAIKey: e.target.value })}
-                    className={inputCls + " pr-10"}
-                  />
-                  <button onClick={() => setShowKey(!showKey)} disabled={!prefs.openAIEnabled} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#122222]/40 dark:text-white/40 hover:text-[#122222] dark:hover:text-white transition-colors">
-                    {showKey ? <EyeOff size={14} /> : <Eye size={14} />}
-                  </button>
-                </div>
-                <button
-                  onClick={handleTest}
-                  disabled={testing || !prefs.openAIKey || !prefs.openAIEnabled}
-                  className="px-4 py-2 border border-black/10 dark:border-white/10 rounded-lg text-[13px] font-semibold text-[#122222] dark:text-white hover:bg-black/5 dark:hover:bg-white/5 transition-colors disabled:opacity-50 flex items-center gap-2"
-                >
-                  {testing ? <RefreshCw size={13} className="animate-spin" /> : null}
-                  {testing ? t("common.loading") : t("common.select")}
-                </button>
-              </div>
-              {testResult === "ok" && <p className="text-[12px] text-[#1a4d40] dark:text-[#1b9277] font-bold mt-2 flex items-center gap-1"><CheckCircle2 size={13} /> {t("common.confirm")}</p>}
-              {testResult === "fail" && <p className="text-[12px] text-red-500 font-bold mt-2 flex items-center gap-1"><AlertTriangle size={13} /> {t("settings.backup.importFailed", { error: "" })}</p>}
-            </Field>
-            <p className="text-[11px] text-[#122222]/40 dark:text-white/40 mt-3 font-medium">
-              {t("settings.integrations.openaiHelp")}
-            </p>
-          </div>
-        </Card>
-
+      <div className="grid grid-cols-1 gap-5 mb-8">
         {/* Groq Card */}
         <Card title={t("settings.integrations.groqTitle", "Groq Llama 3")} icon={<Cpu size={16} className="text-[#1a4d40] dark:text-[#1b9277]" />}>
           <div className="flex items-center justify-between pb-3 mb-3 border-b border-black/5 dark:border-white/5">

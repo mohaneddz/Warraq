@@ -18,7 +18,7 @@ import { queryClient } from "../app/providers";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { formatDisplayDate } from "../utils/dates";
-import { Modal, Input, Button, ItemTypeBadge, StatusBadge } from "../components/ui/primitives";
+import { Modal, Input, Button, ItemTypeBadge, StatusBadge, PageLoader } from "../components/ui/primitives";
 import type { Book, Member, Copy, Reservation, ReservationScope } from "../types";
 import { useThemedAsset } from "../utils/useThemedAsset";
 
@@ -411,7 +411,9 @@ export function ReservationsPage() {
 
         {/* Table Area */}
         <div className="flex-1 overflow-auto">
-          {filteredReservations.length ? (
+          {result.isLoading ? (
+            <PageLoader label={t("reservations.loading", "Loading reservations…")} />
+          ) : filteredReservations.length ? (
             <table className="w-full text-left text-[13px]">
               <thead className="bg-[#fcfbf8] dark:bg-[#111d1a] sticky top-0 border-b border-black/5 dark:border-white/5 text-[11px] font-bold text-[#122222]/50 dark:text-white/50 uppercase tracking-wider select-none">
                 <tr>

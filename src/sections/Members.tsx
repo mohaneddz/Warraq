@@ -16,7 +16,7 @@ import {
   getReservationsForMember, renewLoan, returnCopies, cancelReservation
 } from "../data/repositories/library";
 import type { Member } from "../types";
-import { Modal, Input, Button } from "../components/ui/primitives";
+import { Modal, Input, Button, PageLoader } from "../components/ui/primitives";
 import { toast } from "sonner";
 import { daysLate, formatDisplayDate, dueDate, today } from "../utils/dates";
 import { queryClient } from "../app/providers";
@@ -502,7 +502,9 @@ export function MembersPage() {
         {/* Card Grid Area */}
         <div className="flex-1 flex flex-col min-w-0">
           <div className="flex-1 overflow-y-auto pr-1">
-            {paginatedMembers.length ? (
+            {result.isLoading ? (
+              <PageLoader label={t("members.loading", "Loading members…")} />
+            ) : paginatedMembers.length ? (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-3 pb-4">
                 {paginatedMembers.map((member) => {
                   const initials = getMemberInitials(member.full_name);
