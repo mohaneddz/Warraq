@@ -711,7 +711,13 @@ function BackupTab() {
 
       const backup = await exportLibraryBackup();
       await writeTextFile(path, JSON.stringify(backup, null, 2));
-      toast.success(t("settings.backup.fullExportSuccess", "Full library backup saved successfully.") as string);
+      toast.success(t("settings.backup.fullExportSuccess", "Full library backup saved successfully.") as string, {
+        duration: 8000,
+        action: {
+          label: t("common.openFolder", "Open folder") as string,
+          onClick: () => { void import("@tauri-apps/plugin-opener").then(({ revealItemInDir }) => revealItemInDir(path)).catch(() => {}); },
+        },
+      });
     } catch (err: any) {
       console.error(err);
       toast.error(t("settings.backup.fullExportError", "Could not export backup: {{error}}", { error: err.message || String(err) }) as string);
@@ -926,10 +932,13 @@ function DatabaseTab() {
   const [resetting, setResetting] = useState(false);
   const { settings: librarySettings } = useLibrarySettingsStore();
 
+  // Guard against VITE_SUPABASE_URL being undefined — a bare `.replace` here would throw and crash
+  // the whole Database tab render.
+  const supabaseUrl = (import.meta.env.VITE_SUPABASE_URL as string | undefined) ?? "";
   const stats = [
     { label: t("settings.database.infoName"), value: librarySettings.library_name },
     { label: t("settings.database.infoEngine"), value: "Supabase (Postgres)" },
-    { label: t("settings.database.infoLocation"), value: (import.meta.env.VITE_SUPABASE_URL as string).replace("https://", "") },
+    { label: t("settings.database.infoLocation"), value: supabaseUrl ? supabaseUrl.replace("https://", "") : "—" },
   ];
 
   const handleClearLoans = async () => {
@@ -956,11 +965,11 @@ function DatabaseTab() {
     if (!second) return;
     setResetting(true);
     try {
-      const { supabase } = await import("../data/supabaseClient");
-      for (const table of ["reservations", "loans", "copies", "books", "members"] as const) {
-        const { error } = await supabase.from(table).delete().not("id", "is", null);
-        if (error) throw error;
-      }
+      // Use the shared, FK-safe wipe (children before parents across every backed-up table)
+      // instead of a partial hand-written delete list that both left reference data behind and
+      // could fail on foreign keys (e.g. deleting books while book_authors still reference them).
+      const { deleteAllLibraryData } = await import("../data/repositories/library");
+      await deleteAllLibraryData();
       localStorage.removeItem("warraq-preferences");
       alert(t("settings.database.factoryResetSuccess"));
       window.location.reload();
