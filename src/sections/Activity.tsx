@@ -1,7 +1,7 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
-  Search, Calendar, Download, RefreshCw, Eye, Tag, User, BookOpen, Clock, Activity, Info, Copy
+  Search, Calendar, Download, RefreshCw, Eye, Tag, User, BookOpen, Clock, Activity, Info, Copy, ChevronLeft, ChevronRight
 } from "lucide-react";
 import { useContextMenu } from "../components/ui/ContextMenu";
 
@@ -24,6 +24,8 @@ export function ActivityPage() {
   const [actionFilter, setActionFilter] = useState("All Actions");
   const [entityFilter, setEntityFilter] = useState("All Entities");
   const [selectedLog, setSelectedLog] = useState<any | null>(null);
+  const [page, setPage] = useState(1);
+  const itemsPerPage = useUiStore((state) => state.preferences.pageSize) || 10;
   const { showContextMenu } = useContextMenu();
 
 
@@ -120,6 +122,16 @@ export function ActivityPage() {
       return true;
     });
   }, [result.data, term, dateFilter, actorFilter, actionFilter, entityFilter]);
+
+  // Paginate the filtered logs using the shared pageSize preference (same as Catalog/Members).
+  const totalPages = Math.max(1, Math.ceil(filteredLogs.length / itemsPerPage));
+  const paginatedLogs = useMemo(() => {
+    const start = (page - 1) * itemsPerPage;
+    return filteredLogs.slice(start, start + itemsPerPage);
+  }, [filteredLogs, page, itemsPerPage]);
+
+  // Whenever the filters change (row count shifts), snap back to the first page.
+  useEffect(() => { setPage(1); }, [term, dateFilter, actorFilter, actionFilter, entityFilter, itemsPerPage]);
 
   // Statistics metrics for filtered view (using primary green design system)
   const metrics = useMemo(() => {
@@ -291,7 +303,7 @@ export function ActivityPage() {
           >
             <option value="All Entities">{t("activity.allEntities") || "All Entities"}</option>
             {entityTypesList.map(ent => (
-              <option key={ent} value={ent}>{ent.toUpperCase()}</option>
+              <option key={ent} value={ent}>{translateEntity(ent, t)}</option>
             ))}
           </select>
 
@@ -315,7 +327,7 @@ export function ActivityPage() {
           >
             <option value="All Actions">{t("activity.allActions") || "All Actions"}</option>
             {actionsList.map(act => (
-              <option key={act} value={act}>{act}</option>
+              <option key={act} value={act}>{translateAction(act, t)}</option>
             ))}
           </select>
         </div>
@@ -339,7 +351,7 @@ export function ActivityPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-black/5 dark:divide-white/5">
-                {filteredLogs.map((item) => {
+                {paginatedLogs.map((item) => {
                   const detailsObj = parseJsonDetails(item.after_json);
                   return (
                     <tr
@@ -368,8 +380,8 @@ export function ActivityPage() {
                       </td>
                       <td className="px-6 py-3">
                         <div className="flex items-center gap-2">
-                          <span className="font-bold text-[11px] uppercase tracking-wider text-[#122222]/70 dark:text-white/70 bg-black/5 dark:bg-white/5 px-2 py-0.5 rounded-md">
-                            {item.entity_type}
+                          <span className="font-bold text-[11px] uppercase tracking-wider text-[#122222]/70 dark:text-white/70 bg-black/5 dark:bg-white/5 px-2 py-0.5 rounded-md" title={item.entity_type}>
+                            {translateEntity(item.entity_type, t)}
                           </span>
                           <span className="text-[11px] font-mono font-semibold text-emerald dark:text-emerald-light">
                             {item.entity_id.slice(0, 8)}
@@ -405,6 +417,22 @@ export function ActivityPage() {
             </div>
           )}
         </div>
+
+        {/* Pagination */}
+        {!result.isLoading && filteredLogs.length > 0 && (
+          <div className="p-3 border-t border-black/5 dark:border-white/5 flex items-center justify-between text-[12px] text-[#122222]/60 dark:text-white/60 font-semibold bg-[#fcfbf8] dark:bg-[#111d1a]">
+            <div>{t("catalog.showing", { start: Math.min(filteredLogs.length, (page - 1) * itemsPerPage + 1), end: Math.min(filteredLogs.length, page * itemsPerPage), total: filteredLogs.length })}</div>
+            <div className="flex items-center gap-1">
+              <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="w-7 h-7 rounded flex items-center justify-center hover:bg-black/5 dark:hover:bg-white/5 disabled:opacity-30">
+                <ChevronLeft size={14} />
+              </button>
+              <span className="px-2">{page} / {totalPages}</span>
+              <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="w-7 h-7 rounded flex items-center justify-center hover:bg-black/5 dark:hover:bg-white/5 disabled:opacity-30">
+                <ChevronRight size={14} />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Activity Log Details Inspection Modal */}
@@ -416,7 +444,24 @@ export function ActivityPage() {
   );
 }
 
+/** Turns a snake_case action/entity key into a readable fallback label, e.g. "create_member" → "Create member". */
+function humanize(key: string): string {
+  const s = key.replace(/_/g, " ").trim();
+  return s ? s.charAt(0).toUpperCase() + s.slice(1) : key;
+}
+
+/** Localised label for an audit action, falling back to a humanised version when no key exists. */
+export function translateAction(action: string, t: (key: string, opts?: any) => string): string {
+  return t(`activity.actions.${action}`, { defaultValue: humanize(action) });
+}
+
+/** Localised label for an entity type (book, member, reservation, …). */
+export function translateEntity(entity: string, t: (key: string, opts?: any) => string): string {
+  return t(`activity.entities.${entity.toLowerCase()}`, { defaultValue: entity.toUpperCase() });
+}
+
 function ActionBadge({ action }: { action: string }) {
+  const { t } = useTranslation();
   let colorClass = "bg-emerald/10 text-emerald dark:bg-emerald-light/20 dark:text-emerald-light border border-emerald/20";
   const act = action.toLowerCase();
 
@@ -427,8 +472,8 @@ function ActionBadge({ action }: { action: string }) {
   }
 
   return (
-    <span className={`px-2.5 py-1 rounded-lg text-[11px] font-bold ${colorClass}`}>
-      {action}
+    <span className={`px-2.5 py-1 rounded-lg text-[11px] font-bold ${colorClass}`} title={action}>
+      {translateAction(action, t)}
     </span>
   );
 }
@@ -510,7 +555,7 @@ function ActivityDetailsModal({ log, onClose }: { log: any | null; onClose: () =
 
           <div className="border border-black/10 dark:border-white/10 rounded-xl p-3 bg-white dark:bg-[#1d2926]">
             <span className="text-[11px] font-bold text-[#122222]/50 dark:text-white/50 uppercase block mb-1">{t("activity.modal.entityType") || "Entity Type"}</span>
-            <span className="font-bold uppercase text-emerald dark:text-emerald-light">{log.entity_type}</span>
+            <span className="font-bold uppercase text-emerald dark:text-emerald-light">{translateEntity(log.entity_type, t)}</span>
           </div>
 
           <div className="col-span-2 border border-black/10 dark:border-white/10 rounded-xl p-3 bg-white dark:bg-[#1d2926]">
