@@ -1,4 +1,5 @@
 import { addDays, differenceInCalendarDays, format } from "date-fns";
+import { useLibrarySettingsStore } from "../store/librarySettingsStore";
 
 export const today = () => format(new Date(), "yyyy-MM-dd");
 export const dueDate = (days: number) => format(addDays(new Date(), days), "yyyy-MM-dd");
@@ -12,15 +13,22 @@ export const formatDisplayDate = (dateInput: string | Date | null | undefined): 
   }
   if (isNaN(date.getTime())) return "";
 
+  // Date format and timezone are institutional settings (shared in library_settings), while the
+  // locale is a per-device preference. Read each from its actual source instead of expecting the
+  // format/timezone to live in warraq-preferences (they never did — this is why the configured
+  // date format used to be ignored everywhere).
   let formatStr = "dd/MM/yyyy";
   let tz = "Africa/Algiers";
   let locale = "en";
   try {
+    const settings = useLibrarySettingsStore.getState().settings;
+    if (settings.date_format) formatStr = settings.date_format;
+    if (settings.timezone) tz = settings.timezone;
+  } catch {}
+  try {
     const stored = localStorage.getItem("warraq-preferences");
     if (stored) {
       const prefs = JSON.parse(stored);
-      if (prefs.dateFormat) formatStr = prefs.dateFormat;
-      if (prefs.timezone) tz = prefs.timezone;
       if (prefs.locale) locale = prefs.locale;
     }
   } catch {}
