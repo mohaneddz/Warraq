@@ -1,9 +1,28 @@
 import type { ButtonHTMLAttributes, InputHTMLAttributes, PropsWithChildren } from "react";
 import { createPortal } from "react-dom";
 import { cn } from "../../utils/cn";
-import { X, BookOpen, GraduationCap, Newspaper, FileQuestion } from "lucide-react";
+import { X, BookOpen, GraduationCap, Newspaper, FileQuestion, Loader2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useThemedAsset } from "../../utils/useThemedAsset";
+
+/** A small inline loading spinner. Size in pixels. */
+export function Spinner({ size = 20, className }: { size?: number; className?: string }) {
+  return <Loader2 size={size} className={cn("animate-spin text-emerald", className)} aria-hidden="true" />;
+}
+
+/**
+ * Full-height centered loading state for a page/panel while its data is being fetched.
+ * Keeps the spinner + label visually consistent across Catalog, Members, Reservations, etc.
+ */
+export function PageLoader({ label, className }: { label?: string; className?: string }) {
+  const { t } = useTranslation();
+  return (
+    <div className={cn("flex flex-1 flex-col items-center justify-center gap-3 py-20 text-ink/50 dark:text-parchment/50", className)}>
+      <Spinner size={32} />
+      <p className="text-sm font-medium">{label ?? t("common.loading", "Loading…")}</p>
+    </div>
+  );
+}
 
 /** Icon per item type — reused by the type selector on the book form and by ItemTypeBadge. */
 export const ITEM_TYPE_ICONS: Record<string, React.ElementType> = {

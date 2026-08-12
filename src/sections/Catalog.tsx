@@ -18,7 +18,7 @@ import {
 } from "../data/repositories/library";
 import type { Book, Copy as BookCopy } from "../types";
 import { FLOOR_SHELF_CODE } from "../types";
-import { Modal, Input, Button, StatusBadge, ItemTypeBadge, ItemTypeSelect } from "../components/ui/primitives";
+import { Modal, Input, Button, StatusBadge, ItemTypeBadge, ItemTypeSelect, PageLoader } from "../components/ui/primitives";
 import { toast } from "sonner";
 import {
   isValidIsbn, normalizeIsbn, cleanBarcode,
@@ -821,7 +821,9 @@ export function CatalogPage() {
         {/* Table Area */}
         <div className="flex-1 bg-white dark:bg-[#1d2926] border border-black/5 dark:border-white/5 rounded-xl overflow-hidden flex flex-col shadow-card">
           <div className="flex-1 overflow-auto">
-            {paginatedBooks.length ? (
+            {result.isLoading ? (
+              <PageLoader label={t("catalog.loading", "Loading catalog…")} />
+            ) : paginatedBooks.length ? (
               <table className="min-w-[1100px] w-full text-left text-[13px]">
                 <thead className="bg-[#fcfbf8] dark:bg-[#111d1a] sticky top-0 border-b border-black/5 dark:border-white/5 text-[11px] font-bold text-[#122222]/50 dark:text-white/50 uppercase tracking-wider select-none">
                   <tr>

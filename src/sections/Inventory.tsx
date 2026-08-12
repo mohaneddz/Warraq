@@ -7,7 +7,7 @@ import {
   getRooms, createRoom, renameRoom, deleteRoom,
   getColumns, createColumn, deleteColumn,
 } from "../data/repositories/library";
-import { Modal, Input, Button, StatusBadge, ItemTypeBadge } from "../components/ui/primitives";
+import { Modal, Input, Button, StatusBadge, ItemTypeBadge, PageLoader } from "../components/ui/primitives";
 import { CopyEditModal } from "../components/CopyEditModal";
 import { toast } from "sonner";
 import { queryClient } from "../app/providers";
@@ -170,11 +170,15 @@ export function InventoryPage() {
   const [targetShelfForBrowse, setTargetShelfForBrowse] = useState<Shelf | null>(null);
   const [browseSearch, setBrowseSearch] = useState("");
   const [browseTypeFilter, setBrowseTypeFilter] = useState("all");
+  // Which shelf the browsed copies currently live on. Defaults to "unassigned" so the librarian
+  // sees the items that still need placing first, rather than the whole catalogue.
+  const [browseShelfFilter, setBrowseShelfFilter] = useState<string>("unassigned");
 
   const handleOpenBrowseModal = (shelf: Shelf) => {
     setTargetShelfForBrowse(shelf);
     setBrowseSearch("");
     setBrowseTypeFilter("all");
+    setBrowseShelfFilter("unassigned");
     setBrowseModalOpen(true);
   };
 
@@ -254,13 +258,18 @@ export function InventoryPage() {
     const q = browseSearch.trim().toLowerCase();
     return allCopies.filter(c => {
       if (browseTypeFilter !== "all" && (c.item_type || "book").toLowerCase() !== browseTypeFilter) return false;
+      // Shelf-location filter: "all" shows everything, "unassigned" shows copies not on any shelf,
+      // otherwise match a specific shelf id. The target shelf is always kept visible so its own
+      // placed items still appear (letting the librarian remove them from here too).
+      if (browseShelfFilter === "unassigned" && c.shelf_id && c.shelf_id !== targetShelfForBrowse.id) return false;
+      if (browseShelfFilter !== "all" && browseShelfFilter !== "unassigned" && c.shelf_id !== browseShelfFilter && c.shelf_id !== targetShelfForBrowse.id) return false;
       if (q) {
         const match = c.title?.toLowerCase().includes(q) || c.barcode?.toLowerCase().includes(q) || c.accession_number?.toLowerCase().includes(q);
         if (!match) return false;
       }
       return true;
     });
-  }, [allCopies, targetShelfForBrowse, browseSearch, browseTypeFilter]);
+  }, [allCopies, targetShelfForBrowse, browseSearch, browseTypeFilter, browseShelfFilter]);
 
   const counts = useMemo(() => {
     const total = allCopies.length;
@@ -502,7 +511,9 @@ export function InventoryPage() {
 
           {view === "grid" && (
             <div className="bg-white dark:bg-[#1d2926] rounded-xl border border-black/5 dark:border-white/5 shadow-card p-5 overflow-auto">
-              {!selectedRoom ? (
+              {shelvesQuery.isLoading || roomsQuery.isLoading ? (
+                <PageLoader label={t("inventory.loading", "Loading shelves…")} />
+              ) : !selectedRoom ? (
                 <div className="flex flex-col items-center justify-center py-16 text-center text-[#122222]/50 dark:text-white/50">
                   <img src={noShelvesSrc} alt="" aria-hidden="true" className="h-64 w-auto object-contain mb-3 opacity-90" />
                   <h3 className="text-sm font-bold">{t("inventory.noRoomSelected", "No room selected")}</h3>
@@ -719,6 +730,13 @@ export function InventoryPage() {
           </div>
           <div className="flex gap-3 items-center">
             <div className="flex-1 relative"><Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#122222]/40 dark:text-white/40" /><Input type="text" value={browseSearch} onChange={(e) => setBrowseSearch(e.target.value)} placeholder={t("inventory.browseSearchPlaceholder", "Search items by title, author, barcode, accession number...") as string} className="pl-9 text-[13px] py-2" /></div>
+            <select value={browseShelfFilter} onChange={(e) => setBrowseShelfFilter(e.target.value)} className="bg-white dark:bg-[#1d2926] border border-black/10 dark:border-white/10 rounded-lg py-2 px-3 text-[13px] font-semibold text-[#122222] dark:text-white outline-none focus:border-emerald cursor-pointer max-w-[200px]">
+              <option value="unassigned">{t("inventory.unassignedOption", "Unassigned")}</option>
+              <option value="all">{t("inventory.allShelvesOption", "All shelves")}</option>
+              {allShelves.map((s) => (
+                <option key={s.id} value={s.id}>{t("inventory.shelfLetter", "Shelf {{code}}", { code: s.code })}{s.room ? ` · ${s.room}` : ""}</option>
+              ))}
+            </select>
             <select value={browseTypeFilter} onChange={(e) => setBrowseTypeFilter(e.target.value)} className="bg-white dark:bg-[#1d2926] border border-black/10 dark:border-white/10 rounded-lg py-2 px-3 text-[13px] font-semibold text-[#122222] dark:text-white outline-none focus:border-emerald cursor-pointer">
               <option value="all">{t("inventory.allTypesOption", "All Types")}</option><option value="book">{t("itemTypes.book", "Book")}</option><option value="fyp">{t("itemTypes.fyp", "FYP / PFE")}</option><option value="journal">{t("itemTypes.journal", "Journal")}</option><option value="other">{t("itemTypes.other", "Other")}</option>
             </select>
