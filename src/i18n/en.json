@@ -603,9 +603,12 @@
       "accepted": "Reservation accepted.",
       "declined": "Reservation declined.",
       "banned": "Member banned from making further reservations.",
-      "bulkAccepted": "Selected reservations accepted."
+      "bulkAccepted": "Selected reservations accepted.",
+      "updated": "Reservation updated.",
+      "pickedUp": "Reservation checked out to the member."
     },
     "markReady": "Mark Ready for Pickup",
+    "markPickedUp": "Mark as Picked Up",
     "extendHold": "Extend Hold (+7 Days)",
     "cancelRes": "Cancel Reservation",
     "viewDetails": "View Reservation Details",

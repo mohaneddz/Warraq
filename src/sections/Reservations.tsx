@@ -12,7 +12,7 @@ import { useContextMenu } from "../components/ui/ContextMenu";
 
 import {
   reservations, cancelReservation, deleteReservation, acceptReservation, declineReservation, extendReservation,
-  members, books, addReservation, saveMember, getCopiesForBook, banMember, updateReservation
+  members, books, addReservation, saveMember, getCopiesForBook, banMember, updateReservation, fulfilReservation
 } from "../data/repositories/library";
 import { queryClient } from "../app/providers";
 import { toast } from "sonner";
@@ -140,6 +140,17 @@ export function ReservationsPage() {
       toast.success(t("reservations.alerts.updated") || "Reservation updated.");
     },
     onError: (err: any) => toast.error(err.message || "Failed to update reservation.")
+  });
+
+  // Converts a "ready" hold into an actual loan — the member has come to the desk to collect it.
+  const fulfilMutation = useMutation({
+    mutationFn: (id: string) => fulfilReservation(id),
+    onSuccess: () => {
+      invalidate();
+      toast.success(t("reservations.alerts.pickedUp") || "Reservation checked out to the member.");
+      setSelectedReservationDetails(null);
+    },
+    onError: (err: any) => toast.error(err.message || "Failed to check out reservation.")
   });
 
   const bulkCancelMutation = useMutation({
@@ -703,6 +714,7 @@ export function ReservationsPage() {
         onDecline={(id) => declineMutation.mutate({ id })}
         onBan={(memberId, reason) => banMutation.mutate({ memberId, reason })}
         onExtend={(id) => extendMutation.mutate(id)}
+        onFulfil={(id) => fulfilMutation.mutate(id)}
         onSaveExpiry={(id, expiresAt) => editMutation.mutate({ id, expiresAt })}
         isSaving={editMutation.isPending}
       />
@@ -725,6 +737,7 @@ function ReservationDetailsModal({
   onDecline,
   onBan,
   onExtend,
+  onFulfil,
   onSaveExpiry,
   isSaving
 }: {
@@ -736,6 +749,7 @@ function ReservationDetailsModal({
   onDecline: (id: string) => void;
   onBan: (memberId: string, reason: string) => void;
   onExtend: (id: string) => void;
+  onFulfil: (id: string) => void;
   onSaveExpiry: (id: string, expiresAt: string | null) => void;
   isSaving: boolean;
 }) {
@@ -781,8 +795,8 @@ function ReservationDetailsModal({
       isOpen={!!reservation}
       onClose={onClose}
       title={t("reservations.detailsModal.title") || "Reservation Details"}
-      size="lg"
-      className="max-h-[85vh]"
+      size="xl"
+      className="max-h-[88vh]"
     >
       <div className="flex flex-col h-full">
         <div className="flex-1 min-h-0 overflow-y-auto space-y-5 pr-1">
@@ -925,18 +939,8 @@ function ReservationDetailsModal({
                       </button>
                     </div>
                   ) : (
-                    <span className="flex items-center gap-1.5">
-                      <span className="font-semibold text-amber-600 dark:text-amber-400">
-                        {reservation.expires_at ? formatDisplayDate(reservation.expires_at) : "—"}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={startEditingExpiry}
-                        aria-label={t("common.edit", "Edit") as string}
-                        className="p-1 rounded-control text-[#122222]/50 dark:text-white/50 hover:bg-black/5 dark:hover:bg-white/10 hover:text-emerald cursor-pointer"
-                      >
-                        <Pencil size={12} />
-                      </button>
+                    <span className="font-semibold text-amber-600 dark:text-amber-400">
+                      {reservation.expires_at ? formatDisplayDate(reservation.expires_at) : "—"}
                     </span>
                   )}
                 </div>
@@ -968,6 +972,17 @@ function ReservationDetailsModal({
                   {t("reservations.decline", "Decline")}
                 </Button>
               </>
+            )}
+
+            {reservation.status === 'ready' && (
+              <Button
+                type="button"
+                className="text-[12px] flex items-center gap-1.5 cursor-pointer"
+                onClick={() => onFulfil(reservation.id)}
+              >
+                <UserCheck size={14} />
+                {t("reservations.markPickedUp", "Mark as Picked Up")}
+              </Button>
             )}
 
             {(reservation.status === 'ready' || reservation.status === 'queued') && (
@@ -1021,6 +1036,17 @@ function ReservationDetailsModal({
             >
               <MoreVertical size={16} />
             </button>
+            {!isEditingExpiry && (
+              <Button
+                type="button"
+                variant="secondary"
+                className="flex items-center gap-1.5 cursor-pointer"
+                onClick={startEditingExpiry}
+              >
+                <Pencil size={14} />
+                {t("common.edit", "Edit")}
+              </Button>
+            )}
             <Button type="button" variant="secondary" onClick={onClose}>
               {t("common.close", "Close")}
             </Button>

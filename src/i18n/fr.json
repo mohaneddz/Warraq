@@ -603,9 +603,12 @@
       "accepted": "Réservation acceptée.",
       "declined": "Réservation refusée.",
       "banned": "Membre banni de toute nouvelle réservation.",
-      "bulkAccepted": "Réservations sélectionnées acceptées."
+      "bulkAccepted": "Réservations sélectionnées acceptées.",
+      "updated": "Réservation mise à jour.",
+      "pickedUp": "Réservation prêtée au membre."
     },
     "markReady": "Marquer prêt pour le retrait",
+    "markPickedUp": "Marquer comme retiré",
     "extendHold": "Prolonger la réservation (+7 jours)",
     "cancelRes": "Annuler la réservation",
     "viewDetails": "Voir les détails de la réservation",
