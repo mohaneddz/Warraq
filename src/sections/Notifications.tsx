@@ -9,7 +9,7 @@ import { dashboard, reservations, notifications, markNotificationRead, markAllNo
 import { useLibrarySettingsStore } from "../store/librarySettingsStore";
 import { formatDisplayDate } from "../utils/dates";
 
-type NotificationKind = "overdue" | "ready" | "system";
+type NotificationKind = "overdue" | "duesoon" | "ready" | "system";
 
 interface NotificationRow {
   id: string;
@@ -25,11 +25,13 @@ interface NotificationRow {
 function KindBadge({ kind, t }: { kind: NotificationKind; t: (k: string, d: string) => string }) {
   const styles: Record<NotificationKind, string> = {
     overdue: "bg-red-500/10 text-red-500 border border-red-500/20",
+    duesoon: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20",
     ready: "bg-emerald/10 text-emerald dark:bg-emerald-light/20 dark:text-emerald-light border border-emerald/20",
     system: "bg-black/5 dark:bg-white/5 text-[#122222]/70 dark:text-white/70 border border-black/10 dark:border-white/10",
   };
   const labels: Record<NotificationKind, string> = {
     overdue: t("notificationsPage.kindOverdue", "Overdue"),
+    duesoon: t("notificationsPage.kindDueSoon", "Due Soon"),
     ready: t("notificationsPage.kindReady", "Ready for Pickup"),
     system: t("notificationsPage.kindSystem", "System"),
   };
@@ -48,6 +50,7 @@ export function NotificationsPage() {
 
   const { data: dashData, isLoading: dashLoading } = useQuery({ queryKey: ["dashboard-shell"], queryFn: dashboard });
   const overdueList = librarySettings.notify_overdue ? (dashData?.overdueLoans ?? []) : [];
+  const dueSoonList = librarySettings.notify_due_soon ? (dashData?.dueSoonLoans ?? []) : [];
 
   const { data: resData, isLoading: resLoading } = useQuery({
     queryKey: ["reservations-shell"],
@@ -93,6 +96,16 @@ export function NotificationsPage() {
       markable: false,
       onOpen: () => navigate("/members"),
     }));
+    const dueSoonRows: NotificationRow[] = dueSoonList.map((loan) => ({
+      id: `duesoon-${loan.id}`,
+      kind: "duesoon",
+      title: loan.title ?? "",
+      subtitle: `${t("circulation.selectedMember")}: ${loan.member_name}`,
+      date: loan.due_at,
+      isRead: false,
+      markable: false,
+      onOpen: () => navigate("/members"),
+    }));
     const readyRows: NotificationRow[] = readyReservations.map((res) => ({
       id: `ready-${res.id}`,
       kind: "ready",
@@ -116,9 +129,9 @@ export function NotificationsPage() {
         if (n.link) navigate(n.link);
       },
     }));
-    return [...overdueRows, ...readyRows, ...historyRows].sort((a, b) => new Date(b.date).valueOf() - new Date(a.date).valueOf());
+    return [...overdueRows, ...dueSoonRows, ...readyRows, ...historyRows].sort((a, b) => new Date(b.date).valueOf() - new Date(a.date).valueOf());
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [overdueList, readyReservations, history, t]);
+  }, [overdueList, dueSoonList, readyReservations, history, t]);
 
   const filteredRows = useMemo(() => {
     return rows.filter((r) => {
@@ -159,15 +172,16 @@ export function NotificationsPage() {
       </div>
 
       {/* Summary Metric Pills */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6">
         {[
           { label: t("notificationsPage.total", "Total"), val: rows.length, icon: Bell, color: "emerald" },
           { label: t("notificationsPage.unread", "Unread"), val: unreadCount, icon: BellRing, color: "emerald" },
           { label: t("notificationsPage.kindOverdue", "Overdue"), val: overdueList.length, icon: Clock, color: "red" },
+          { label: t("notificationsPage.kindDueSoon", "Due Soon"), val: dueSoonList.length, icon: CalendarClock, color: "amber" },
           { label: t("notificationsPage.kindReady", "Ready for Pickup"), val: readyReservations.length, icon: CalendarClock, color: "emerald" },
         ].map((m) => {
-          const colorClass = m.color === "red" ? "text-red-500" : "text-emerald dark:text-emerald-light";
-          const bgLight = m.color === "red" ? "bg-red-500/10" : "bg-emerald/10 dark:bg-emerald-light/10";
+          const colorClass = m.color === "red" ? "text-red-500" : m.color === "amber" ? "text-amber-600 dark:text-amber-400" : "text-emerald dark:text-emerald-light";
+          const bgLight = m.color === "red" ? "bg-red-500/10" : m.color === "amber" ? "bg-amber-500/10" : "bg-emerald/10 dark:bg-emerald-light/10";
           return (
             <div key={m.label} className="bg-white dark:bg-[#1d2926] border border-black/5 dark:border-white/5 p-3 rounded-2xl shadow-card flex items-center gap-3">
               <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${bgLight}`}>
@@ -204,6 +218,7 @@ export function NotificationsPage() {
           >
             <option value="all">{t("notificationsPage.allTypes", "All Types")}</option>
             <option value="overdue">{t("notificationsPage.kindOverdue", "Overdue")}</option>
+            <option value="duesoon">{t("notificationsPage.kindDueSoon", "Due Soon")}</option>
             <option value="ready">{t("notificationsPage.kindReady", "Ready for Pickup")}</option>
             <option value="system">{t("notificationsPage.kindSystem", "System")}</option>
           </select>

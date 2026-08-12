@@ -102,6 +102,8 @@ export interface DashboardMetrics {
   titles: number; copies: number; onLoan: number; members: number; overdue: number; readyReservations: number;
   recentLoans: Loan[]; overdueLoans: Loan[]; activity: { date: string; count: number }[];
   activeDepartments?: { name: string; count: number }[]; circulationRhythm?: { time: string; checkouts: number; returns: number }[];
+  // Added by migration 0017. Optional so the UI still works if the migration hasn't been applied.
+  dueSoon?: number; dueSoonLoans?: Loan[];
 }
 
 export interface AppNotification {
