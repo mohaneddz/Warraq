@@ -939,6 +939,7 @@
     "total": "Total",
     "unread": "Unread",
     "kindOverdue": "Overdue",
+    "kindDueSoon": "Due Soon",
     "kindReady": "Ready for Pickup",
     "kindSystem": "System",
     "searchPlaceholder": "Search notifications...",

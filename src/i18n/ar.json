@@ -959,6 +959,7 @@
     "total": "الإجمالي",
     "unread": "غير مقروء",
     "kindOverdue": "متأخر",
+    "kindDueSoon": "قريب الاستحقاق",
     "kindReady": "جاهز للاستلام",
     "kindSystem": "نظام",
     "searchPlaceholder": "البحث في الإشعارات...",

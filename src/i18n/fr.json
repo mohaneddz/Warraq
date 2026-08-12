@@ -939,6 +939,7 @@
     "total": "Total",
     "unread": "Non lu",
     "kindOverdue": "En retard",
+    "kindDueSoon": "Bientôt dû",
     "kindReady": "Prêt à récupérer",
     "kindSystem": "Système",
     "searchPlaceholder": "Rechercher des notifications...",

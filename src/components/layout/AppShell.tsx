@@ -141,14 +141,18 @@ export function AppShell() {
     ? (resData?.filter(r => r.status === "ready") ?? [])
     : [];
 
+  // Loans coming due within the configured window (migration 0017 populates dueSoonLoans).
+  const dueSoonList = librarySettings.notify_due_soon ? (dashData?.dueSoonLoans ?? []) : [];
+
   // Persisted DB notifications (system alerts, reservation-ready history, etc.)
   const { data: dbNotifications } = useQuery({ queryKey: ["notifications"], queryFn: () => notifications(50) });
   const unreadDbNotifications = dbNotifications?.filter((n) => !n.is_read) ?? [];
 
-  const totalNotificationsCount = overdueCount + readyReservations.length + unreadDbNotifications.length;
+  const totalNotificationsCount = overdueCount + readyReservations.length + dueSoonList.length + unreadDbNotifications.length;
 
   const notificationPreview = [
     ...overdueList.map((loan) => ({ kind: "overdue" as const, item: loan, date: loan.due_at })),
+    ...dueSoonList.map((loan) => ({ kind: "duesoon" as const, item: loan, date: loan.due_at })),
     ...readyReservations.map((res) => ({ kind: "ready" as const, item: res, date: res.reserved_at || res.requested_at })),
     ...unreadDbNotifications.map((n) => ({ kind: "db" as const, item: n, date: n.created_at })),
   ]
@@ -639,6 +643,19 @@ export function AppShell() {
                               <div className="font-bold text-[#122222] dark:text-white truncate">{item.title}</div>
                               <div className="text-[11px] text-[#122222]/60 dark:text-white/60 mt-0.5">{t("circulation.selectedMember")}: {item.member_name}</div>
                               <div className="text-[10px] text-red-500 font-bold mt-1">{t("circulation.due")}: {formatDisplayDate(item.due_at)}</div>
+                            </div>
+                          ) : kind === "duesoon" ? (
+                            <div
+                              key={`duesoon-${item.id}`}
+                              onClick={() => {
+                                navigate("/members");
+                                setShowNotifications(false);
+                              }}
+                              className="p-2 rounded-lg hover:bg-emerald/5 dark:hover:bg-emerald-light/10 transition-colors cursor-pointer border border-black/5 dark:border-white/5"
+                            >
+                              <div className="font-bold text-[#122222] dark:text-white truncate">{item.title}</div>
+                              <div className="text-[11px] text-[#122222]/60 dark:text-white/60 mt-0.5">{t("circulation.selectedMember")}: {item.member_name}</div>
+                              <div className="text-[10px] text-amber-600 dark:text-amber-400 font-bold mt-1">{t("notificationsPage.kindDueSoon", "Due Soon")}: {formatDisplayDate(item.due_at)}</div>
                             </div>
                           ) : (
                             <div
