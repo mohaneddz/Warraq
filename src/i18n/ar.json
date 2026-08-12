@@ -869,7 +869,9 @@
     "charts": {
       "circulationTrend": "اتجاه نشاط الإعارة",
       "vsLastPeriod": "+14% مقارنة بالفترة السابقة",
-      "topCategories": "التصنيفات الأكثر إعارة",
+      "topCategories": "أهم التصنيفات",
+      "memberStatus": "توزيع حالات الأعضاء",
+      "memberJoins": "الأعضاء الجدد عبر الزمن",
       "statusDistribution": "توزيع حالة المقتنيات",
       "hourlyRhythm": "الإيقاع الساعي للإعارة",
       "checkoutsVsReturns": "الإعارات مقابل الإرجاع",
@@ -917,8 +919,13 @@
       "archived": "مؤرشف",
       "returned": "تم الإرجاع",
       "openActive": "إعارة نشطة",
-      "overdue": "متأخر"
+      "overdue": "متأخر",
+      "memberActive": "نشط",
+      "memberExpired": "منتهٍ",
+      "memberSuspended": "موقوف",
+      "memberBanned": "محظور"
     },
+    "csvExportedNamed": "تم تصدير {{filename}} — راجع مجلد التنزيلات لديك.",
     "columns": {
       "day": "اليوم",
       "circulation": "التداول",
@@ -933,7 +940,8 @@
       "role": "الصفة",
       "department": "القسم",
       "copies": "النسخ",
-      "condition": "الحالة الفيزيائية"
+      "condition": "الحالة الفيزيائية",
+      "month": "الشهر"
     },
     "sectionSubtitles": {
       "circulation": "إتمام الإعارات، أوقات الذروة، وتوزيع أنواع المقتنيات",

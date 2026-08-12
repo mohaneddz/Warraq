@@ -3,7 +3,7 @@ import {
   Printer, RefreshCw, BarChart2, Copy, TrendingUp, Users, BookOpen, 
   CheckCircle2, Clock, AlertTriangle, Download, Filter, Layers, Bookmark
 } from "lucide-react";
-import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
+import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 
 import { dashboard, loans } from "../data/repositories/library";
 import { supabase, unwrap } from "../data/supabaseClient";
@@ -17,6 +17,10 @@ import { useLibrarySettingsStore } from "../store/librarySettingsStore";
 import { useContextMenu } from "../components/ui/ContextMenu";
 import { toast } from "sonner";
 import { generateReportsPdf } from "../utils/reportsPdf";
+
+// Categorical palette for pie/segment charts — emerald-led with warm and cool supports so
+// slices stay distinguishable in both light and dark themes.
+const PIE_COLORS = ["#1a4d40", "#b96f3e", "#3b5998", "#7c3aed", "#0284c7", "#c58a59", "#1b9277", "#dc2626"];
 
 function countBy<T extends string>(values: (T | null | undefined)[], fallback: string): { name: string; count: number }[] {
   const counts = new Map<string, number>();
@@ -84,6 +88,52 @@ export function ReportsPage() {
     }
   });
 
+  // Real inventory share: physical copies grouped by their title's category (not loan activity),
+  // so "Category Inventory Share" reflects the actual collection instead of duplicating borrows.
+  const inventoryCategoriesQuery = useQuery({
+    queryKey: ["report-inventory-categories"],
+    queryFn: async () => {
+      const rows = unwrap<any[]>(
+        await supabase.from("copies").select("books(categories(name))").neq("status", "archived")
+      );
+      const nameOf = (r: any): string | null => {
+        const book = Array.isArray(r?.books) ? r.books[0] : r?.books;
+        const cat = book && (Array.isArray(book.categories) ? book.categories[0] : book.categories);
+        return cat?.name ?? null;
+      };
+      return countBy(rows.map(nameOf), "General Collection")
+        .slice(0, 6)
+        .map((c) => ({ name: c.name, value: c.count }));
+    }
+  });
+
+  // Member status distribution (active / expired / suspended / banned …) for the Members tab.
+  const memberStatusQuery = useQuery({
+    queryKey: ["report-member-status"],
+    queryFn: async () => {
+      const rows = unwrap<{ status: string | null }[]>(await supabase.from("members").select("status").is("archived_at", null));
+      return countBy(rows.map((r) => r.status), "active").map((c) => ({ status: c.name, count: c.count }));
+    }
+  });
+
+  // Members grouped by the month they joined, for a "growth over time" chart.
+  const memberJoinsQuery = useQuery({
+    queryKey: ["report-member-joins"],
+    queryFn: async () => {
+      const rows = unwrap<{ joined_at: string | null }[]>(await supabase.from("members").select("joined_at").is("archived_at", null));
+      const counts = new Map<string, number>();
+      for (const r of rows) {
+        if (!r.joined_at) continue;
+        const month = r.joined_at.slice(0, 7); // YYYY-MM
+        counts.set(month, (counts.get(month) ?? 0) + 1);
+      }
+      return [...counts.entries()]
+        .sort((a, b) => a[0].localeCompare(b[0]))
+        .slice(-12)
+        .map(([month, count]) => ({ month, count }));
+    }
+  });
+
   // Calculate live report metrics
   const stats = useMemo(() => {
     const totalLoans = loansQuery.data?.length ?? 0;
@@ -125,6 +175,7 @@ export function ReportsPage() {
 
   // Map top categories — real data only; an empty catalog shows an empty chart.
   const categoriesList = useMemo(() => categoriesQuery.data ?? [], [categoriesQuery.data]);
+  const inventoryCategoriesList = useMemo(() => inventoryCategoriesQuery.data ?? [], [inventoryCategoriesQuery.data]);
 
   // Context Menu
   const { showContextMenu } = useContextMenu();
@@ -167,22 +218,54 @@ export function ReportsPage() {
     ], { title: t("reports.title", "Analytics & Reports") });
   };
 
+  // Escapes a single CSV field (quote-wrap when it contains a comma, quote, or newline).
+  const csvField = (v: unknown) => {
+    const s = String(v ?? "");
+    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  const csvSection = (title: string, columns: string[], rows: (string | number)[][]) =>
+    `# ${title}\n${columns.map(csvField).join(",")}\n${rows.map(r => r.map(csvField).join(",")).join("\n")}\n`;
+
+  // Exports every report datagram (not just a 5-line summary) as one multi-section CSV. Each
+  // datagram is a titled block, mirroring the sheets you would otherwise get in a zip.
   const exportCSV = () => {
-    const csvContent = "data:text/csv;charset=utf-8," 
-      + "Metric,Value\n"
-      + `Total Titles,${stats.totalTitles}\n`
-      + `Total Copies,${stats.totalCopies}\n`
-      + `Total Checkouts,${stats.totalLoans}\n`
-      + `Active Borrowers,${stats.activeMembers}\n`
-      + `Overdue Rate,${stats.overdueRate}\n`;
-    const encodedUri = encodeURI(csvContent);
+    const sections: string[] = [];
+    sections.push(csvSection("Summary", ["Metric", "Value"], [
+      ["Total Titles", stats.totalTitles],
+      ["Total Copies", stats.totalCopies],
+      ["Total Checkouts", stats.totalLoans],
+      ["Active Borrowers", stats.activeMembers],
+      ["Overdue Rate", stats.overdueRate],
+      ["Returned Loans", stats.returnedLoans],
+      ["Open Loans", stats.openLoansCount],
+      ["Overdue Loans", stats.overdueLoansCount],
+    ]));
+    sections.push(csvSection("Circulation Trend", ["Day", "Circulation"], trendData.map(d => [d.name, d.circulation])));
+    sections.push(csvSection("Top Categories", ["Category", "Loans"], categoriesList.map(c => [c.name, c.value])));
+    sections.push(csvSection("Category Inventory Share", ["Category", "Copies"], inventoryCategoriesList.map(c => [c.name, c.value])));
+    sections.push(csvSection("Copy Status Distribution", ["Status", "Count"], (copyStatusQuery.data ?? []).map(d => [translateLabel(d.status), d.count])));
+    sections.push(csvSection("Condition Health", ["Condition", "Count"], (conditionQuery.data ?? []).map(d => [translateLabel(d.condition), d.count])));
+    sections.push(csvSection("Media Types", ["Type", "Count"], (itemTypesQuery.data ?? []).map(d => [translateLabel(d.item_type), d.count])));
+    sections.push(csvSection("Members by Role", ["Role", "Count"], (memberRolesQuery.data ?? []).map(d => [translateLabel(d.role), d.count])));
+    sections.push(csvSection("Member Status", ["Status", "Count"], (memberStatusQuery.data ?? []).map(d => [translateLabel(d.status), d.count])));
+    sections.push(csvSection("New Members Over Time", ["Month", "Count"], (memberJoinsQuery.data ?? []).map(d => [d.month, d.count])));
+    sections.push(csvSection("Peak Circulation Hours", ["Time", "Checkouts", "Returns"], (dashQuery.data?.circulationRhythm ?? []).map(r => [r.time, r.checkouts, r.returns])));
+
+    const csvContent = "﻿" + sections.join("\n"); // BOM so Excel reads UTF-8 correctly
+    const filename = `warraq-library-report-${new Date().toISOString().split('T')[0]}.csv`;
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `warraq-library-report-${new Date().toISOString().split('T')[0]}.csv`);
+    link.href = url;
+    link.setAttribute("download", filename);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    toast.success(t("reports.csvExported") || "CSV Report exported successfully");
+    URL.revokeObjectURL(url);
+    toast.success(
+      (t("reports.csvExportedNamed", { filename }) as string) ||
+      `Exported ${filename} — check your Downloads folder.`
+    );
   };
 
   // Builds a purpose-made PDF — not a screenshot of the app page — with the same four
@@ -202,7 +285,7 @@ export function ReportsPage() {
         Overview: ["circulationTrend", "topCategories", "statusDistribution", "hourlyRhythm"],
         Circulation: ["peakHours", "mediaTypeDist", "fulfillmentStatus", "dailyPace"],
         Inventory: ["copyStatusDist", "conditionHealth", "categoryShare", "formatHoldingsCount"],
-        Members: ["membersByRole", "activeDepts"],
+        Members: ["membersByRole", "activeDepts", "memberStatus", "memberJoins"],
       };
       const captured: Record<string, { dataUrl: string; width: number; height: number } | null> = {};
       for (const tab of Object.keys(chartKeysByTab) as (typeof activeTab)[]) {
@@ -263,13 +346,13 @@ export function ReportsPage() {
           subtitle: (t("reports.subtitle", "Comprehensive intelligence, holdings stats, and circulation metrics") as string),
           charts: [
             chartFor("circulationTrend", overviewChartTitle("circulationTrend", "Circulation Activity Trend")),
-            chartFor("topCategories", overviewChartTitle("topCategories", "Top Borrowed Categories")),
+            chartFor("topCategories", overviewChartTitle("topCategories", "Top Categories")),
             chartFor("statusDistribution", overviewChartTitle("statusDistribution", "Holding Status Distribution")),
             chartFor("hourlyRhythm", overviewChartTitle("hourlyRhythm", "Circulation Hourly Rhythm")),
           ].filter((c): c is NonNullable<typeof c> => !!c),
           tables: [
             { title: (t("reports.charts.circulationTrend") || "Circulation Activity Trend") as string, columns: [t("reports.columns.day", "Day"), t("reports.columns.circulation", "Circulation")], rows: trendData.map(d => [d.name, d.circulation]) },
-            { title: (t("reports.charts.topCategories") || "Top Borrowed Categories") as string, columns: [t("reports.columns.category", "Category"), t("reports.columns.loans", "Loans")], rows: categoriesList.map(c => [c.name, c.value]) },
+            { title: (t("reports.charts.topCategories") || "Top Categories") as string, columns: [t("reports.columns.category", "Category"), t("reports.columns.loans", "Loans")], rows: categoriesList.map(c => [c.name, c.value]) },
           ],
         },
         {
@@ -307,7 +390,7 @@ export function ReportsPage() {
           tables: [
             { title: (t("reports.charts.copyStatusDist") || "Copy Status Distribution") as string, columns: [t("reports.columns.status", "Status"), t("reports.columns.count", "Count")], rows: (copyStatusQuery.data ?? []).map(d => [translateLabel(d.status), d.count]) },
             { title: (t("reports.charts.conditionHealth") || "Physical Item Condition Health") as string, columns: [t("reports.columns.condition", "Condition"), t("reports.columns.count", "Count")], rows: (conditionQuery.data ?? []).map(d => [translateLabel(d.condition), d.count]) },
-            { title: (t("reports.charts.categoryShare") || "Category Inventory Share") as string, columns: [t("reports.columns.category", "Category"), t("reports.columns.copies", "Copies")], rows: categoriesList.map(c => [c.name, c.value]) },
+            { title: (t("reports.charts.categoryShare") || "Category Inventory Share") as string, columns: [t("reports.columns.category", "Category"), t("reports.columns.copies", "Copies")], rows: inventoryCategoriesList.map(c => [c.name, c.value]) },
           ],
         },
         {
@@ -317,10 +400,14 @@ export function ReportsPage() {
           charts: [
             chartFor("membersByRole", overviewChartTitle("membersByRole", "Members by Academic Role")),
             chartFor("activeDepts", overviewChartTitle("activeDepts", "Most Active Departments")),
+            chartFor("memberStatus", overviewChartTitle("memberStatus", "Member Status Distribution")),
+            chartFor("memberJoins", overviewChartTitle("memberJoins", "New Members Over Time")),
           ].filter((c): c is NonNullable<typeof c> => !!c),
           tables: [
             { title: (t("reports.charts.membersByRole") || "Members by Academic Role") as string, columns: [t("reports.columns.role", "Role"), t("reports.columns.count", "Count")], rows: (memberRolesQuery.data ?? []).map(d => [translateLabel(d.role), d.count]) },
             { title: (t("reports.charts.activeDepts") || "Most Active Departments") as string, columns: [t("reports.columns.department", "Department"), t("reports.columns.loans", "Loans")], rows: (dashQuery.data?.activeDepartments ?? []).map((d: any) => [d.name, d.count]) },
+            { title: (t("reports.charts.memberStatus") || "Member Status Distribution") as string, columns: [t("reports.columns.status", "Status"), t("reports.columns.count", "Count")], rows: (memberStatusQuery.data ?? []).map(d => [translateLabel(d.status), d.count]) },
+            { title: (t("reports.charts.memberJoins") || "New Members Over Time") as string, columns: [t("reports.columns.month", "Month"), t("reports.columns.count", "Count")], rows: (memberJoinsQuery.data ?? []).map(d => [d.month, d.count]) },
           ],
         },
       ],
@@ -339,6 +426,10 @@ export function ReportsPage() {
       Returned: t("reports.statusLabels.returned") || "Returned",
       "Open Active": t("reports.statusLabels.openActive") || "Active Loan",
       Overdue: t("reports.statusLabels.overdue") || "Overdue",
+      active: t("reports.statusLabels.memberActive") || "Active",
+      expired: t("reports.statusLabels.memberExpired") || "Expired",
+      suspended: t("reports.statusLabels.memberSuspended") || "Suspended",
+      banned: t("reports.statusLabels.memberBanned") || "Banned",
       good: t("catalog.condition.good") || "Good",
       fair: t("catalog.condition.fair") || "Fair",
       worn: t("catalog.condition.worn") || "Worn",
@@ -436,8 +527,8 @@ export function ReportsPage() {
             </ResponsiveContainer>
           </ChartWidget>
 
-          {/* Chart 2: Top Borrowed Categories */}
-          <ChartWidget title={t("reports.charts.topCategories") || "Top Borrowed Categories"} icon={BarChart2} chartRef={(el) => { chartRefs.current["topCategories"] = el; }}>
+          {/* Chart 2: Top Categories */}
+          <ChartWidget title={t("reports.charts.topCategories") || "Top Categories"} icon={BarChart2} chartRef={(el) => { chartRefs.current["topCategories"] = el; }}>
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={categoriesList} layout="vertical" margin={{ top: 5, right: 20, left: 20, bottom: 5 }}>
                 <XAxis type="number" hide />
@@ -448,15 +539,27 @@ export function ReportsPage() {
             </ResponsiveContainer>
           </ChartWidget>
 
-          {/* Chart 3: Holdings Distribution */}
+          {/* Chart 3: Holdings Distribution (pie) */}
           <ChartWidget title={t("reports.charts.statusDistribution") || "Holding Status Distribution"} icon={Layers} chartRef={(el) => { chartRefs.current["statusDistribution"] = el; }}>
-            <ResponsiveContainer width="100%" height={200}>
-              <BarChart data={(copyStatusQuery.data ?? []).map(d => ({ ...d, status: translateLabel(d.status) }))} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
-                <XAxis dataKey="status" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: 'currentColor' }} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: 'currentColor' }} />
+            <ResponsiveContainer width="100%" height={220}>
+              <PieChart>
+                <Pie
+                  data={(copyStatusQuery.data ?? []).map(d => ({ name: translateLabel(d.status), value: d.count }))}
+                  dataKey="value"
+                  nameKey="name"
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={45}
+                  outerRadius={80}
+                  paddingAngle={2}
+                >
+                  {(copyStatusQuery.data ?? []).map((_, i) => (
+                    <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} stroke="none" />
+                  ))}
+                </Pie>
                 <Tooltip contentStyle={{ borderRadius: '12px', background: '#122222', color: '#fff', fontSize: '12px' }} />
-                <Bar dataKey="count" fill="var(--color-accent)" radius={[6, 6, 0, 0]} barSize={32} />
-              </BarChart>
+                <Legend iconType="circle" wrapperStyle={{ fontSize: '11px' }} />
+              </PieChart>
             </ResponsiveContainer>
           </ChartWidget>
 
@@ -564,10 +667,10 @@ export function ReportsPage() {
             </ResponsiveContainer>
           </ChartWidget>
 
-          {/* Chart 3: Category Inventory Share */}
+          {/* Chart 3: Category Inventory Share — real copies-per-category from the collection */}
           <ChartWidget title={t("reports.charts.categoryShare") || "Category Inventory Share"} icon={BarChart2} chartRef={(el) => { chartRefs.current["categoryShare"] = el; }}>
             <ResponsiveContainer width="100%" height={200}>
-              <BarChart data={categoriesList} layout="vertical" margin={{ top: 5, right: 20, left: 20, bottom: 5 }}>
+              <BarChart data={inventoryCategoriesList} layout="vertical" margin={{ top: 5, right: 20, left: 20, bottom: 5 }}>
                 <XAxis type="number" hide />
                 <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: 'currentColor' }} width={120} />
                 <Tooltip contentStyle={{ borderRadius: '12px', background: '#122222', color: '#fff' }} />
@@ -613,6 +716,48 @@ export function ReportsPage() {
                 <Tooltip contentStyle={{ borderRadius: '12px', background: '#122222', color: '#fff' }} />
                 <Bar dataKey="count" fill="var(--color-accent)" radius={[0, 6, 6, 0]} barSize={16} />
               </BarChart>
+            </ResponsiveContainer>
+          </ChartWidget>
+
+          {/* Chart 3: Member Status Distribution (pie) */}
+          <ChartWidget title={t("reports.charts.memberStatus") || "Member Status Distribution"} icon={Users} chartRef={(el) => { chartRefs.current["memberStatus"] = el; }}>
+            <ResponsiveContainer width="100%" height={220}>
+              <PieChart>
+                <Pie
+                  data={(memberStatusQuery.data ?? []).map(d => ({ name: translateLabel(d.status), value: d.count }))}
+                  dataKey="value"
+                  nameKey="name"
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={45}
+                  outerRadius={80}
+                  paddingAngle={2}
+                >
+                  {(memberStatusQuery.data ?? []).map((_, i) => (
+                    <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} stroke="none" />
+                  ))}
+                </Pie>
+                <Tooltip contentStyle={{ borderRadius: '12px', background: '#122222', color: '#fff', fontSize: '12px' }} />
+                <Legend iconType="circle" wrapperStyle={{ fontSize: '11px' }} />
+              </PieChart>
+            </ResponsiveContainer>
+          </ChartWidget>
+
+          {/* Chart 4: New Members Over Time */}
+          <ChartWidget title={t("reports.charts.memberJoins") || "New Members Over Time"} icon={TrendingUp} chartRef={(el) => { chartRefs.current["memberJoins"] = el; }}>
+            <ResponsiveContainer width="100%" height={220}>
+              <AreaChart data={memberJoinsQuery.data ?? []} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="colorJoins" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="var(--color-accent)" stopOpacity={0.4}/>
+                    <stop offset="95%" stopColor="var(--color-accent)" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: 'currentColor' }} />
+                <YAxis axisLine={false} tickLine={false} allowDecimals={false} tick={{ fontSize: 11, fill: 'currentColor' }} />
+                <Tooltip contentStyle={{ borderRadius: '12px', background: '#122222', color: '#fff', fontSize: '12px' }} />
+                <Area type="monotone" dataKey="count" stroke="var(--color-accent)" strokeWidth={2.5} fill="url(#colorJoins)" />
+              </AreaChart>
             </ResponsiveContainer>
           </ChartWidget>
         </div>

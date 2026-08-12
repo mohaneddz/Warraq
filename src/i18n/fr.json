@@ -853,7 +853,9 @@
     "charts": {
       "circulationTrend": "Tendance de l'activité de prêt",
       "vsLastPeriod": "+14% par rapport à la période précédente",
-      "topCategories": "Catégories les plus empruntées",
+      "topCategories": "Catégories principales",
+      "memberStatus": "Répartition des statuts des membres",
+      "memberJoins": "Nouveaux membres dans le temps",
       "statusDistribution": "Distribution du statut des exemplaires",
       "hourlyRhythm": "Rythme horaire des prêts",
       "checkoutsVsReturns": "Prêts vs Retours",
@@ -897,8 +899,13 @@
       "archived": "Archivé",
       "returned": "Retourné",
       "openActive": "Prêt en cours",
-      "overdue": "En retard"
+      "overdue": "En retard",
+      "memberActive": "Actif",
+      "memberExpired": "Expiré",
+      "memberSuspended": "Suspendu",
+      "memberBanned": "Banni"
     },
+    "csvExportedNamed": "Exporté {{filename}} — voir votre dossier Téléchargements.",
     "columns": {
       "day": "Jour",
       "circulation": "Circulation",
@@ -913,7 +920,8 @@
       "role": "Rôle",
       "department": "Département",
       "copies": "Exemplaires",
-      "condition": "État"
+      "condition": "État",
+      "month": "Mois"
     },
     "sectionSubtitles": {
       "circulation": "Suivi des prêts, heures de pointe et répartition par type de collection",

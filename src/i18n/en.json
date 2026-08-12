@@ -853,7 +853,9 @@
     "charts": {
       "circulationTrend": "Circulation Activity Trend",
       "vsLastPeriod": "+14% vs last period",
-      "topCategories": "Top Borrowed Categories",
+      "topCategories": "Top Categories",
+      "memberStatus": "Member Status Distribution",
+      "memberJoins": "New Members Over Time",
       "statusDistribution": "Holding Status Distribution",
       "hourlyRhythm": "Circulation Hourly Rhythm",
       "checkoutsVsReturns": "Checkouts vs Returns",
@@ -897,8 +899,13 @@
       "archived": "Archived",
       "returned": "Returned",
       "openActive": "Active Loan",
-      "overdue": "Overdue"
+      "overdue": "Overdue",
+      "memberActive": "Active",
+      "memberExpired": "Expired",
+      "memberSuspended": "Suspended",
+      "memberBanned": "Banned"
     },
+    "csvExportedNamed": "Exported {{filename}} — check your Downloads folder.",
     "columns": {
       "day": "Day",
       "circulation": "Circulation",
@@ -913,7 +920,8 @@
       "role": "Role",
       "department": "Department",
       "copies": "Copies",
-      "condition": "Condition"
+      "condition": "Condition",
+      "month": "Month"
     },
     "sectionSubtitles": {
       "circulation": "Loan fulfillment, peak hours, and collection type breakdown",
