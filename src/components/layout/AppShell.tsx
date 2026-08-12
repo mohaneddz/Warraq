@@ -6,7 +6,7 @@ import { useUiStore } from "../../store/uiStore";
 import { useLibrarySettingsStore } from "../../store/librarySettingsStore";
 import { useAuthStore } from "../../store/authStore";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { dashboard, reservations, notifications, markAllNotificationsRead } from "../../data/repositories/library";
+import { dashboard, reservations, notifications, markNotificationRead } from "../../data/repositories/library";
 import { logout as logoutRequest } from "../../data/auth";
 import { formatDisplayDate } from "../../utils/dates";
 import { useTranslation } from "react-i18next";
@@ -156,13 +156,15 @@ export function AppShell() {
     .slice(0, 3);
 
   const handleToggleNotifications = () => {
-    const opening = !showNotifications;
-    setShowNotifications(opening);
-    if (opening && unreadDbNotifications.length > 0) {
-      markAllNotificationsRead()
-        .then(() => qc.invalidateQueries({ queryKey: ["notifications"] }))
-        .catch((err) => toast.error(err?.message || String(err)));
-    }
+    setShowNotifications((v) => !v);
+  };
+
+  // Marks a single persisted notification as read and refreshes the bell badge, so clicking any
+  // notification (here or on the Notifications page) drops the unread count immediately.
+  const markOneRead = (id: string) => {
+    markNotificationRead(id)
+      .then(() => qc.invalidateQueries({ queryKey: ["notifications"] }))
+      .catch((err) => toast.error(err?.message || String(err)));
   };
 
   // ── Theme ────────────────────────────────────────────────────────────────────
@@ -615,6 +617,7 @@ export function AppShell() {
                             <div
                               key={`db-${item.id}`}
                               onClick={() => {
+                                markOneRead(item.id);
                                 navigate(item.link || "/notifications");
                                 setShowNotifications(false);
                               }}

@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
-import { Bell, BellRing, CalendarClock, CheckCheck, Clock, Search, Info } from "lucide-react";
+import { Bell, BellRing, BellOff, CalendarClock, CheckCheck, Clock, Search, Info } from "lucide-react";
 import { toast } from "sonner";
 
 import { dashboard, reservations, notifications, markNotificationRead, markAllNotificationsRead } from "../data/repositories/library";
@@ -78,13 +78,9 @@ export function NotificationsPage() {
     }
   };
 
-  // Opening the notifications page marks all persisted notifications as seen.
-  useEffect(() => {
-    if (history?.some((n) => !n.is_read)) {
-      handleMarkAllRead();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [history]);
+  // Notifications are marked read individually when clicked (see the history rows below), so
+  // opening the page no longer silently clears every unread item — the badge only drops as the
+  // user actually reads each one, or via the explicit "Mark all as read" button.
 
   const rows: NotificationRow[] = useMemo(() => {
     const overdueRows: NotificationRow[] = overdueList.map((loan) => ({
@@ -261,9 +257,12 @@ export function NotificationsPage() {
               </tbody>
             </table>
           ) : (
-            <div className="flex flex-col items-center justify-center py-20 text-center text-[#122222]/40 dark:text-white/40">
-              {rows.length === 0 ? <Bell size={40} className="mb-3 opacity-30" /> : <Info size={40} className="mb-3 opacity-30" />}
-              <p className="font-bold text-[14px]">{rows.length === 0 ? t("nav.allClear") : t("notificationsPage.noMatches", "No notifications match your filters")}</p>
+            <div className="flex flex-col items-center justify-center py-20 text-center text-[#122222]/50 dark:text-white/50">
+              <div className="mb-4 grid h-20 w-20 place-items-center rounded-full bg-emerald/10 text-emerald dark:bg-emerald-light/10 dark:text-emerald-light">
+                {rows.length === 0 ? <BellOff size={38} /> : <Info size={38} />}
+              </div>
+              <p className="font-bold text-[16px] text-[#122222] dark:text-white">{rows.length === 0 ? t("notificationsPage.emptyTitle", "You're all caught up") : t("notificationsPage.noMatches", "No notifications match your filters")}</p>
+              <p className="mt-1 max-w-sm text-[13px]">{rows.length === 0 ? t("notificationsPage.emptyDesc", "No overdue loans, ready holds, or system alerts right now. New notifications will appear here.") : t("notificationsPage.noMatchesDesc", "Try clearing the search or changing the filters above.")}</p>
             </div>
           )}
         </div>
