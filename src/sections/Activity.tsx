@@ -12,6 +12,7 @@ import { useTranslation } from "react-i18next";
 import { useUiStore } from "../store/uiStore";
 import { formatDisplayDate } from "../utils/dates";
 import { Modal, Button } from "../components/ui/primitives";
+import { exportBlobWithToast } from "../utils/exportFile";
 import { useThemedAsset } from "../utils/useThemedAsset";
 
 export function ActivityPage() {
@@ -167,25 +168,22 @@ export function ActivityPage() {
         Details: jsonToText(l.after_json)
       }));
 
-      const csvContent = Papa.unparse(csvData);
+      const csvContent = "﻿" + Papa.unparse(csvData); // BOM so Excel reads UTF-8
       const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-      const url = URL.createObjectURL(blob);
 
       const now = new Date();
       const year = now.getFullYear();
       const month = String(now.getMonth() + 1).padStart(2, "0");
       const day = String(now.getDate()).padStart(2, "0");
       const timestamp = `${year}-${month}-${day}_${now.getHours()}-${now.getMinutes()}`;
+      const filename = `warraq_audit_logs_${timestamp}.csv`;
 
-      const link = document.createElement("a");
-      link.href = url;
-      link.setAttribute("download", `warraq_audit_logs_${timestamp}.csv`);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-
-      toast.success(t("activity.alerts.exportSuccess", { count: filteredLogs.length }) || `Successfully exported ${filteredLogs.length} audit logs as CSV.`);
+      exportBlobWithToast(
+        blob,
+        filename,
+        (t("activity.alerts.exportSuccess", { count: filteredLogs.length }) as string) || `Successfully exported ${filteredLogs.length} audit logs as CSV.`,
+        (t("common.openFolder", "Open folder") as string),
+      );
     } catch (e: any) {
       toast.error(t("activity.alerts.exportFailed", { error: e.message }) || "Failed to export CSV: " + e.message);
     }

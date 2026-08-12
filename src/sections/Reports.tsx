@@ -17,6 +17,7 @@ import { useLibrarySettingsStore } from "../store/librarySettingsStore";
 import { useContextMenu } from "../components/ui/ContextMenu";
 import { toast } from "sonner";
 import { generateReportsPdf } from "../utils/reportsPdf";
+import { exportCsvZip, openDownloadsFolder } from "../utils/exportFile";
 
 // Categorical palette for pie/segment charts — emerald-led with warm and cool supports so
 // slices stay distinguishable in both light and dark themes.
@@ -218,53 +219,38 @@ export function ReportsPage() {
     ], { title: t("reports.title", "Analytics & Reports") });
   };
 
-  // Escapes a single CSV field (quote-wrap when it contains a comma, quote, or newline).
-  const csvField = (v: unknown) => {
-    const s = String(v ?? "");
-    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-  };
-  const csvSection = (title: string, columns: string[], rows: (string | number)[][]) =>
-    `# ${title}\n${columns.map(csvField).join(",")}\n${rows.map(r => r.map(csvField).join(",")).join("\n")}\n`;
-
-  // Exports every report datagram (not just a 5-line summary) as one multi-section CSV. Each
-  // datagram is a titled block, mirroring the sheets you would otherwise get in a zip.
-  const exportCSV = () => {
-    const sections: string[] = [];
-    sections.push(csvSection("Summary", ["Metric", "Value"], [
-      ["Total Titles", stats.totalTitles],
-      ["Total Copies", stats.totalCopies],
-      ["Total Checkouts", stats.totalLoans],
-      ["Active Borrowers", stats.activeMembers],
-      ["Overdue Rate", stats.overdueRate],
-      ["Returned Loans", stats.returnedLoans],
-      ["Open Loans", stats.openLoansCount],
-      ["Overdue Loans", stats.overdueLoansCount],
-    ]));
-    sections.push(csvSection("Circulation Trend", ["Day", "Circulation"], trendData.map(d => [d.name, d.circulation])));
-    sections.push(csvSection("Top Categories", ["Category", "Loans"], categoriesList.map(c => [c.name, c.value])));
-    sections.push(csvSection("Category Inventory Share", ["Category", "Copies"], inventoryCategoriesList.map(c => [c.name, c.value])));
-    sections.push(csvSection("Copy Status Distribution", ["Status", "Count"], (copyStatusQuery.data ?? []).map(d => [translateLabel(d.status), d.count])));
-    sections.push(csvSection("Condition Health", ["Condition", "Count"], (conditionQuery.data ?? []).map(d => [translateLabel(d.condition), d.count])));
-    sections.push(csvSection("Media Types", ["Type", "Count"], (itemTypesQuery.data ?? []).map(d => [translateLabel(d.item_type), d.count])));
-    sections.push(csvSection("Members by Role", ["Role", "Count"], (memberRolesQuery.data ?? []).map(d => [translateLabel(d.role), d.count])));
-    sections.push(csvSection("Member Status", ["Status", "Count"], (memberStatusQuery.data ?? []).map(d => [translateLabel(d.status), d.count])));
-    sections.push(csvSection("New Members Over Time", ["Month", "Count"], (memberJoinsQuery.data ?? []).map(d => [d.month, d.count])));
-    sections.push(csvSection("Peak Circulation Hours", ["Time", "Checkouts", "Returns"], (dashQuery.data?.circulationRhythm ?? []).map(r => [r.time, r.checkouts, r.returns])));
-
-    const csvContent = "﻿" + sections.join("\n"); // BOM so Excel reads UTF-8 correctly
-    const filename = `warraq-library-report-${new Date().toISOString().split('T')[0]}.csv`;
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.setAttribute("download", filename);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-    toast.success(
-      (t("reports.csvExportedNamed", { filename }) as string) ||
-      `Exported ${filename} — check your Downloads folder.`
+  // Exports every report datagram as a ZIP with one CSV file per datagram, then offers an
+  // "Open folder" action in the toast so the file is easy to find.
+  const exportCSV = async () => {
+    const date = new Date().toISOString().split('T')[0];
+    const files = [
+      { name: "summary.csv", columns: ["Metric", "Value"], rows: [
+        ["Total Titles", stats.totalTitles],
+        ["Total Copies", stats.totalCopies],
+        ["Total Checkouts", stats.totalLoans],
+        ["Active Borrowers", stats.activeMembers],
+        ["Overdue Rate", stats.overdueRate],
+        ["Returned Loans", stats.returnedLoans],
+        ["Open Loans", stats.openLoansCount],
+        ["Overdue Loans", stats.overdueLoansCount],
+      ] as (string | number)[][] },
+      { name: "circulation-trend.csv", columns: ["Day", "Circulation"], rows: trendData.map(d => [d.name, d.circulation]) },
+      { name: "top-categories.csv", columns: ["Category", "Loans"], rows: categoriesList.map(c => [c.name, c.value]) },
+      { name: "category-inventory-share.csv", columns: ["Category", "Copies"], rows: inventoryCategoriesList.map(c => [c.name, c.value]) },
+      { name: "copy-status-distribution.csv", columns: ["Status", "Count"], rows: (copyStatusQuery.data ?? []).map(d => [translateLabel(d.status), d.count]) },
+      { name: "condition-health.csv", columns: ["Condition", "Count"], rows: (conditionQuery.data ?? []).map(d => [translateLabel(d.condition), d.count]) },
+      { name: "media-types.csv", columns: ["Type", "Count"], rows: (itemTypesQuery.data ?? []).map(d => [translateLabel(d.item_type), d.count]) },
+      { name: "members-by-role.csv", columns: ["Role", "Count"], rows: (memberRolesQuery.data ?? []).map(d => [translateLabel(d.role), d.count]) },
+      { name: "member-status.csv", columns: ["Status", "Count"], rows: (memberStatusQuery.data ?? []).map(d => [translateLabel(d.status), d.count]) },
+      { name: "new-members-over-time.csv", columns: ["Month", "Count"], rows: (memberJoinsQuery.data ?? []).map(d => [d.month, d.count]) },
+      { name: "peak-circulation-hours.csv", columns: ["Time", "Checkouts", "Returns"], rows: (dashQuery.data?.circulationRhythm ?? []).map(r => [r.time, r.checkouts, r.returns]) },
+    ];
+    const filename = `warraq-library-report-${date}.zip`;
+    await exportCsvZip(
+      filename,
+      files,
+      (t("reports.csvExportedNamed", { filename }) as string) || `Exported ${filename} — check your Downloads folder.`,
+      (t("common.openFolder", "Open folder") as string),
     );
   };
 
@@ -304,7 +290,11 @@ export function ReportsPage() {
       };
 
       await buildAndSavePdf(chartFor);
-      toast.success((t("reports.pdfExported", "PDF report generated successfully") as string), { id: toastId });
+      toast.success((t("reports.pdfExported", "PDF report generated successfully") as string), {
+        id: toastId,
+        duration: 8000,
+        action: { label: t("common.openFolder", "Open folder") as string, onClick: () => void openDownloadsFolder() },
+      });
     } catch (err: any) {
       setActiveTab(originalTab);
       toast.error(err?.message || String(err), { id: toastId });
@@ -460,7 +450,7 @@ export function ReportsPage() {
             onClick={exportCSV}
             className="flex items-center gap-2 bg-white dark:bg-[#1d2926] border border-black/10 dark:border-white/10 text-[#122222] dark:text-white px-3.5 py-2 rounded-xl font-semibold text-[12px] hover:bg-black/5 dark:hover:bg-white/5 transition-colors shadow-sm cursor-pointer"
           >
-            <Download size={15} className="text-[#1a4d40] dark:text-[#1b9277]" /> {t("reports.exportCSV") || "Export CSV"}
+            <Download size={15} className="text-[#1a4d40] dark:text-[#1b9277]" /> {t("reports.exportCsvZip", "Export CSVs (ZIP)")}
           </button>
           <button
             onClick={handleExportPdf}
