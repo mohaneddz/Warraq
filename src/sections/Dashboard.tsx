@@ -38,15 +38,33 @@ export function DashboardPage() {
   // activity numbers.
   const circulationRhythm = useMemo(() => metrics.circulationRhythm ?? [], [metrics.circulationRhythm]);
 
-  const activeDepartmentsList = useMemo(() => {
-    if (!metrics.activeDepartments || metrics.activeDepartments.length === 0) return [];
-    const maxVal = Math.max(...metrics.activeDepartments.map(d => d.count), 1);
-    return metrics.activeDepartments.map(d => ({
-      name: d.name,
-      val: d.count,
-      percent: (d.count / maxVal) * 100
-    }));
-  }, [metrics.activeDepartments]);
+  // Rotates through a set of short quotes, picking one per calendar day so the greeting card
+  // changes daily without needing any stored state. Falls back to the single legacy quote.
+  const dailyQuote = useMemo(() => {
+    const quotes = t("dashboard.dailyQuotes", { returnObjects: true }) as unknown;
+    if (Array.isArray(quotes) && quotes.length > 0) {
+      const dayIndex = Math.floor(Date.now() / 86_400_000) % quotes.length;
+      return quotes[dayIndex] as { text: string; source: string };
+    }
+    return { text: t("dashboard.quote"), source: t("dashboard.quoteTranslation") };
+  }, [t]);
+
+  // A "Collection Snapshot" derived entirely from existing metrics — how the holdings are being
+  // used right now. Replaces the old Active Departments panel.
+  const snapshot = useMemo(() => {
+    const copies = metrics.copies || 0;
+    const onLoan = metrics.onLoan || 0;
+    const available = Math.max(copies - onLoan, 0);
+    return {
+      copies,
+      onLoan,
+      available,
+      onHold: metrics.readyReservations || 0,
+      overdue: metrics.overdue || 0,
+      utilisation: copies > 0 ? Math.round((onLoan / copies) * 100) : 0,
+      pct: (n: number) => (copies > 0 ? Math.min((n / copies) * 100, 100) : 0),
+    };
+  }, [metrics.copies, metrics.onLoan, metrics.readyReservations, metrics.overdue]);
 
   // 7-day activity mapper
   const activityData = useMemo(() => {
@@ -149,10 +167,10 @@ export function DashboardPage() {
         {/* Quote Card */}
         <div className="relative z-10  dark:border-emerald/25 px-5 py-3.5 max-w-md shrink-0">
           <h2 className={cn("text-[15px] sm:text-[16px] font-bold text-emerald dark:text-emerald-light leading-snug mb-1", isRtl ? "font-arabic" : "font-display")}>
-            “{t("dashboard.quote")}”
+            “{dailyQuote.text}”
           </h2>
           <p className="text-[11px] font-semibold text-[#122222]/60 dark:text-white/60 uppercase tracking-wider">
-            — {t("dashboard.quoteTranslation")}
+            — {dailyQuote.source}
           </p>
         </div>
       </div>
@@ -355,18 +373,27 @@ export function DashboardPage() {
           </div>
         </Panel>
 
-        {/* Most active departments */}
-        <Panel title={t("dashboard.activeDepartments")} subtitle={t("dashboard.deptsHelp")} actionText={t("dashboard.viewAll")} className="xl:col-span-1">
-          <div className="flex-1 flex flex-col justify-between py-2">
-            {activeDepartmentsList.map(dept => (
-              <div key={dept.name} className="flex items-center gap-3">
-                <div className="w-20 text-[12px] font-semibold text-[#122222] dark:text-white truncate">{dept.name}</div>
+        {/* Collection snapshot — how holdings are being used right now (replaces Active Departments) */}
+        <Panel title={t("dashboard.collectionSnapshot")} subtitle={t("dashboard.snapshotHelp")} actionText={t("dashboard.viewAll")} onActionClick={() => navigate("/inventory")} className="xl:col-span-1">
+          <div className="flex-1 flex flex-col justify-center gap-4 py-2">
+            {[
+              { label: t("dashboard.snapshotAvailable"), val: snapshot.available, color: "bg-emerald" },
+              { label: t("dashboard.snapshotOnLoan"), val: snapshot.onLoan, color: "bg-copper" },
+              { label: t("dashboard.snapshotOnHold"), val: snapshot.onHold, color: "bg-[#3b5998]" },
+              { label: t("dashboard.snapshotOverdue"), val: snapshot.overdue, color: "bg-red-500" },
+            ].map((row) => (
+              <div key={row.label} className="flex items-center gap-3">
+                <div className="w-28 text-[12px] font-semibold text-[#122222] dark:text-white truncate">{row.label}</div>
                 <div className="flex-1 h-1.5 bg-black/5 dark:bg-white/5 rounded-full overflow-hidden">
-                  <div className="h-full bg-emerald" style={{ width: `${dept.percent}%` }} />
+                  <div className={`h-full ${row.color} rounded-full`} style={{ width: `${snapshot.pct(row.val)}%` }} />
                 </div>
-                <div className="w-8 text-right text-[12px] font-bold text-[#122222]/70 dark:text-white/70">{dept.val}</div>
+                <div className="w-10 text-right text-[12px] font-bold text-[#122222]/70 dark:text-white/70">{row.val.toLocaleString(prefs.locale)}</div>
               </div>
             ))}
+            <div className="mt-2 pt-3 border-t border-black/5 dark:border-white/5 flex items-center justify-between">
+              <span className="text-[12px] font-semibold text-[#122222]/60 dark:text-white/60">{t("dashboard.snapshotUtilisation")}</span>
+              <span className="text-[15px] font-bold text-emerald dark:text-emerald-light">{snapshot.utilisation}%</span>
+            </div>
           </div>
         </Panel>
 
