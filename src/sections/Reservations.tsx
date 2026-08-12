@@ -18,7 +18,7 @@ import { queryClient } from "../app/providers";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { formatDisplayDate } from "../utils/dates";
-import { Modal, Input, Button, ItemTypeBadge, StatusBadge, PageLoader } from "../components/ui/primitives";
+import { Modal, Input, Button, ItemTypeBadge, StatusBadge, PageLoader, DefaultCover } from "../components/ui/primitives";
 import type { Book, Member, Copy, Reservation, ReservationScope } from "../types";
 import { useThemedAsset } from "../utils/useThemedAsset";
 
@@ -481,9 +481,7 @@ export function ReservationsPage() {
                         {res.cover_path ? (
                           <img src={res.cover_path} alt="" className="w-8 h-11 object-cover rounded shadow-sm shrink-0" />
                         ) : (
-                          <div className="w-8 h-11 bg-black/5 dark:bg-white/5 rounded flex items-center justify-center text-[#122222]/40 dark:text-white/40 shrink-0">
-                            <BookOpen size={16} />
-                          </div>
+                          <DefaultCover type={res.item_type} className="w-8 h-11 shrink-0" iconSize={15} />
                         )}
                         <div className="line-clamp-2" title={res.title || ""}>{res.title || "—"}</div>
                       </div>
@@ -839,9 +837,7 @@ function ReservationDetailsModal({
                     className="w-20 h-28 object-cover rounded-xl shadow border border-black/10 dark:border-white/10 shrink-0"
                   />
                 ) : (
-                  <div className="w-20 h-28 bg-[#f4ebdd] dark:bg-[#1a2522] rounded-xl border border-black/10 dark:border-white/10 flex items-center justify-center text-[#122222]/40 dark:text-white/40 shrink-0 shadow-sm">
-                    <BookOpen size={28} />
-                  </div>
+                  <DefaultCover type={reservation.item_type} className="w-20 h-28 rounded-xl shrink-0 shadow-sm" iconSize={30} />
                 )}
 
                 <div className="space-y-1.5 flex-1 min-w-0">

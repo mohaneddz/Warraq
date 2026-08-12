@@ -7,7 +7,7 @@ import {
   getRooms, createRoom, renameRoom, deleteRoom,
   getColumns, createColumn, deleteColumn,
 } from "../data/repositories/library";
-import { Modal, Input, Button, StatusBadge, ItemTypeBadge, PageLoader } from "../components/ui/primitives";
+import { Modal, Input, Button, StatusBadge, ItemTypeBadge, PageLoader, DefaultCover } from "../components/ui/primitives";
 import { CopyEditModal } from "../components/CopyEditModal";
 import { toast } from "sonner";
 import { queryClient } from "../app/providers";
@@ -749,9 +749,13 @@ export function InventoryPage() {
               const isOtherShelf = c.shelf && !isCurrentShelf;
               return (
                 <div key={c.id} className="flex items-center justify-between p-3 rounded-xl border border-black/5 dark:border-white/5 bg-white dark:bg-[#1d2926] hover:border-emerald/30 transition-all shadow-sm gap-4">
-                  <div className="w-12 h-16 rounded-lg bg-[#f4ebdd] dark:bg-[#1a2522] border border-black/10 flex items-center justify-center shrink-0 overflow-hidden relative shadow-sm">
-                    {c.cover_path ? <img src={c.cover_path} alt={c.title} className="w-full h-full object-cover" /> : <span className="text-[10px] font-bold text-[#122222]/40 dark:text-white/40 uppercase tracking-tighter">{(c.item_type || "BOK").slice(0, 3)}</span>}
-                  </div>
+                  {c.cover_path ? (
+                    <div className="w-12 h-16 rounded-lg bg-[#f4ebdd] dark:bg-[#1a2522] border border-black/10 flex items-center justify-center shrink-0 overflow-hidden relative shadow-sm">
+                      <img src={c.cover_path} alt={c.title} className="w-full h-full object-cover" />
+                    </div>
+                  ) : (
+                    <DefaultCover type={c.item_type} className="w-12 h-16 rounded-lg shrink-0 shadow-sm" iconSize={22} />
+                  )}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-0.5"><h4 className="font-bold text-[14px] text-[#122222] dark:text-white truncate" title={c.title}>{c.title}</h4><ItemTypeBadge type={c.item_type} /></div>
                     {c.author && <p className="text-[12px] text-[#122222]/60 dark:text-white/60 truncate mb-1">{c.author}</p>}

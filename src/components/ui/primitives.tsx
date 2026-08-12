@@ -82,6 +82,27 @@ export function ItemTypeBadge({ type, className }: { type?: string; className?: 
   );
 }
 
+/**
+ * A placeholder "cover" for catalogue items that have no cover image — shows an icon tinted per
+ * item type (book / FYP / journal / other) so journals and equipment don't all fall back to a
+ * generic book box. Use anywhere a cover thumbnail is rendered with `cover_path` as the fallback.
+ */
+export function DefaultCover({ type, className, iconSize = 18 }: { type?: string | null; className?: string; iconSize?: number }) {
+  const normalized = (type || "book").toLowerCase();
+  const Icon = ITEM_TYPE_ICONS[normalized] || ITEM_TYPE_ICONS.other;
+  const tint: Record<string, string> = {
+    book: "text-emerald bg-emerald/10",
+    fyp: "text-purple-500 bg-purple-500/10",
+    journal: "text-blue-500 bg-blue-500/10",
+    other: "text-slate-500 bg-slate-500/10",
+  };
+  return (
+    <div className={cn("flex items-center justify-center overflow-hidden rounded border border-black/10 dark:border-white/10", tint[normalized] || tint.other, className)}>
+      <Icon size={iconSize} strokeWidth={1.75} />
+    </div>
+  );
+}
+
 /** Item-type selector with an icon per option, used on the book add/edit forms. */
 export function ItemTypeSelect({ value, onChange, className }: { value: string; onChange: (value: string) => void; className?: string }) {
   const { t } = useTranslation();

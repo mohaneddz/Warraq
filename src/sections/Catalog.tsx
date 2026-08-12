@@ -18,7 +18,7 @@ import {
 } from "../data/repositories/library";
 import type { Book, Copy as BookCopy } from "../types";
 import { FLOOR_SHELF_CODE } from "../types";
-import { Modal, Input, Button, StatusBadge, ItemTypeBadge, ItemTypeSelect, PageLoader } from "../components/ui/primitives";
+import { Modal, Input, Button, StatusBadge, ItemTypeBadge, ItemTypeSelect, PageLoader, DefaultCover } from "../components/ui/primitives";
 import { toast } from "sonner";
 import {
   isValidIsbn, normalizeIsbn, cleanBarcode,
@@ -898,9 +898,7 @@ export function CatalogPage() {
                             {book.cover_path ? (
                               <img src={book.cover_path} alt="" className="w-8 h-12 rounded object-cover shadow-sm border border-black/10 shrink-0" />
                             ) : (
-                              <div className="w-8 h-12 bg-[#f4ebdd] dark:bg-[#1a2522] rounded border border-black/10 flex items-center justify-center shrink-0 text-[10px] font-bold text-[#122222]/40 dark:text-white/40 uppercase">
-                                {book.item_type ? book.item_type.slice(0, 3) : "doc"}
-                              </div>
+                              <DefaultCover type={book.item_type} className="w-8 h-12 shrink-0" iconSize={15} />
                             )}
                             <div className="min-w-0 flex-1 max-w-[280px]">
                               <div className="font-bold text-[#122222] dark:text-white truncate" title={displayTitle.main}>{displayTitle.main}</div>
@@ -1289,8 +1287,9 @@ function BookSidebar({ book, onClose, registerClean }: { book: Book; onClose: ()
           {book.cover_path ? (
             <img src={book.cover_path} alt={book.title} className="w-full h-full object-cover" />
           ) : (
-            <div className="text-[14px] font-bold text-[#122222]/40 dark:text-white/40 uppercase">
-              {book.item_type ? book.item_type : "Item"}
+            <div className="flex flex-col items-center gap-2 text-[#122222]/40 dark:text-white/40">
+              <DefaultCover type={book.item_type} className="w-20 h-20 rounded-2xl border-0 bg-transparent" iconSize={44} />
+              <ItemTypeBadge type={book.item_type} />
             </div>
           )}
         </div>
