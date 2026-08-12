@@ -3,15 +3,15 @@ import { supabase, unwrap } from "../data/supabaseClient";
 import type { LibrarySettings } from "../types";
 
 const defaults: LibrarySettings = {
-  library_name: "Mustapha Bacha Hospital Library",
+  library_name: "CHU Mustapha Pacha — Medical Library",
   library_short_name: "Warraq",
-  library_address: "",
-  library_city: "",
-  library_phone: "",
+  library_address: "Place du 1er Mai 1945, Sidi M'Hamed",
+  library_city: "Algiers",
+  library_phone: "+213 21 23 55 55",
   library_email: "",
   library_website: "",
-  library_hours: "",
-  library_description: "",
+  library_hours: "Sun–Thu, 08:00–16:30",
+  library_description: "Medical library of the Mustapha Pacha University Hospital Center (CHU Mustapha Pacha), Algiers.",
   timezone: "Africa/Algiers",
   date_format: "dd/MM/yyyy",
   currency: "DZD",
@@ -44,7 +44,13 @@ export const useLibrarySettingsStore = create<LibrarySettingsState>((set, get) =
   loaded: false,
   load: async () => {
     const data = unwrap<Partial<LibrarySettings>>(await supabase.from("library_settings").select("*").eq("id", 1).single());
-    set({ settings: { ...defaults, ...data }, loaded: true });
+    // Fall back to the institutional defaults for any column the DB left null/undefined, so a
+    // freshly-provisioned settings row still shows the CHU Mustapha profile out of the box.
+    const merged: Record<string, unknown> = { ...defaults };
+    for (const [key, value] of Object.entries(data)) {
+      if (value !== null && value !== undefined) merged[key] = value;
+    }
+    set({ settings: merged as unknown as LibrarySettings, loaded: true });
   },
   update: async (values) => {
     const data = unwrap<Partial<LibrarySettings>>(

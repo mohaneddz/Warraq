@@ -138,14 +138,16 @@ export function SettingsPage() {
           <h1 className="font-display text-[28px] font-bold text-[#122222] dark:text-white leading-tight">{t("nav.settings")}</h1>
         </div>
 
-        <div className="relative mb-6">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#122222]/40 dark:text-white/40" />
+        {/* Small left padding + an inset focus ring so the ring can't be clipped by the nav's
+            overflow-y-auto (which was cropping the input's left edge when focused). */}
+        <div className="relative mb-6 px-0.5">
+          <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#122222]/40 dark:text-white/40 pointer-events-none" />
           <input
             type="text"
             placeholder={t("settings.searchPlaceholder") || "Search settings..."}
             value={search}
             onChange={e => setSearch(e.target.value)}
-            className="w-full bg-white dark:bg-[#1d2926] border border-black/10 dark:border-white/10 rounded-lg py-2 pl-8 pr-3 text-[13px] text-[#122222] dark:text-[#f0ebe1] outline-none focus:border-[#1a4d40]"
+            className="w-full bg-white dark:bg-[#1d2926] border border-black/10 dark:border-white/10 rounded-lg py-2 pl-9 pr-3 text-[13px] text-[#122222] dark:text-[#f0ebe1] outline-none focus:border-[#1a4d40] focus:ring-2 focus:ring-inset focus:ring-[#1a4d40]/20"
           />
         </div>
 
