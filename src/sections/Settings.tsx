@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   Settings as SettingsIcon, Search, CheckCircle2, ChevronRight,
   BookOpen, Database, UserCircle, Monitor, Globe, Bell,
@@ -1720,6 +1720,7 @@ function DesktopTab({ prefs, update }: TabProps) {
 // ═══════════════════════════════════════════════════════════════════════════════
 function AboutTab() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const credits = [
     { role: t("settings.about.developer"), name: "MANAA Mohaned" },
     { role: "Book data", name: "Google Books / Open Library" },
@@ -1780,17 +1781,17 @@ function AboutTab() {
 
       <Card title={t("settings.about.legal") || "Legal"} icon={<FileText size={16} className="text-[#122222]/60 dark:text-white/60" />}>
         <div className="flex flex-col gap-3">
-          <a href="#" className="flex items-center justify-between text-[13px] font-semibold text-[#1a4d40] dark:text-[#1b9277] hover:underline">
+          <button onClick={() => navigate("/legal/terms")} className="flex items-center justify-between text-[13px] font-semibold text-[#1a4d40] dark:text-[#1b9277] hover:underline cursor-pointer text-left">
             {t("settings.about.terms") || "Terms of Service"} <ChevronRight size={14} />
-          </a>
-          <a href="#" className="flex items-center justify-between text-[13px] font-semibold text-[#1a4d40] dark:text-[#1b9277] hover:underline">
+          </button>
+          <button onClick={() => navigate("/legal/privacy")} className="flex items-center justify-between text-[13px] font-semibold text-[#1a4d40] dark:text-[#1b9277] hover:underline cursor-pointer text-left">
             {t("settings.about.privacy") || "Privacy Policy"} <ChevronRight size={14} />
-          </a>
-          <a href="#" className="flex items-center justify-between text-[13px] font-semibold text-[#1a4d40] dark:text-[#1b9277] hover:underline">
+          </button>
+          <button onClick={() => navigate("/legal/licenses")} className="flex items-center justify-between text-[13px] font-semibold text-[#1a4d40] dark:text-[#1b9277] hover:underline cursor-pointer text-left">
             {t("settings.about.licenses") || "Open Source Licenses"} <ChevronRight size={14} />
-          </a>
+          </button>
         </div>
-        <p className="text-[11px] text-[#122222]/40 dark:text-white/40 mt-4">© 2026 Warraq. All rights reserved.</p>
+        <p className="text-[11px] text-[#122222]/40 dark:text-white/40 mt-4">© 2026 Warraq — MANAA Mohaned. Free for CHU Mustapha Pacha only; redistribution is prohibited.</p>
       </Card>
     </div>
   );

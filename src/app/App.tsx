@@ -19,6 +19,7 @@ import { ReportsPage } from "../sections/Reports";
 import { SettingsPage } from "../sections/Settings";
 import { ReservationsPage } from "../sections/Reservations";
 import { NotificationsPage } from "../sections/Notifications";
+import { LegalPage } from "../sections/Legal";
 import { OnboardingPage } from "../sections/Onboarding";
 import { LoginPage, ForcedPasswordChangePage } from "../sections/Login";
 
@@ -229,6 +230,7 @@ function Boot() {
           <Route path="/activity" element={<ActivityPage />} />
           <Route path="/notifications" element={<NotificationsPage />} />
           <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/legal/:doc" element={<LegalPage />} />
         </Route>
         <Route path="*" element={<Home />} />
       </Routes>
