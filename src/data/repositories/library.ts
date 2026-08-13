@@ -342,17 +342,11 @@ export async function returnCopies(copyIds: string[]): Promise<void> {
   unwrap(await supabase.rpc("return_copies", { p_copy_ids: copyIds }));
 }
 
-export async function renewLoan(loanId: string, days: number): Promise<void> {
-  const loan = unwrap(await supabase.from("loans").select("*").eq("id", loanId).single()) as Loan;
-  if (loan.returned_at) throw new Error("This loan has already been returned.");
-
-  const currentDueDate = new Date(loan.due_at);
-  const baseDate = currentDueDate > new Date() ? currentDueDate : new Date();
-  baseDate.setDate(baseDate.getDate() + days);
-  const newDueDate = baseDate.toISOString();
-
-  unwrap(await supabase.from("loans").update({ due_at: newDueDate, renewed_count: loan.renewed_count + 1 }).eq("id", loanId).select().single());
-  await audit("renew", "loan", loanId, { old_due: loan.due_at, new_due: newDueDate });
+// Renewal goes through the server-side renew_loan() RPC so the configured renew_limit is
+// enforced (and the new due date is derived from the same loan-period rule as a fresh loan)
+// instead of a direct table write that could be renewed past the cap.
+export async function renewLoan(loanId: string): Promise<void> {
+  unwrap(await supabase.rpc("renew_loan", { p_loan_id: loanId }));
 }
 
 export async function cancelReservation(reservationId: string): Promise<void> {

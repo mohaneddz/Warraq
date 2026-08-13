@@ -840,7 +840,7 @@ function MemberSidebar({ member, onClose, registerClean }: { member: Member; onC
   });
 
   const renewMutation = useMutation({
-    mutationFn: (loanId: string) => renewLoan(loanId, librarySettings.loan_days),
+    mutationFn: (loanId: string) => renewLoan(loanId),
     onSuccess: () => {
       toast.success(t("circulation.alerts.renewSuccess") || "Loan renewed.");
       refetchLoans();
