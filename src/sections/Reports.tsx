@@ -343,7 +343,7 @@ export function ReportsPage() {
             chartFor("circulationTrend", overviewChartTitle("circulationTrend", "Circulation Activity Trend")),
             chartFor("topCategories", overviewChartTitle("topCategories", "Top Categories")),
             chartFor("statusDistribution", overviewChartTitle("statusDistribution", "Holding Status Distribution")),
-            chartFor("hourlyRhythm", overviewChartTitle("hourlyRhythm", "Circulation Hourly Rhythm")),
+            chartFor("hourlyRhythm", overviewChartTitle("hourlyRhythm", "Hourly Circulation")),
           ].filter((c): c is NonNullable<typeof c> => !!c),
           tables: [
             { title: (t("reports.charts.circulationTrend") || "Circulation Activity Trend") as string, columns: [t("reports.columns.day", "Day"), t("reports.columns.circulation", "Circulation")], rows: trendData.map(d => [d.name, d.circulation]) },
@@ -563,7 +563,7 @@ export function ReportsPage() {
           </ChartWidget>
 
           {/* Chart 4: Hourly Checkout Rhythm */}
-          <ChartWidget title={t("reports.charts.hourlyRhythm") || "Circulation Hourly Rhythm"} icon={Clock} secondaryBadge={t("reports.charts.checkoutsVsReturns") || "Checkouts vs Returns"} chartRef={(el) => { chartRefs.current["hourlyRhythm"] = el; }}>
+          <ChartWidget title={t("reports.charts.hourlyRhythm") || "Hourly Circulation"} icon={Clock} secondaryBadge={t("reports.charts.checkoutsVsReturns") || "Checkouts vs Returns"} chartRef={(el) => { chartRefs.current["hourlyRhythm"] = el; }}>
             <ResponsiveContainer width="100%" height={200}>
               <BarChart data={dashQuery.data?.circulationRhythm ?? []} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
                 <XAxis dataKey="time" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: 'currentColor' }} />

@@ -860,7 +860,7 @@
       "memberStatus": "Répartition des statuts des membres",
       "memberJoins": "Nouveaux membres dans le temps",
       "statusDistribution": "Distribution du statut des exemplaires",
-      "hourlyRhythm": "Rythme horaire des prêts",
+      "hourlyRhythm": "Prêts par heure",
       "checkoutsVsReturns": "Prêts vs Retours",
       "peakHours": "Heures de pointe des prêts",
       "mediaTypeDist": "Distribution des types de médias",

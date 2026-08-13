@@ -876,7 +876,7 @@
       "memberStatus": "توزيع حالات الأعضاء",
       "memberJoins": "الأعضاء الجدد عبر الزمن",
       "statusDistribution": "توزيع حالة المقتنيات",
-      "hourlyRhythm": "الإيقاع الساعي للإعارة",
+      "hourlyRhythm": "الإعارة حسب الساعة",
       "checkoutsVsReturns": "الإعارات مقابل الإرجاع",
       "peakHours": "ساعات ذروة الإعارة",
       "mediaTypeDist": "توزيع أنواع وسائط المقتنيات",
