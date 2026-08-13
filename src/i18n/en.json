@@ -17,7 +17,7 @@
     "titleArabic": "Arabic Name",
     "titleToggleToast": "Displaying {{mode}} titles",
     "forcedChangeTitle": "Set a new password",
-    "forcedChangeSubtitle": "Welcome, {{name}}. Your administrator created this account — choose a new password only you know before continuing."
+    "forcedChangeSubtitle": "Welcome, {{name}}. Your administrator created this account. Choose a new password only you know before continuing."
   },
   "save": "Save",
   "cancel": "Cancel",
@@ -288,7 +288,7 @@
       "cancel": "Cancel",
       "save": "Save book",
       "isbnLabel": "ISBN",
-      "autofillGap": "Not found automatically — add a Groq API key in Settings for auto-translation, or fill this in by hand."
+      "autofillGap": "Not found automatically. Add a Groq API key in Settings for auto-translation, or fill this in by hand."
     },
     "availableNow": "Available Now",
     "outOfStock": "Out of Stock",
@@ -636,8 +636,8 @@
     "banMember": "Ban Member",
     "banReasonPrompt": "Reason for banning this member:",
     "scope": {
-      "internal": "Internal — stays in library",
-      "external": "External — taken home"
+      "internal": "Internal: stays in library",
+      "external": "External: taken home"
     }
   },
   "inventory": {
@@ -727,14 +727,14 @@
     "totalCapacity": "Total capacity",
     "currentlyShelved": "Currently shelved",
     "copiesWord": "copies",
-    "noRooms": "No rooms yet — create one to get started.",
+    "noRooms": "No rooms yet. Create one to get started.",
     "noRoomSelected": "No room selected",
     "createRoomHint": "Create a room in Manage Rooms, then add columns to give it shelves.",
     "manageRooms": "Manage Rooms",
     "addRoom": "Add Room",
     "selectRoomFirst": "Select or create a room first",
     "floorShelf": "Floor shelf",
-    "floorShelfHint": "The library's oversized floor-level shelf — larger capacity than a lettered shelf.",
+    "floorShelfHint": "The library's oversized floor-level shelf, with larger capacity than a lettered shelf.",
     "shelfLetter": "Shelf {{code}}",
     "needsRepair": "Needs repair",
     "missing": "Missing",
@@ -908,7 +908,7 @@
       "memberSuspended": "Suspended",
       "memberBanned": "Banned"
     },
-    "csvExportedNamed": "Exported {{filename}} — check your Downloads folder.",
+    "csvExportedNamed": "Exported {{filename}}. Check your Downloads folder.",
     "columns": {
       "day": "Day",
       "circulation": "Circulation",
@@ -1186,7 +1186,7 @@
       "allowSelfRenewalDesc": "Members can renew their own loans without staff intervention.",
       "shelvingTitle": "Shelving",
       "shelfRowCount": "Shelf rows per bookcase column (A–…)",
-      "shelfRowCountHelp": "Every bookcase column gets a ground-level shelf plus this many lettered rows (A, B, C…), stacked bottom to top. Raise this if your bookcases are taller — existing columns keep their current rows.",
+      "shelfRowCountHelp": "Every bookcase column gets a ground-level shelf plus this many lettered rows (A, B, C…), stacked bottom to top. Raise this if your bookcases are taller; existing columns keep their current rows.",
       "gracePeriodTitle": "Grace period",
       "enableGracePeriod": "Enable grace period",
       "enableGracePeriodDesc": "Allow a short window after the due date before overdue alerts trigger.",
@@ -1221,7 +1221,7 @@
       "noBackup": "No backups found",
       "savedBadge": "Saved",
       "exportTitle": "Export backup",
-      "exportDesc": "Warraq's data lives in Supabase, which manages its own backups — see the note above.",
+      "exportDesc": "Warraq's data lives in Supabase, which manages its own backups; see the note above.",
       "exportBtn": "Export database (.db)",
       "exportSuccess": "Backup saved successfully.",
       "exportError": "Could not export backup. Please try again.",
@@ -1246,12 +1246,12 @@
       "importFailed": "Import failed: {{error}}",
       "invalidJsonBooks": "Invalid JSON: Expected an array of books.",
       "invalidJsonMembers": "Invalid JSON: Expected an array of members.",
-      "supabaseNote": "Warraq's data now lives in Supabase, which handles automated database backups on its own — there is nothing to export or restore from this desktop app. The tools below only cover moving catalog/member records in and out as JSON.",
+      "supabaseNote": "Warraq's data now lives in Supabase, which handles automated database backups on its own. There is nothing to export or restore from this desktop app. The tools below only cover moving catalog/member records in and out as JSON.",
       "importBooksDescJson": "Import books from a JSON file containing an array of book objects.",
       "importMembersDescJson": "Import library members from a JSON file containing an array of member objects.",
-      "supabaseNote2": "Warraq's data lives in Supabase, which handles automated database backups on its own. The full backup below is for taking your own local copy — e.g. before a risky change — and covers rooms, shelves, books, copies, members, reservations, and loans.",
+      "supabaseNote2": "Warraq's data lives in Supabase, which handles automated database backups on its own. The full backup below is for taking your own local copy (e.g. before a risky change) and covers rooms, shelves, books, copies, members, reservations, and loans.",
       "fullBackupTitle": "Full library backup",
-      "fullBackupDesc": "Export every catalog and circulation record to a single JSON file, or restore from one. Restoring re-inserts rows by their original ID, so it's meant for putting data back exactly as it was — not merging with unrelated data.",
+      "fullBackupDesc": "Export every catalog and circulation record to a single JSON file, or restore from one. Restoring re-inserts rows by their original ID, so it's meant for putting data back exactly as it was, not merging with unrelated data.",
       "fullExportBtn": "Export full backup",
       "fullRestoreBtn": "Restore from backup",
       "fullExportSuccess": "Full library backup saved successfully.",
@@ -1290,7 +1290,7 @@
       "factoryResetBtn": "Factory reset",
       "factoryResetBtnRunning": "Resetting…",
       "factoryResetConfirm1": "⚠️ FACTORY RESET\n\nThis will PERMANENTLY DELETE all books, members, loans, reservations, and settings.\nThis cannot be undone.\n\nAre you absolutely sure?",
-      "factoryResetConfirm2": "Last chance — type OK to confirm you want to wipe all data and start fresh.",
+      "factoryResetConfirm2": "Last chance: type OK to confirm you want to wipe all data and start fresh.",
       "factoryResetSuccess": "Factory reset complete. Warraq will now reload."
     },
     "integrations": {
@@ -1347,7 +1347,7 @@
       "role": "Role",
       "initialPassword": "Initial password",
       "credentialsTitle": "Account created",
-      "credentialsHelp": "Share these credentials with the new user securely. This password cannot be shown again — reset it if it's lost.",
+      "credentialsHelp": "Share these credentials with the new user securely. This password cannot be shown again; reset it if it's lost.",
       "statusUpdated": "User status updated.",
       "roleUpdated": "User role updated.",
       "userUpdated": "User details updated successfully.",
@@ -1512,7 +1512,7 @@
       },
       "about": {
         "title": "About Warraq",
-        "body": "Warraq — وراق — means 'the scribe' or 'paper seller' in classical Arabic.",
+        "body": "Warraq (وراق) means 'the scribe' or 'paper seller' in classical Arabic.",
         "tips": [
           "v1.0.0 is the initial release",
           "Built with Tauri 2 + React",

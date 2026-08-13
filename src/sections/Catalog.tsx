@@ -129,7 +129,7 @@ function AutofillGapHint({ field, unresolvedFields, t }: { field: string; unreso
   if (!unresolvedFields?.includes(field)) return null;
   return (
     <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-1">
-      {t("catalog.addModal.autofillGap", "Not found automatically — add a Groq API key in Settings for auto-translation, or fill this in by hand.")}
+      {t("catalog.addModal.autofillGap", "Not found automatically. Add a Groq API key in Settings for auto-translation, or fill this in by hand.")}
     </p>
   );
 }
@@ -1446,7 +1446,7 @@ function BookSidebar({ book, onClose, registerClean }: { book: Book; onClose: ()
                       <div className="flex items-center gap-1 text-[10px] text-emerald font-semibold mt-1">
                         <MapPin size={10} />
                         {copy.room ? `${copy.room} · ` : ""}
-                        {copy.column_number != null ? `${t("inventory.columnLabel", "Column {{number}}", { number: copy.column_number })} — ` : ""}
+                        {copy.column_number != null ? `${t("inventory.columnLabel", "Column {{number}}", { number: copy.column_number })} · ` : ""}
                         {copy.shelf === FLOOR_SHELF_CODE ? t("inventory.floorShelf", "Floor shelf") : t("inventory.shelfLetter", "Shelf {{code}}", { code: copy.shelf })}
                       </div>
                     )}
@@ -1488,7 +1488,7 @@ function BookSidebar({ book, onClose, registerClean }: { book: Book; onClose: ()
                     <select {...copyForm.register("shelfId")} className="field-select mt-1 text-[13px] py-2 px-3 bg-white dark:bg-[#1d2926]">
                       <option value="">{t("catalog.details.shelfUnassigned", "Unassigned")}</option>
                       {allShelves.map((s) => (
-                        <option key={s.id} value={s.id}>{s.room} · {t("inventory.columnLabel", "Column {{number}}", { number: s.column_number })} — {s.shelf_type === "floor" ? `${FLOOR_SHELF_CODE} ${t("inventory.floorShelf", "Floor shelf")}` : `${t("inventory.shelfLetter", "Shelf {{code}}", { code: s.code })}`}</option>
+                        <option key={s.id} value={s.id}>{s.room} · {t("inventory.columnLabel", "Column {{number}}", { number: s.column_number })} · {s.shelf_type === "floor" ? `${FLOOR_SHELF_CODE} ${t("inventory.floorShelf", "Floor shelf")}` : `${t("inventory.shelfLetter", "Shelf {{code}}", { code: s.code })}`}</option>
                       ))}
                     </select>
                   </label>

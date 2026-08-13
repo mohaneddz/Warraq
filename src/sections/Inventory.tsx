@@ -457,7 +457,7 @@ export function InventoryPage() {
                   {room.name}
                 </button>
               ))}
-              {rooms.length === 0 && <p className="text-[11px] text-[#122222]/40 dark:text-white/40 italic px-2 py-1">{t("inventory.noRooms", "No rooms yet — create one to get started.")}</p>}
+              {rooms.length === 0 && <p className="text-[11px] text-[#122222]/40 dark:text-white/40 italic px-2 py-1">{t("inventory.noRooms", "No rooms yet. Create one to get started.")}</p>}
             </div>
           </div>
 
@@ -588,7 +588,7 @@ export function InventoryPage() {
                           return (
                             <div key={column.id} className="px-0.5">
                               <div onClick={() => setSelectedShelfId(isSelected ? null : shelf.id)}
-                                title={isGround ? (t("inventory.floorShelfHint", "The library's oversized floor-level shelf — larger capacity than a lettered shelf.") as string) : undefined}
+                                title={isGround ? (t("inventory.floorShelfHint", "The library's oversized floor-level shelf, with larger capacity than a lettered shelf.") as string) : undefined}
                                 className={`relative border rounded-lg pt-1.5 px-1.5 pb-1.5 text-center flex flex-col items-center justify-between transition-all cursor-pointer hover:shadow-md hover:scale-[1.02] ${isGround ? "bg-[#f4ebdd]/50 dark:bg-[#1a2522]" : "bg-white dark:bg-[#1d2926]"} ${isSelected ? "ring-2 ring-[#b96f3e] border-[#b96f3e]/30 scale-[1.03] shadow-md" : "border-black/8 dark:border-white/8"}`}>
                                 {isSelected && (
                                   <div className="absolute -top-0.5 right-2 w-3 h-4 bg-[#b96f3e] rounded-b-sm shadow z-10 flex flex-col justify-end pb-0.5 items-center">
@@ -891,7 +891,7 @@ function ManageRoomsModal({ rooms, onClose, onRename, onDelete, onCreate, creati
         {rooms.length === 0 && !adding && (
           <div className="flex flex-col items-center justify-center py-6 text-center">
             <img src={noShelvesSrc} alt="" aria-hidden="true" className="h-36 w-auto object-contain mb-2 opacity-90" />
-            <p className="text-[12px] text-[#122222]/60 dark:text-white/60 italic px-2">{t("inventory.noRooms", "No rooms yet — create one to get started.")}</p>
+            <p className="text-[12px] text-[#122222]/60 dark:text-white/60 italic px-2">{t("inventory.noRooms", "No rooms yet. Create one to get started.")}</p>
           </div>
         )}
 

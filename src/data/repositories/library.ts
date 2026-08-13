@@ -419,7 +419,7 @@ export async function markNotificationRead(notificationId: string): Promise<void
   // success with zero rows affected — surface that case explicitly instead of letting the UI
   // believe the notification is read when the database never actually changed.
   if (updated.length === 0) {
-    throw new Error("Notification could not be marked as read (no matching row was updated — check permissions).");
+    throw new Error("Notification could not be marked as read (no matching row was updated, check permissions).");
   }
 }
 

@@ -87,7 +87,7 @@ function buildDocs(): Record<string, LegalDoc> {
       {
         heading: "3. Third-party lookups",
         body: [
-          "When you enrich a catalogue record, the title or ISBN you look up is sent to the external metadata providers you enable (Google Books, Open Library, and Groq). Only the search query is shared — never your members' personal data.",
+          "When you enrich a catalogue record, the title or ISBN you look up is sent to the external metadata providers you enable (Google Books, Open Library, and Groq). Only the search query is shared, never your members' personal data.",
         ],
       },
       {
@@ -121,18 +121,18 @@ function buildDocs(): Record<string, LegalDoc> {
         heading: "Bundled open-source components",
         body: [
           "Warraq gratefully builds on open-source projects, each under its own license:",
-          "• React — MIT License",
-          "• Tauri — MIT / Apache-2.0",
-          "• Vite — MIT License",
-          "• Tailwind CSS — MIT License",
-          "• TanStack Query — MIT License",
-          "• Recharts — MIT License",
-          "• lucide-react (icons) — ISC License",
-          "• Supabase JS — MIT License",
-          "• i18next / react-i18next — MIT License",
-          "• Zustand — MIT License",
-          "• PapaParse — MIT License",
-          "• date-fns — MIT License",
+          "• React: MIT License",
+          "• Tauri: MIT / Apache-2.0",
+          "• Vite: MIT License",
+          "• Tailwind CSS: MIT License",
+          "• TanStack Query: MIT License",
+          "• Recharts: MIT License",
+          "• lucide-react (icons): ISC License",
+          "• Supabase JS: MIT License",
+          "• i18next / react-i18next: MIT License",
+          "• Zustand: MIT License",
+          "• PapaParse: MIT License",
+          "• date-fns: MIT License",
         ],
       },
       {
@@ -207,7 +207,7 @@ export function LegalPage() {
           </section>
         ))}
         <p className="text-[11px] text-[#122222]/40 dark:text-white/40 pt-4 border-t border-black/5 dark:border-white/5">
-          © {YEAR} Warraq — {OWNER}. Licensed free of charge to the {INSTITUTION} only.
+          © {YEAR} Warraq, {OWNER}. Licensed free of charge to the {INSTITUTION} only.
         </p>
       </div>
     </div>

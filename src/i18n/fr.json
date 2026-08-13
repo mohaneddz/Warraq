@@ -17,7 +17,7 @@
     "titleArabic": "Nom arabe",
     "titleToggleToast": "Affichage des titres réglé sur {{mode}}",
     "forcedChangeTitle": "Définir un nouveau mot de passe",
-    "forcedChangeSubtitle": "Bienvenue, {{name}}. Votre administrateur a créé ce compte — choisissez un nouveau mot de passe que vous seul connaissez avant de continuer."
+    "forcedChangeSubtitle": "Bienvenue, {{name}}. Votre administrateur a créé ce compte. Choisissez un nouveau mot de passe que vous seul connaissez avant de continuer."
   },
   "save": "Enregistrer",
   "cancel": "Annuler",
@@ -288,7 +288,7 @@
       "cancel": "Annuler",
       "save": "Enregistrer le livre",
       "isbnLabel": "ISBN",
-      "autofillGap": "Non trouvé automatiquement — ajoutez une clé API Groq dans les paramètres pour la traduction automatique, ou remplissez ce champ manuellement."
+      "autofillGap": "Non trouvé automatiquement. Ajoutez une clé API Groq dans les paramètres pour la traduction automatique, ou remplissez ce champ manuellement."
     },
     "availableNow": "Disponible",
     "outOfStock": "En rupture de stock",
@@ -636,8 +636,8 @@
     "banMember": "Bannir le membre",
     "banReasonPrompt": "Motif du bannissement de ce membre :",
     "scope": {
-      "internal": "Interne — reste à la bibliothèque",
-      "external": "Externe — emporté à domicile"
+      "internal": "Interne : reste à la bibliothèque",
+      "external": "Externe : emporté à domicile"
     }
   },
   "inventory": {
@@ -727,14 +727,14 @@
     "totalCapacity": "Capacité totale",
     "currentlyShelved": "Actuellement rangés",
     "copiesWord": "exemplaires",
-    "noRooms": "Aucune salle pour l'instant — créez-en une pour commencer.",
+    "noRooms": "Aucune salle pour l'instant. Créez-en une pour commencer.",
     "noRoomSelected": "Aucune salle sélectionnée",
     "createRoomHint": "Créez une salle dans « Gérer les salles », puis ajoutez des colonnes pour lui donner des étagères.",
     "manageRooms": "Gérer les salles",
     "addRoom": "Ajouter une salle",
     "selectRoomFirst": "Sélectionnez ou créez d'abord une salle",
     "floorShelf": "Étagère au sol",
-    "floorShelfHint": "L'étagère au sol surdimensionnée de la bibliothèque — capacité supérieure à celle d'une étagère lettrée.",
+    "floorShelfHint": "L'étagère au sol surdimensionnée de la bibliothèque, avec une capacité supérieure à celle d'une étagère lettrée.",
     "shelfLetter": "Étagère {{code}}",
     "needsRepair": "À réparer",
     "missing": "Manquant",
@@ -908,7 +908,7 @@
       "memberSuspended": "Suspendu",
       "memberBanned": "Banni"
     },
-    "csvExportedNamed": "Exporté {{filename}} — voir votre dossier Téléchargements.",
+    "csvExportedNamed": "Exporté {{filename}}. Voir votre dossier Téléchargements.",
     "columns": {
       "day": "Jour",
       "circulation": "Circulation",
@@ -1186,7 +1186,7 @@
       "allowSelfRenewalDesc": "Les membres peuvent prolonger leurs prêts sans intervention du personnel.",
       "shelvingTitle": "Étagères",
       "shelfRowCount": "Rangées par colonne de bibliothèque (A–…)",
-      "shelfRowCountHelp": "Chaque colonne de bibliothèque reçoit une étagère au sol plus ce nombre de rangées lettrées (A, B, C…), empilées de bas en haut. Augmentez ce nombre si vos bibliothèques sont plus hautes — les colonnes existantes conservent leurs rangées actuelles.",
+      "shelfRowCountHelp": "Chaque colonne de bibliothèque reçoit une étagère au sol plus ce nombre de rangées lettrées (A, B, C…), empilées de bas en haut. Augmentez ce nombre si vos bibliothèques sont plus hautes ; les colonnes existantes conservent leurs rangées actuelles.",
       "gracePeriodTitle": "Délai de grâce",
       "enableGracePeriod": "Activer le délai de grâce",
       "enableGracePeriodDesc": "Accorder une période supplémentaire après l'échéance avant le déclenchement des alertes de retard.",
@@ -1221,7 +1221,7 @@
       "noBackup": "Aucune sauvegarde trouvée",
       "savedBadge": "Enregistré",
       "exportTitle": "Exporter la sauvegarde",
-      "exportDesc": "Les données de Warraq résident dans Supabase, qui gère ses propres sauvegardes — voir la remarque ci-dessus.",
+      "exportDesc": "Les données de Warraq résident dans Supabase, qui gère ses propres sauvegardes ; voir la remarque ci-dessus.",
       "exportBtn": "Exporter la base de données (.db)",
       "exportSuccess": "Sauvegarde enregistrée avec succès.",
       "exportError": "Impossible d'exporter la sauvegarde. Veuillez réessayer.",
@@ -1246,12 +1246,12 @@
       "importFailed": "Échec de l'importation: {{error}}",
       "invalidJsonBooks": "JSON invalide: Tableau de livres attendu.",
       "invalidJsonMembers": "JSON invalide: Tableau de membres attendu.",
-      "supabaseNote": "Les données de Warraq résident désormais dans Supabase, qui gère lui-même les sauvegardes automatiques de la base de données — il n'y a rien à exporter ou restaurer depuis cette application de bureau. Les outils ci-dessous ne servent qu'à importer/exporter les fiches du catalogue/des membres au format JSON.",
+      "supabaseNote": "Les données de Warraq résident désormais dans Supabase, qui gère lui-même les sauvegardes automatiques de la base de données. Il n'y a rien à exporter ou restaurer depuis cette application de bureau. Les outils ci-dessous ne servent qu'à importer/exporter les fiches du catalogue/des membres au format JSON.",
       "importBooksDescJson": "Importer des livres à partir d'un fichier JSON contenant un tableau d'objets livre.",
       "importMembersDescJson": "Importer des membres de la bibliothèque à partir d'un fichier JSON contenant un tableau d'objets membre.",
-      "supabaseNote2": "Les données de Warraq résident dans Supabase, qui gère lui-même des sauvegardes automatiques. La sauvegarde complète ci-dessous sert à conserver votre propre copie locale — par exemple avant une modification risquée — et couvre les salles, étagères, livres, exemplaires, membres, réservations et prêts.",
+      "supabaseNote2": "Les données de Warraq résident dans Supabase, qui gère lui-même des sauvegardes automatiques. La sauvegarde complète ci-dessous sert à conserver votre propre copie locale (par exemple avant une modification risquée) et couvre les salles, étagères, livres, exemplaires, membres, réservations et prêts.",
       "fullBackupTitle": "Sauvegarde complète de la bibliothèque",
-      "fullBackupDesc": "Exportez tous les registres de catalogue et de circulation dans un seul fichier JSON, ou restaurez-en un. La restauration réinsère les lignes avec leur ID d'origine, elle est donc destinée à remettre les données exactement comme elles étaient — pas à les fusionner avec d'autres données.",
+      "fullBackupDesc": "Exportez tous les registres de catalogue et de circulation dans un seul fichier JSON, ou restaurez-en un. La restauration réinsère les lignes avec leur ID d'origine, elle est donc destinée à remettre les données exactement comme elles étaient, pas à les fusionner avec d'autres données.",
       "fullExportBtn": "Exporter la sauvegarde complète",
       "fullRestoreBtn": "Restaurer depuis une sauvegarde",
       "fullExportSuccess": "Sauvegarde complète de la bibliothèque enregistrée avec succès.",
@@ -1290,7 +1290,7 @@
       "factoryResetBtn": "Réinitialisation d'usine",
       "factoryResetBtnRunning": "Réinitialisation…",
       "factoryResetConfirm1": "⚠️ RÉINITIALISATION D'USINE\n\nCette action supprimera DÉFINITIVEMENT tous les livres, membres, prêts, réservations et paramètres.\nCette action est irréversible.\n\nÊtes-vous sûr ?",
-      "factoryResetConfirm2": "Dernière chance — Tapez OK pour confirmer la suppression complète.",
+      "factoryResetConfirm2": "Dernière chance : tapez OK pour confirmer la suppression complète.",
       "factoryResetSuccess": "Réinitialisation réussie. L'application va redémarrer."
     },
     "integrations": {
@@ -1347,7 +1347,7 @@
       "role": "Rôle",
       "initialPassword": "Mot de passe initial",
       "credentialsTitle": "Compte créé",
-      "credentialsHelp": "Partagez ces identifiants avec le nouvel utilisateur de façon sécurisée. Ce mot de passe ne pourra plus être affiché — réinitialisez-le s'il est perdu.",
+      "credentialsHelp": "Partagez ces identifiants avec le nouvel utilisateur de façon sécurisée. Ce mot de passe ne pourra plus être affiché ; réinitialisez-le s'il est perdu.",
       "statusUpdated": "Statut de l'utilisateur mis à jour.",
       "roleUpdated": "Rôle de l'utilisateur mis à jour.",
       "userUpdated": "Détails utilisateur mis à jour.",
@@ -1512,7 +1512,7 @@
       },
       "about": {
         "title": "À propos de Warraq",
-        "body": "Warraq — وراق — signifie 'le copiste' ou 'le libraire' en arabe classique.",
+        "body": "Warraq (وراق) signifie 'le copiste' ou 'le libraire' en arabe classique.",
         "tips": [
           "v1.0.0 est la version initiale",
           "Conçu avec Tauri 2 et React",
