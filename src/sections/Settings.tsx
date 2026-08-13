@@ -602,7 +602,7 @@ function RulesTab({ prefs, update }: LibraryTabProps) {
           <NumberInput value={prefs.shelf_row_count} min={1} max={20} onChange={v => update({ shelf_row_count: v })} />
         </Field>
         <p className="text-[11px] text-[#122222]/50 dark:text-white/50 mt-3">
-          {t("settings.rules.shelfRowCountHelp", "Every bookcase column gets a ground-level shelf plus this many lettered rows (A, B, C…), stacked bottom to top. Raise this if your bookcases are taller — existing columns keep their current rows.")}
+          {t("settings.rules.shelfRowCountHelp", "Every bookcase column gets a ground-level shelf plus this many lettered rows (A, B, C…), stacked bottom to top. Raise this if your bookcases are taller; existing columns keep their current rows.")}
         </p>
       </Card>
 
@@ -863,13 +863,13 @@ function BackupTab() {
       <div className="bg-[#1a4d40]/5 dark:bg-[#1b9277]/5 border border-[#1a4d40]/10 dark:border-[#1b9277]/10 rounded-2xl p-5 flex items-start gap-3 mb-6">
         <Info size={16} className="text-[#1a4d40] dark:text-[#1b9277] shrink-0 mt-0.5" />
         <p className="text-[12px] text-[#1a4d40] dark:text-[#1b9277] leading-relaxed">
-          {t("settings.backup.supabaseNote2", "Warraq's data lives in Supabase, which handles automated database backups on its own. The full backup below is for taking your own local copy — e.g. before a risky change — and covers rooms, shelves, books, copies, members, reservations, and loans.")}
+          {t("settings.backup.supabaseNote2", "Warraq's data lives in Supabase, which handles automated database backups on its own. The full backup below is for taking your own local copy (e.g. before a risky change) and covers rooms, shelves, books, copies, members, reservations, and loans.")}
         </p>
       </div>
 
       <Card title={t("settings.backup.fullBackupTitle", "Full library backup")} icon={<HardDrive size={16} className="text-[#1a4d40] dark:text-[#1b9277]" />}>
         <p className="text-[12px] text-[#122222]/70 dark:text-white/70 mb-4 font-normal">
-          {t("settings.backup.fullBackupDesc", "Export every catalog and circulation record to a single JSON file, or restore from one. Restoring re-inserts rows by their original ID, so it's meant for putting data back exactly as it was — not merging with unrelated data.")}
+          {t("settings.backup.fullBackupDesc", "Export every catalog and circulation record to a single JSON file, or restore from one. Restoring re-inserts rows by their original ID, so it's meant for putting data back exactly as it was, not merging with unrelated data.")}
         </p>
         <div className="flex flex-wrap gap-3">
           <button
@@ -1304,7 +1304,7 @@ function IntegrationsTab({ prefs, update }: TabProps) {
                 {entry.status === "error" && <AlertTriangle size={14} className="text-red-500 shrink-0 mt-0.5" />}
                 <div>
                   <span className="font-semibold text-[#122222] dark:text-white">{entry.book.title}</span>
-                  <span className="text-[#122222]/60 dark:text-white/60"> — {entry.message}</span>
+                  <span className="text-[#122222]/60 dark:text-white/60"> · {entry.message}</span>
                 </div>
               </div>
             ))}
@@ -1803,7 +1803,7 @@ function AboutTab() {
             {t("settings.about.licenses") || "Open Source Licenses"} <ChevronRight size={14} />
           </button>
         </div>
-        <p className="text-[11px] text-[#122222]/40 dark:text-white/40 mt-4">© 2026 Warraq — MANAA Mohaned. Free for CHU Mustapha Pacha only; redistribution is prohibited.</p>
+        <p className="text-[11px] text-[#122222]/40 dark:text-white/40 mt-4">© 2026 Warraq, MANAA Mohaned. Free for CHU Mustapha Pacha only; redistribution is prohibited.</p>
       </Card>
     </div>
   );

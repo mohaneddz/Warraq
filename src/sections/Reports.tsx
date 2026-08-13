@@ -254,7 +254,7 @@ export function ReportsPage() {
     await exportCsvZip(
       filename,
       files,
-      (t("reports.csvExportedNamed", { filename }) as string) || `Exported ${filename} — check your Downloads folder.`,
+      (t("reports.csvExportedNamed", { filename }) as string) || `Exported ${filename}. Check your Downloads folder.`,
       (t("common.openFolder", "Open folder") as string),
     );
   };

@@ -1811,7 +1811,7 @@ function NewReservationModal({ isOpen, onClose }: NewReservationModalProps) {
                   }`}
                 >
                   <Building2 size={16} className={scope === "internal" ? "text-white" : "text-emerald"} />
-                  <span>{t("reservations.scope.internal", "Internal — stays in library")}</span>
+                  <span>{t("reservations.scope.internal", "Internal: stays in library")}</span>
                 </button>
                 <button
                   type="button"
@@ -1826,7 +1826,7 @@ function NewReservationModal({ isOpen, onClose }: NewReservationModalProps) {
                   }`}
                 >
                   <Globe size={16} className={!externalBlocked && scope === "external" ? "text-white" : "text-emerald"} />
-                  <span>{t("reservations.scope.external", "External — taken home")}</span>
+                  <span>{t("reservations.scope.external", "External: taken home")}</span>
                 </button>
               </div>
               {externalBlocked && (

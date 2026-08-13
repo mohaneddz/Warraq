@@ -3,7 +3,7 @@ import { supabase, unwrap } from "../data/supabaseClient";
 import type { LibrarySettings } from "../types";
 
 const defaults: LibrarySettings = {
-  library_name: "CHU Mustapha Pacha — Medical Library",
+  library_name: "CHU Mustapha Pacha, Medical Library",
   library_short_name: "Warraq",
   library_address: "Place du 1er Mai 1945, Sidi M'Hamed",
   library_city: "Algiers",

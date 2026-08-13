@@ -45,7 +45,7 @@ export async function enrichBook(book: Book, opts: { groqApiKey?: string }): Pro
 
   if (!book.dewey_code && meta.dewey_code) {
     patch.dewey_code = meta.dewey_code;
-    notes.push(opts.groqApiKey ? "Dewey code is a Groq estimate — verify." : "Filled Dewey code from Open Library.");
+    notes.push(opts.groqApiKey ? "Dewey code is a Groq estimate; verify." : "Filled Dewey code from Open Library.");
   }
 
   if (!book.arabic_title && meta.arabic_title) {
