@@ -7,6 +7,7 @@ import { toast } from "sonner";
 
 import { dashboard, reservations, notifications, markNotificationRead, markAllNotificationsRead } from "../data/repositories/library";
 import { useLibrarySettingsStore } from "../store/librarySettingsStore";
+import { useNotificationsStore } from "../store/notificationsStore";
 import { formatDisplayDate } from "../utils/dates";
 
 type NotificationKind = "overdue" | "duesoon" | "ready" | "system";
@@ -43,6 +44,9 @@ export function NotificationsPage() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const librarySettings = useLibrarySettingsStore((s) => s.settings);
+  const seen = useNotificationsStore((s) => s.seen);
+  const markSeen = useNotificationsStore((s) => s.markSeen);
+  const seenSet = useMemo(() => new Set(seen), [seen]);
 
   const [term, setTerm] = useState("");
   const [kindFilter, setKindFilter] = useState<"all" | NotificationKind>("all");
@@ -73,6 +77,13 @@ export function NotificationsPage() {
   };
 
   const handleMarkAllRead = async () => {
+    // Acknowledge the live overdue/due-soon/ready alerts locally as well as flipping the DB
+    // notifications, so "Mark all as read" truly zeroes the badge.
+    markSeen([
+      ...overdueList.map((loan) => `overdue-${loan.id}`),
+      ...dueSoonList.map((loan) => `duesoon-${loan.id}`),
+      ...readyReservations.map((res) => `ready-${res.id}`),
+    ]);
     try {
       await markAllNotificationsRead();
       qc.invalidateQueries({ queryKey: ["notifications"] });
@@ -86,36 +97,45 @@ export function NotificationsPage() {
   // user actually reads each one, or via the explicit "Mark all as read" button.
 
   const rows: NotificationRow[] = useMemo(() => {
-    const overdueRows: NotificationRow[] = overdueList.map((loan) => ({
-      id: `overdue-${loan.id}`,
-      kind: "overdue",
-      title: loan.title ?? "",
-      subtitle: `${t("circulation.selectedMember")}: ${loan.member_name}`,
-      date: loan.due_at,
-      isRead: false,
-      markable: false,
-      onOpen: () => navigate("/members"),
-    }));
-    const dueSoonRows: NotificationRow[] = dueSoonList.map((loan) => ({
-      id: `duesoon-${loan.id}`,
-      kind: "duesoon",
-      title: loan.title ?? "",
-      subtitle: `${t("circulation.selectedMember")}: ${loan.member_name}`,
-      date: loan.due_at,
-      isRead: false,
-      markable: false,
-      onOpen: () => navigate("/members"),
-    }));
-    const readyRows: NotificationRow[] = readyReservations.map((res) => ({
-      id: `ready-${res.id}`,
-      kind: "ready",
-      title: res.title ?? "",
-      subtitle: `${t("circulation.selectedMember")}: ${res.member_name}`,
-      date: res.reserved_at || res.requested_at,
-      isRead: false,
-      markable: false,
-      onOpen: () => navigate("/reservations"),
-    }));
+    const overdueRows: NotificationRow[] = overdueList.map((loan) => {
+      const id = `overdue-${loan.id}`;
+      return {
+        id,
+        kind: "overdue",
+        title: loan.title ?? "",
+        subtitle: `${t("circulation.selectedMember")}: ${loan.member_name}`,
+        date: loan.due_at,
+        isRead: seenSet.has(id),
+        markable: true,
+        onOpen: () => { markSeen([id]); navigate("/members"); },
+      };
+    });
+    const dueSoonRows: NotificationRow[] = dueSoonList.map((loan) => {
+      const id = `duesoon-${loan.id}`;
+      return {
+        id,
+        kind: "duesoon",
+        title: loan.title ?? "",
+        subtitle: `${t("circulation.selectedMember")}: ${loan.member_name}`,
+        date: loan.due_at,
+        isRead: seenSet.has(id),
+        markable: true,
+        onOpen: () => { markSeen([id]); navigate("/members"); },
+      };
+    });
+    const readyRows: NotificationRow[] = readyReservations.map((res) => {
+      const id = `ready-${res.id}`;
+      return {
+        id,
+        kind: "ready",
+        title: res.title ?? "",
+        subtitle: `${t("circulation.selectedMember")}: ${res.member_name}`,
+        date: res.reserved_at || res.requested_at,
+        isRead: seenSet.has(id),
+        markable: true,
+        onOpen: () => { markSeen([id]); navigate("/reservations"); },
+      };
+    });
     const historyRows: NotificationRow[] = (history ?? []).map((n) => ({
       id: n.id,
       kind: n.type === "reservation_ready" ? "ready" : "system",
@@ -131,7 +151,7 @@ export function NotificationsPage() {
     }));
     return [...overdueRows, ...dueSoonRows, ...readyRows, ...historyRows].sort((a, b) => new Date(b.date).valueOf() - new Date(a.date).valueOf());
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [overdueList, dueSoonList, readyReservations, history, t]);
+  }, [overdueList, dueSoonList, readyReservations, history, t, seenSet, markSeen]);
 
   const filteredRows = useMemo(() => {
     return rows.filter((r) => {

@@ -5,6 +5,7 @@ import { useEffect, useState, useRef } from "react";
 import { useUiStore } from "../../store/uiStore";
 import { useLibrarySettingsStore } from "../../store/librarySettingsStore";
 import { useAuthStore } from "../../store/authStore";
+import { useNotificationsStore } from "../../store/notificationsStore";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { dashboard, reservations, notifications, markNotificationRead } from "../../data/repositories/library";
 import { logout as logoutRequest } from "../../data/auth";
@@ -128,7 +129,6 @@ export function AppShell() {
 
   // Live queries for overdue alerts
   const { data: dashData } = useQuery({ queryKey: ["dashboard-shell"], queryFn: dashboard });
-  const overdueCount = librarySettings.notify_overdue ? (dashData?.overdue ?? 0) : 0;
   const overdueList = librarySettings.notify_overdue ? (dashData?.overdueLoans ?? []) : [];
 
   // Live reservations holds ready alert
@@ -148,7 +148,28 @@ export function AppShell() {
   const { data: dbNotifications } = useQuery({ queryKey: ["notifications"], queryFn: () => notifications(50) });
   const unreadDbNotifications = dbNotifications?.filter((n) => !n.is_read) ?? [];
 
-  const totalNotificationsCount = overdueCount + readyReservations.length + dueSoonList.length + unreadDbNotifications.length;
+  // Live overdue/due-soon/ready states have no DB "read" flag, so we track which the user has
+  // acknowledged locally by stable id. The badge only counts unacknowledged synthetic alerts +
+  // unread DB notifications, so clicking clears items and the badge actually reaches zero.
+  const seen = useNotificationsStore((s) => s.seen);
+  const markSeen = useNotificationsStore((s) => s.markSeen);
+  const syncSeen = useNotificationsStore((s) => s.sync);
+  const seenSet = new Set(seen);
+
+  const syntheticIds = [
+    ...overdueList.map((loan) => `overdue-${loan.id}`),
+    ...dueSoonList.map((loan) => `duesoon-${loan.id}`),
+    ...readyReservations.map((res) => `ready-${res.id}`),
+  ];
+  // Drop acknowledgements for alerts that are no longer live so the set stays bounded and a
+  // recurring alert lights the badge again.
+  useEffect(() => {
+    syncSeen(syntheticIds);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [syntheticIds.join("|")]);
+
+  const unseenSyntheticCount = syntheticIds.filter((id) => !seenSet.has(id)).length;
+  const totalNotificationsCount = unseenSyntheticCount + unreadDbNotifications.length;
 
   const notificationPreview = [
     ...overdueList.map((loan) => ({ kind: "overdue" as const, item: loan, date: loan.due_at })),
@@ -640,6 +661,7 @@ export function AppShell() {
                             <div
                               key={`overdue-${item.id}`}
                               onClick={() => {
+                                markSeen([`overdue-${item.id}`]);
                                 navigate("/members");
                                 setShowNotifications(false);
                               }}
@@ -653,6 +675,7 @@ export function AppShell() {
                             <div
                               key={`duesoon-${item.id}`}
                               onClick={() => {
+                                markSeen([`duesoon-${item.id}`]);
                                 navigate("/members");
                                 setShowNotifications(false);
                               }}
@@ -666,6 +689,7 @@ export function AppShell() {
                             <div
                               key={`ready-${item.id}`}
                               onClick={() => {
+                                markSeen([`ready-${item.id}`]);
                                 navigate("/reservations");
                                 setShowNotifications(false);
                               }}
