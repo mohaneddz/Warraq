@@ -75,6 +75,7 @@
     "placeholderOp": "e.g. Mohamed Benali"
   },
   "dashboard": {
+    "loading": "Loading dashboard…",
     "title": "Dashboard Overview",
     "welcome": "Welcome back, {{name}}",
     "subtitle": "Here's what's happening in your library today.",
@@ -807,6 +808,7 @@
     "close": "Close"
   },
   "reports": {
+    "loading": "Loading analytics…",
     "title": "Reports",
     "subtitle": "Export summaries, library statistics and Excel sheets.",
     "refreshReports": "Refresh Reports",

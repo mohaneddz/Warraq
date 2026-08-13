@@ -75,6 +75,7 @@
     "placeholderOp": "ex. Mohamed Benali"
   },
   "dashboard": {
+    "loading": "Chargement du tableau de bord…",
     "title": "Aperçu du tableau de bord",
     "welcome": "Bon retour, {{name}}",
     "subtitle": "Voici ce qui se passe dans votre bibliothèque aujourd'hui.",
@@ -807,6 +808,7 @@
     "selectRowsWarning": "Sélectionnez au moins une rangée."
   },
   "reports": {
+    "loading": "Chargement des analyses…",
     "title": "Rapports",
     "subtitle": "Exporter des résumés, des statistiques de bibliothèque et des feuilles Excel.",
     "refreshReports": "Actualiser les rapports",
