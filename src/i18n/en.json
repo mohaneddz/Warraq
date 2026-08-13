@@ -1320,6 +1320,8 @@
       "groqKey": "Groq API Key (Llama 3)",
       "groqPlaceholder": "gsk_…",
       "groqHelp": "Fast, cost-effective alternative for local-first cataloging.",
+      "groqInvalidKey": "Invalid or expired API key (401). Generate a new key at console.groq.com and paste it here.",
+      "groqTestFailed": "Couldn't reach Groq. Check your connection and try again.",
       "saveBtn": "Save integrations"
     },
     "secrets": {

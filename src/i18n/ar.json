@@ -1340,6 +1340,8 @@
       "groqKey": "مفتاح Groq API Key (Llama 3)",
       "groqPlaceholder": "gsk_…",
       "groqHelp": "بديل سريع ومجاني/منخفض التكلفة للفهرسة المحلية الذكية السريعة.",
+      "groqInvalidKey": "مفتاح API غير صالح أو منتهي الصلاحية (401). أنشئ مفتاحًا جديدًا من console.groq.com والصقه هنا.",
+      "groqTestFailed": "تعذّر الوصول إلى Groq. تحقّق من اتصالك وحاول مرة أخرى.",
       "saveBtn": "حفظ إعدادات الربط"
     },
     "secrets": {
