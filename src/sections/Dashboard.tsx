@@ -17,6 +17,7 @@ import { queryClient } from "../app/providers";
 import { toast } from "sonner";
 import { useThemedAsset } from "../utils/useThemedAsset";
 import { cn } from "../utils/cn";
+import { PageLoader } from "../components/ui/primitives";
 
 
 export function DashboardPage() {
@@ -26,7 +27,7 @@ export function DashboardPage() {
   const user = useAuthStore((state) => state.user);
 
   // Queries
-  const { data } = useQuery({ queryKey: ["dashboard"], queryFn: dashboard });
+  const { data, isLoading } = useQuery({ queryKey: ["dashboard"], queryFn: dashboard });
   const reservationsQuery = useQuery({ queryKey: ["reservations-dashboard"], queryFn: reservations });
 
   const metrics = data ?? { titles: 0, copies: 0, onLoan: 0, members: 0, overdue: 0, readyReservations: 0, recentLoans: [], overdueLoans: [], activity: [] };
@@ -141,6 +142,12 @@ export function DashboardPage() {
       },
     ], { title: t("dashboard.title", "Dashboard Overview") });
   };
+
+  // First load only — cached data keeps this false on later visits, so the dashboard never
+  // flashes zeroed metrics before the real numbers arrive.
+  if (isLoading && !data) {
+    return <PageLoader label={t("dashboard.loading", "Loading dashboard…")} />;
+  }
 
   return (
     <div onContextMenu={handleDashboardContextMenu} className="flex flex-col gap-6 w-full">

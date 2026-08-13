@@ -18,6 +18,7 @@ import { useContextMenu } from "../components/ui/ContextMenu";
 import { toast } from "sonner";
 import { generateReportsPdf } from "../utils/reportsPdf";
 import { exportCsvZip, openDownloadsFolder } from "../utils/exportFile";
+import { PageLoader } from "../components/ui/primitives";
 
 // Categorical palette for pie/segment charts — emerald-led with warm and cool supports so
 // slices stay distinguishable in both light and dark themes.
@@ -153,6 +154,10 @@ export function ReportsPage() {
 
     return { totalLoans, activeMembers, overdueRate, totalCopies, totalTitles, returnedLoans, openLoansCount: openLoans.length, overdueLoansCount: overdueLoans.length };
   }, [loansQuery.data, dashQuery.data]);
+
+  // Core datasets that every tab's cards/charts derive from — hold the whole panel behind a
+  // loader until they arrive so the page never flashes zeroed metrics and empty charts.
+  const isLoading = dashQuery.isLoading || loansQuery.isLoading;
 
   // Map activity to trend chart — an empty week is real data (nothing circulated), not a
   // reason to substitute made-up numbers.
@@ -488,6 +493,10 @@ export function ReportsPage() {
         </div>
       </div>
 
+      {isLoading ? (
+        <PageLoader label={t("reports.loading", "Loading analytics…")} />
+      ) : (
+       <>
       {/* Metric Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <MetricCard title={t("reports.metrics.totalCheckouts") || "Total Checkouts"} value={stats.totalLoans.toLocaleString(prefs.locale)} label={t("reports.metrics.totalCheckoutsSub") || "All-time loan transactions"} icon={TrendingUp} />
@@ -751,6 +760,8 @@ export function ReportsPage() {
             </ResponsiveContainer>
           </ChartWidget>
         </div>
+      )}
+       </>
       )}
 
     </div>
