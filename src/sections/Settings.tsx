@@ -1055,7 +1055,7 @@ function IntegrationsTab({ prefs, update }: TabProps) {
 
   const [showGroqKey, setShowGroqKey] = useState(false);
   const [testingGroq, setTestingGroq] = useState(false);
-  const [testGroqResult, setTestGroqResult] = useState<"ok" | "fail" | null>(null);
+  const [testGroqResult, setTestGroqResult] = useState<"ok" | "fail" | "invalid" | null>(null);
 
   const [enriching, setEnriching] = useState(false);
   const [enrichLog, setEnrichLog] = useState<EnrichProgress[]>([]);
@@ -1104,12 +1104,14 @@ function IntegrationsTab({ prefs, update }: TabProps) {
       const res = await fetch("https://api.groq.com/openai/v1/models", {
         headers: { Authorization: `Bearer ${prefs.groqApiKey}` },
       });
-      setTestGroqResult(res.ok ? "ok" : "fail");
+      // A 401/403 means the key itself is rejected (invalid/expired/revoked) — the common cause of
+      // "Groq not working" — so surface that distinctly from a network/other error.
+      setTestGroqResult(res.ok ? "ok" : (res.status === 401 || res.status === 403) ? "invalid" : "fail");
     } catch {
       setTestGroqResult("fail");
     } finally {
       setTestingGroq(false);
-      setTimeout(() => setTestGroqResult(null), 5000);
+      setTimeout(() => setTestGroqResult(null), 6000);
     }
   };
 
@@ -1159,7 +1161,8 @@ function IntegrationsTab({ prefs, update }: TabProps) {
                 </button>
               </div>
               {testGroqResult === "ok" && <p className="text-[12px] text-[#1a4d40] dark:text-[#1b9277] font-bold mt-2 flex items-center gap-1"><CheckCircle2 size={13} /> {t("common.confirm")}</p>}
-              {testGroqResult === "fail" && <p className="text-[12px] text-red-500 font-bold mt-2 flex items-center gap-1"><AlertTriangle size={13} /> {t("settings.backup.importFailed", { error: "" })}</p>}
+              {testGroqResult === "invalid" && <p className="text-[12px] text-red-500 font-bold mt-2 flex items-center gap-1"><AlertTriangle size={13} /> {t("settings.integrations.groqInvalidKey", "Invalid or expired API key (401). Generate a new key at console.groq.com and paste it here.")}</p>}
+              {testGroqResult === "fail" && <p className="text-[12px] text-red-500 font-bold mt-2 flex items-center gap-1"><AlertTriangle size={13} /> {t("settings.integrations.groqTestFailed", "Couldn't reach Groq. Check your connection and try again.")}</p>}
             </Field>
             <p className="text-[11px] text-[#122222]/40 dark:text-white/40 mt-3 font-medium">
               {t("settings.integrations.groqHelp")}

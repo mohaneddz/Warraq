@@ -162,9 +162,7 @@ export interface Preferences {
   fontSize: "small" | "medium" | "large";
   googleBooksEnabled: boolean;
   openLibraryEnabled: boolean;
-  openAIEnabled: boolean;
   groqEnabled: boolean;
-  openAIKey: string;
   groqApiKey: string;
   closeToTray: boolean;
   launchOnBoot: boolean;
