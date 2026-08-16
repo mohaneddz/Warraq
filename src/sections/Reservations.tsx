@@ -425,7 +425,7 @@ export function ReservationsPage() {
           {result.isLoading ? (
             <PageLoader label={t("reservations.loading", "Loading reservations…")} />
           ) : filteredReservations.length ? (
-            <table className="w-full text-left text-[13px]">
+            <table className="w-full table-fixed text-left text-[13px]">
               <thead className="bg-[#fcfbf8] dark:bg-[#111d1a] sticky top-0 border-b border-black/5 dark:border-white/5 text-[11px] font-bold text-[#122222]/50 dark:text-white/50 uppercase tracking-wider select-none">
                 <tr>
                   <th className="px-6 py-3 w-10">
@@ -442,13 +442,13 @@ export function ReservationsPage() {
                       className="cursor-pointer rounded border-black/25 dark:border-white/25 text-emerald focus:ring-emerald h-4 w-4"
                     />
                   </th>
-                  <th className="px-6 py-3">{t("catalog.headers.title")}</th>
-                  <th className="px-6 py-3">{t("circulation.selectedMember")}</th>
-                  <th className="px-6 py-3">{t("reservations.addModal.copyBarcode") || "Copy Barcode"}</th>
-                  <th className="px-6 py-3">{t("reservations.requestDate")}</th>
-                  <th className="px-6 py-3">{t("reservations.expiresDate") || "Expires Date"}</th>
-                  <th className="px-6 py-3">{t("status")}</th>
-                  <th className="px-6 py-3 w-20">{t("actions")}</th>
+                  <th className="px-6 py-3 w-[24%]">{t("catalog.headers.title")}</th>
+                  <th className="px-6 py-3 w-[16%]">{t("circulation.selectedMember")}</th>
+                  <th className="px-6 py-3 w-[16%]">{t("reservations.addModal.copyBarcode") || "Copy Barcode"}</th>
+                  <th className="px-6 py-3 w-[12%]">{t("reservations.requestDate")}</th>
+                  <th className="px-6 py-3 w-[12%]">{t("reservations.expiresDate") || "Expires Date"}</th>
+                  <th className="px-6 py-3 w-[10%]">{t("status")}</th>
+                  <th className="px-6 py-3 w-24">{t("actions")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-black/5 dark:divide-white/5">
@@ -477,17 +477,17 @@ export function ReservationsPage() {
                       />
                     </td>
                     <td className="px-6 py-3 font-semibold text-[#122222] dark:text-white">
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
                         {res.cover_path ? (
                           <img src={res.cover_path} alt="" className="w-8 h-11 object-cover rounded shadow-sm shrink-0" />
                         ) : (
                           <DefaultCover type={res.item_type} className="w-8 h-11 shrink-0" iconSize={15} />
                         )}
-                        <div className="line-clamp-2" title={res.title || ""}>{res.title || "—"}</div>
+                        <div className="truncate" title={res.title || ""}>{res.title || "—"}</div>
                       </div>
                     </td>
                     <td className="px-6 py-3 text-[#122222]/70 dark:text-white/70">
-                      <div className="flex items-center gap-2.5">
+                      <div className="flex items-center gap-2.5 min-w-0">
                         {res.member_avatar ? (
                           <img src={res.member_avatar} alt="" className="w-8 h-8 rounded-full object-cover shadow-sm shrink-0 border border-black/10 dark:border-white/10" />
                         ) : (
@@ -495,21 +495,21 @@ export function ReservationsPage() {
                             {res.member_name?.charAt(0).toUpperCase() || "M"}
                           </div>
                         )}
-                        <div>
-                          <div className="font-semibold text-[#122222] dark:text-white line-clamp-1">{res.member_name || "—"}</div>
+                        <div className="min-w-0">
+                          <div className="font-semibold text-[#122222] dark:text-white truncate" title={res.member_name || ""}>{res.member_name || "—"}</div>
                           {res.member_number && (
-                            <div className="text-[11px] font-mono text-[#122222]/50 dark:text-white/50">{res.member_number}</div>
+                            <div className="text-[11px] font-mono text-[#122222]/50 dark:text-white/50 truncate">{res.member_number}</div>
                           )}
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-3 text-[#122222]/70 dark:text-white/70">
                       {res.copy_barcode ? (
-                        <div className="flex items-center gap-1.5 font-mono text-[12px] font-medium text-emerald dark:text-emerald-light">
-                          <Hash size={13} className="opacity-60" />
-                          {res.copy_barcode}
+                        <div className="flex items-center gap-1.5 font-mono text-[12px] font-medium text-emerald dark:text-emerald-light min-w-0">
+                          <Hash size={13} className="opacity-60 shrink-0" />
+                          <span className="truncate" title={res.copy_barcode}>{res.copy_barcode}</span>
                           {res.copy_shelf && (
-                            <span className="text-[10px] bg-emerald/10 text-emerald dark:bg-emerald-light/20 dark:text-emerald-light px-2 py-0.5 rounded font-semibold flex items-center gap-1 ml-1">
+                            <span className="text-[10px] bg-emerald/10 text-emerald dark:bg-emerald-light/20 dark:text-emerald-light px-2 py-0.5 rounded font-semibold flex items-center gap-1 ml-1 shrink-0">
                               <MapPin size={10} />
                               {res.copy_shelf}
                             </span>
@@ -520,22 +520,22 @@ export function ReservationsPage() {
                       )}
                     </td>
                     <td className="px-6 py-3 text-[#122222]/70 dark:text-white/70">
-                      <div className="flex items-center gap-2">
-                        <Clock size={14} className="opacity-50"/>
-                        {formatDisplayDate(res.reserved_at)}
+                      <div className="flex items-center gap-2 whitespace-nowrap">
+                        <Clock size={14} className="opacity-50 shrink-0"/>
+                        <span className="truncate">{formatDisplayDate(res.reserved_at)}</span>
                       </div>
                     </td>
                     <td className="px-6 py-3 text-[#122222]/70 dark:text-white/70">
                       {res.expires_at ? (
-                        <div className="flex items-center gap-2 font-medium text-amber-600 dark:text-amber-400">
-                          <Calendar size={14} className="opacity-70"/>
-                          {formatDisplayDate(res.expires_at)}
+                        <div className="flex items-center gap-2 font-medium text-amber-600 dark:text-amber-400 whitespace-nowrap">
+                          <Calendar size={14} className="opacity-70 shrink-0"/>
+                          <span className="truncate">{formatDisplayDate(res.expires_at)}</span>
                         </div>
                       ) : (
                         <span className="opacity-40">—</span>
                       )}
                     </td>
-                    <td className="px-6 py-3">
+                    <td className="px-6 py-3 whitespace-nowrap">
                       <span className={`px-2 py-1 rounded-[4px] text-[11px] font-bold ${
                         res.status === 'ready'
                           ? 'bg-emerald/10 text-emerald dark:bg-emerald-light/20 dark:text-emerald-light'
