@@ -14,6 +14,7 @@ import {
   reservations, cancelReservation, deleteReservation, acceptReservation, declineReservation, extendReservation,
   members, books, addReservation, saveMember, getCopiesForBook, banMember, updateReservation, fulfilReservation
 } from "../data/repositories/library";
+import { useLibrarySettingsStore } from "../store/librarySettingsStore";
 import { queryClient } from "../app/providers";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
@@ -1084,8 +1085,18 @@ function NewReservationModal({ isOpen, onClose }: NewReservationModalProps) {
   // Step 3: Physical Copy state
   const [selectedCopy, setSelectedCopy] = useState<Copy | null>(null);
 
-  // Step 4: Scope (internal = in-library only, external = take home)
+  // Step 4: Scope (internal = in-library only, external = take home) & hold expiry date
   const [scope, setScope] = useState<ReservationScope>("internal");
+  const holdDays = useLibrarySettingsStore(s => s.settings.reservation_hold_days);
+  const defaultExpiryDate = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + holdDays);
+    return d.toISOString().slice(0, 10);
+  }, [holdDays]);
+  const [expiryDate, setExpiryDate] = useState(defaultExpiryDate);
+  useEffect(() => {
+    if (isOpen) setExpiryDate(defaultExpiryDate);
+  }, [isOpen, defaultExpiryDate]);
   const isVisitor = mode === "visitor";
   const isSingleCopyBook = (selectedBook?.total_copies ?? 0) <= 1;
   const externalBlocked = isVisitor || isSingleCopyBook;
@@ -1211,7 +1222,12 @@ function NewReservationModal({ isOpen, onClose }: NewReservationModalProps) {
         throw new Error(t("reservations.alerts.selectItem") || "Please select an item to reserve.");
       }
 
-      await addReservation(selectedBook.id, targetMemberId, scope);
+      const reservationId = await addReservation(selectedBook.id, targetMemberId, scope);
+      // Reservations created from this interface are accepted immediately by default
+      // (the pending/decline workflow only applies to requests made elsewhere, e.g. by members themselves).
+      await acceptReservation(reservationId);
+      const iso = expiryDate ? new Date(`${expiryDate}T23:59:59`).toISOString() : null;
+      await updateReservation(reservationId, { expiresAt: iso });
       return targetMemberName;
     },
     onSuccess: (memberName) => {
@@ -1245,6 +1261,7 @@ function NewReservationModal({ isOpen, onClose }: NewReservationModalProps) {
     setSelectedItemType("all");
     setAvailabilityFilter("all");
     setScope("internal");
+    setExpiryDate(defaultExpiryDate);
     onClose();
   };
 
@@ -1833,7 +1850,23 @@ function NewReservationModal({ isOpen, onClose }: NewReservationModalProps) {
                 <p className="text-[11px] text-amber-600 dark:text-amber-400 mt-2">{externalBlockedReason}</p>
               )}
               <p className="text-[11px] text-[#122222]/50 dark:text-white/50 mt-2">
-                {t("reservations.addModal.approvalHint", "An admin must accept this request before it enters the queue. Loan duration is set automatically based on scope.")}
+                {t("reservations.addModal.approvalHint", "This reservation is accepted automatically. Loan duration is set automatically based on scope.")}
+              </p>
+            </div>
+
+            {/* Hold Expiry Date */}
+            <div className="shrink-0">
+              <label className="text-[12px] font-bold text-[#122222] dark:text-white block mb-2">
+                {t("reservations.addModal.expiryLabel", "Hold Expires On")}
+              </label>
+              <Input
+                type="date"
+                value={expiryDate}
+                onChange={(e) => setExpiryDate(e.target.value)}
+                className="w-full"
+              />
+              <p className="text-[11px] text-[#122222]/50 dark:text-white/50 mt-2">
+                {t("reservations.addModal.expiryHint", "Defaults from the library's hold-days setting, but can be changed for this reservation.")}
               </p>
             </div>
 
@@ -1887,6 +1920,16 @@ function NewReservationModal({ isOpen, onClose }: NewReservationModalProps) {
                   <span className="font-bold text-amber-600 dark:text-amber-400 flex items-center gap-1.5 mt-0.5">
                     {scope === "external" ? <Globe size={14} className="opacity-80" /> : <Building2 size={14} className="opacity-80" />}
                     {scope === "external" ? t("reservations.scope.external", "External") : t("reservations.scope.internal", "Internal")}
+                  </span>
+                </div>
+
+                <div>
+                  <span className="text-[#122222]/60 dark:text-white/60 text-[11px] block mb-0.5">
+                    {t("reservations.addModal.expiryLabel", "Hold Expires On")}
+                  </span>
+                  <span className="font-bold text-[#122222] dark:text-white flex items-center gap-1.5 mt-0.5">
+                    <Calendar size={14} className="opacity-80 text-emerald" />
+                    {expiryDate ? formatDisplayDate(new Date(`${expiryDate}T23:59:59`).toISOString()) : "—"}
                   </span>
                 </div>
               </div>

@@ -394,8 +394,8 @@ export async function reservations(): Promise<Reservation[]> {
   return unwrap(await supabase.from("reservation_details").select("*").order("requested_at", { ascending: false })) as Reservation[];
 }
 
-/** Creates a reservation request in `pending` status — an admin must accept or decline it (see acceptReservation/declineReservation). */
-export async function addReservation(bookId: string, memberId: string, scope: ReservationScope, expiresAt?: string | null): Promise<void> {
+/** Creates a reservation request in `pending` status — an admin must accept or decline it (see acceptReservation/declineReservation). Returns the new reservation's id. */
+export async function addReservation(bookId: string, memberId: string, scope: ReservationScope, expiresAt?: string | null): Promise<string> {
   const inserted = unwrap(await supabase.from("reservations").insert({
     book_id: bookId, member_id: memberId, scope, status: "pending", requested_at: timestamp(), expires_at: expiresAt ?? null,
   }).select("id").single()) as { id: string };
@@ -403,6 +403,7 @@ export async function addReservation(bookId: string, memberId: string, scope: Re
   const book = unwrap(await supabase.from("books").select("title").eq("id", bookId).single()) as { title: string };
   const member = unwrap(await supabase.from("members").select("full_name").eq("id", memberId).single()) as { full_name: string };
   await audit("create_reservation", "reservation", inserted.id, { book_title: book.title, member_name: member.full_name, scope });
+  return inserted.id;
 }
 
 export async function auditLog(limit = 500) {
