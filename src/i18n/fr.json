@@ -699,15 +699,6 @@
     "editDueDate": "Modifier la date de retour",
     "renewLimitReached": "Limite de renouvellement atteinte",
     "notes": "Notes",
-    "change": "Changer",
-    "searchMember": "Rechercher un membre par nom ou numéro...",
-    "noMembers": "Aucun membre trouvé.",
-    "itemsToLend": "Documents à prêter",
-    "searchCopy": "Scannez ou recherchez un code-barres / titre...",
-    "noAvailableCopies": "Aucun exemplaire disponible ne correspond.",
-    "removeItem": "Retirer le document",
-    "scope": "Portée :",
-    "confirmCheckout": "Prêter {{count}} document(s)",
     "detailsModal": {
       "title": "Détails du prêt"
     },
@@ -744,7 +735,23 @@
       "dueUpdateFailed": "Échec de la mise à jour de la date de retour.",
       "confirmBulkReturn": "Rendre {{count}} document(s) ?",
       "confirmBulkRenew": "Renouveler {{count}} prêt(s) ?",
-      "checkoutFailed": "Échec du prêt."
+      "checkoutFailed": "Échec du prêt.",
+      "loanCreated": "Document prêté à {{name}}.",
+      "selectCopy": "Veuillez sélectionner l'exemplaire physique à prêter."
+    },
+    "addModal": {
+      "title": "Nouveau prêt",
+      "scopeLabel": "Portée du prêt",
+      "scopeHint": "Les documents internes restent à la bibliothèque, les externes partent à domicile. La portée définit la durée par défaut.",
+      "dueLabel": "À rendre le",
+      "dueHint": "Par défaut selon la durée de prêt de la bibliothèque pour cette portée, modifiable pour ce prêt.",
+      "summaryTitle": "Récapitulatif du prêt",
+      "submit": "Prêter le document",
+      "submitting": "Prêt en cours...",
+      "visitorsInternalOnly": "Les visiteurs peuvent uniquement consulter les documents sur place.",
+      "singleCopyInternalOnly": "Ce titre n'a qu'un seul exemplaire et ne peut être consulté que sur place.",
+      "copyUnavailable": "Cet exemplaire n'est pas disponible au prêt.",
+      "pickCopyFirst": "Sélectionnez l'exemplaire à prêter."
     }
   },
   "inventory": {
