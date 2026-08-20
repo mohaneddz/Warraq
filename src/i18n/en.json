@@ -699,6 +699,15 @@
     "editDueDate": "Edit due date",
     "renewLimitReached": "Renewal limit reached",
     "notes": "Notes",
+    "change": "Change",
+    "searchMember": "Search member by name or number...",
+    "noMembers": "No members found.",
+    "itemsToLend": "Items to lend",
+    "searchCopy": "Scan or search a copy barcode / title...",
+    "noAvailableCopies": "No available copies match.",
+    "removeItem": "Remove item",
+    "scope": "Scope:",
+    "confirmCheckout": "Lend {{count}} item(s)",
     "detailsModal": {
       "title": "Loan Details"
     },
@@ -735,23 +744,7 @@
       "dueUpdateFailed": "Failed to update due date.",
       "confirmBulkReturn": "Return {{count}} item(s)?",
       "confirmBulkRenew": "Renew {{count}} loan(s)?",
-      "checkoutFailed": "Checkout failed.",
-      "loanCreated": "Item lent to {{name}}.",
-      "selectCopy": "Please select which physical copy is being lent."
-    },
-    "addModal": {
-      "title": "New Loan",
-      "scopeLabel": "Loan Scope",
-      "scopeHint": "Internal items stay in the library, external items go home. The scope sets the default loan length.",
-      "dueLabel": "Due On",
-      "dueHint": "Defaults from the library's loan period for this scope, but can be changed for this loan.",
-      "summaryTitle": "Loan Details Summary",
-      "submit": "Lend Item",
-      "submitting": "Lending...",
-      "visitorsInternalOnly": "Visitors can only use items inside the library.",
-      "singleCopyInternalOnly": "This title has only one copy and can only be used inside the library.",
-      "copyUnavailable": "This copy is not available to lend.",
-      "pickCopyFirst": "Select which copy is being lent."
+      "checkoutFailed": "Checkout failed."
     }
   },
   "inventory": {
