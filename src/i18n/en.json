@@ -673,7 +673,6 @@
   "loans": {
     "title": "Loans",
     "subtitle": "Every item currently out, overdue, or returned.",
-    "newLoan": "New Loan",
     "searchPlaceholder": "Search title, member, barcode, shelf...",
     "loading": "Loading loans…",
     "borrowedDate": "Borrowed",
@@ -699,15 +698,6 @@
     "editDueDate": "Edit due date",
     "renewLimitReached": "Renewal limit reached",
     "notes": "Notes",
-    "change": "Change",
-    "searchMember": "Search member by name or number...",
-    "noMembers": "No members found.",
-    "itemsToLend": "Items to lend",
-    "searchCopy": "Scan or search a copy barcode / title...",
-    "noAvailableCopies": "No available copies match.",
-    "removeItem": "Remove item",
-    "scope": "Scope:",
-    "confirmCheckout": "Lend {{count}} item(s)",
     "detailsModal": {
       "title": "Loan Details"
     },
@@ -743,8 +733,7 @@
       "dueUpdated": "Due date updated.",
       "dueUpdateFailed": "Failed to update due date.",
       "confirmBulkReturn": "Return {{count}} item(s)?",
-      "confirmBulkRenew": "Renew {{count}} loan(s)?",
-      "checkoutFailed": "Checkout failed."
+      "confirmBulkRenew": "Renew {{count}} loan(s)?"
     }
   },
   "inventory": {
@@ -1718,8 +1707,7 @@
       "integrations": "Integrations & AI settings",
       "integrationsSub": "Configure LLMs & Groq keys",
       "secrets": "Secrets & API keys",
-      "secretsSub": "Manage developer tokens",
-      "newLoanSub": "Check an item out to a member"
+      "secretsSub": "Manage developer tokens"
     }
   },
   "languages": {

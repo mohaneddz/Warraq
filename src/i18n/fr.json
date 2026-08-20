@@ -673,7 +673,6 @@
   "loans": {
     "title": "Prêts",
     "subtitle": "Tous les documents actuellement sortis, en retard ou rendus.",
-    "newLoan": "Nouveau prêt",
     "searchPlaceholder": "Rechercher titre, membre, code-barres, rayon...",
     "loading": "Chargement des prêts…",
     "borrowedDate": "Emprunté le",
@@ -699,15 +698,6 @@
     "editDueDate": "Modifier la date de retour",
     "renewLimitReached": "Limite de renouvellement atteinte",
     "notes": "Notes",
-    "change": "Changer",
-    "searchMember": "Rechercher un membre par nom ou numéro...",
-    "noMembers": "Aucun membre trouvé.",
-    "itemsToLend": "Documents à prêter",
-    "searchCopy": "Scannez ou recherchez un code-barres / titre...",
-    "noAvailableCopies": "Aucun exemplaire disponible ne correspond.",
-    "removeItem": "Retirer le document",
-    "scope": "Portée :",
-    "confirmCheckout": "Prêter {{count}} document(s)",
     "detailsModal": {
       "title": "Détails du prêt"
     },
@@ -743,8 +733,7 @@
       "dueUpdated": "Date de retour mise à jour.",
       "dueUpdateFailed": "Échec de la mise à jour de la date de retour.",
       "confirmBulkReturn": "Rendre {{count}} document(s) ?",
-      "confirmBulkRenew": "Renouveler {{count}} prêt(s) ?",
-      "checkoutFailed": "Échec du prêt."
+      "confirmBulkRenew": "Renouveler {{count}} prêt(s) ?"
     }
   },
   "inventory": {
@@ -1718,8 +1707,7 @@
       "integrations": "Paramètres intégrations & IA",
       "integrationsSub": "Configurer les clés OpenAI & Groq",
       "secrets": "Secrets & clés API",
-      "secretsSub": "Gérer les jetons développeur",
-      "newLoanSub": "Prêter un document à un membre"
+      "secretsSub": "Gérer les jetons développeur"
     }
   },
   "languages": {

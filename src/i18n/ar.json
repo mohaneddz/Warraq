@@ -685,7 +685,6 @@
   "loans": {
     "title": "الإعارات",
     "subtitle": "كل مادة مُعارة حاليًا أو متأخرة أو مُعادة.",
-    "newLoan": "إعارة جديدة",
     "searchPlaceholder": "ابحث بالعنوان أو العضو أو الباركود أو الرف...",
     "loading": "جارٍ تحميل الإعارات…",
     "borrowedDate": "تاريخ الإعارة",
@@ -711,15 +710,6 @@
     "editDueDate": "تعديل تاريخ الاستحقاق",
     "renewLimitReached": "تم بلوغ حد التجديد",
     "notes": "ملاحظات",
-    "change": "تغيير",
-    "searchMember": "ابحث عن عضو بالاسم أو الرقم...",
-    "noMembers": "لم يتم العثور على أعضاء.",
-    "itemsToLend": "المواد المراد إعارتها",
-    "searchCopy": "امسح أو ابحث عن باركود/عنوان النسخة...",
-    "noAvailableCopies": "لا توجد نسخ متاحة مطابقة.",
-    "removeItem": "إزالة المادة",
-    "scope": "النطاق:",
-    "confirmCheckout": "إعارة {{count}} مادة",
     "detailsModal": {
       "title": "تفاصيل الإعارة"
     },
@@ -755,8 +745,7 @@
       "dueUpdated": "تم تحديث تاريخ الاستحقاق.",
       "dueUpdateFailed": "تعذر تحديث تاريخ الاستحقاق.",
       "confirmBulkReturn": "إرجاع {{count}} مادة؟",
-      "confirmBulkRenew": "تجديد {{count}} إعارة؟",
-      "checkoutFailed": "فشلت الإعارة."
+      "confirmBulkRenew": "تجديد {{count}} إعارة؟"
     }
   },
   "inventory": {
@@ -1738,8 +1727,7 @@
       "integrations": "إعدادات الربط والذكاء الاصطناعي",
       "integrationsSub": "تهيئة مفاتيح OpenAI و Groq للبحث والتصنيف",
       "secrets": "مفاتيح الأمان والتحقق",
-      "secretsSub": "إدارة رموز وصول المطورين",
-      "newLoanSub": "إعارة مادة لعضو"
+      "secretsSub": "إدارة رموز وصول المطورين"
     }
   },
   "languages": {
