@@ -349,6 +349,17 @@ export async function renewLoan(loanId: string): Promise<void> {
   unwrap(await supabase.rpc("renew_loan", { p_loan_id: loanId }));
 }
 
+/**
+ * Overrides a loan's due date directly, for desk corrections that a renewal can't express
+ * (a mis-keyed date, an agreed extension past the renew_limit). Deliberately separate from
+ * renewLoan: it does not touch renewed_count, so it never consumes one of the member's
+ * renewals and is not bound by the cap.
+ */
+export async function updateLoanDueDate(loanId: string, dueAt: string): Promise<void> {
+  unwrap(await supabase.from("loans").update({ due_at: dueAt }).eq("id", loanId).select().single());
+  await audit("update_loan_due", "loan", loanId, { due_at: dueAt });
+}
+
 export async function cancelReservation(reservationId: string): Promise<void> {
   unwrap(await supabase.from("reservations").update({ status: "cancelled" }).eq("id", reservationId).select().single());
   await audit("cancel_reservation", "reservation", reservationId, { status: "cancelled" });
