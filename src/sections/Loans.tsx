@@ -2,22 +2,23 @@ import { useState, useMemo, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import {
-  Search, Clock, Plus, RotateCcw, RefreshCw, BookOpen, Calendar, CheckCircle2,
+  Search, Clock, Plus, RotateCcw, RefreshCw, BookOpen, Calendar,
   MapPin, Hash, Eye, Copy as CopyIcon, Globe, Building2, UserCheck, AlertTriangle,
   Check, X as XIcon, Undo2
 } from "lucide-react";
 import { useContextMenu } from "../components/ui/ContextMenu";
+import { NewCirculationModal } from "../components/NewCirculationModal";
 
 import {
-  loans, returnCopies, renewLoan, updateLoanDueDate, members, copies, checkout
+  loans, returnCopies, renewLoan, updateLoanDueDate
 } from "../data/repositories/library";
 import { useLibrarySettingsStore } from "../store/librarySettingsStore";
 import { queryClient } from "../app/providers";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { formatDisplayDate } from "../utils/dates";
-import { Modal, Button, ItemTypeBadge, PageLoader, DefaultCover, Spinner } from "../components/ui/primitives";
-import type { Loan, LoanState, Member, Copy, ReservationScope } from "../types";
+import { Modal, Button, ItemTypeBadge, PageLoader, DefaultCover } from "../components/ui/primitives";
+import type { Loan, LoanState } from "../types";
 import { useThemedAsset } from "../utils/useThemedAsset";
 
 const invalidate = () => queryClient.invalidateQueries();
@@ -600,7 +601,13 @@ export function LoansPage() {
         isSaving={dueDateMutation.isPending}
       />
 
-      <NewLoanModal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} />
+      {/* Same wizard the Reservations screen uses — lending and holding ask for the same
+          things, so the flow is shared rather than reimplemented. */}
+      <NewCirculationModal
+        kind="loan"
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+      />
     </div>
   );
 }
@@ -919,246 +926,6 @@ function LoanDetailsModal({
 
           <Button type="button" variant="ghost" className="text-[12px] cursor-pointer" onClick={onClose}>
             {t("common.close", "Close")}
-          </Button>
-        </div>
-      </div>
-    </Modal>
-  );
-}
-
-/**
- * Direct-desk checkout. Until now `checkout()` existed in the data layer but had no UI at all,
- * so a loan could only ever be created by fulfilling a reservation — this closes that gap.
- * The copy list is filtered to `available` because checkout() rejects anything else server-side,
- * and offering an unavailable copy would only produce a confusing failure at confirm time.
- */
-function NewLoanModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
-  const { t } = useTranslation();
-  const settings = useLibrarySettingsStore((s) => s.settings);
-
-  const [memberTerm, setMemberTerm] = useState("");
-  const [selectedMember, setSelectedMember] = useState<Member | null>(null);
-  const [copyTerm, setCopyTerm] = useState("");
-  const [selectedCopies, setSelectedCopies] = useState<(Copy & { title: string })[]>([]);
-  const [scope, setScope] = useState<ReservationScope>("external");
-
-  useEffect(() => {
-    if (!isOpen) {
-      setMemberTerm(""); setSelectedMember(null);
-      setCopyTerm(""); setSelectedCopies([]); setScope("external");
-    }
-  }, [isOpen]);
-
-  const membersQuery = useQuery({
-    queryKey: ["members", memberTerm],
-    queryFn: () => members(memberTerm),
-    enabled: isOpen && !selectedMember,
-  });
-
-  const copiesQuery = useQuery({
-    queryKey: ["copies", copyTerm],
-    queryFn: () => copies(copyTerm),
-    enabled: isOpen && !!selectedMember,
-  });
-
-  const availableCopies = useMemo(
-    () => (copiesQuery.data ?? []).filter(
-      (c) => c.status === "available" && !selectedCopies.some((s) => s.id === c.id)
-    ),
-    [copiesQuery.data, selectedCopies]
-  );
-
-  const checkoutMutation = useMutation({
-    mutationFn: () =>
-      checkout(selectedMember!.id, selectedCopies.map((c) => c.id), settings.loan_limit ?? 5, scope),
-    onSuccess: () => {
-      invalidate();
-      toast.success(t("circulation.alerts.checkoutSuccess", "Checkout completed successfully."));
-      onClose();
-    },
-    onError: (err: any) => toast.error(err.message || t("loans.alerts.checkoutFailed", "Checkout failed.")),
-  });
-
-  return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      title={t("loans.newLoan", "New Loan")}
-      size="lg"
-      className="max-h-[88vh]"
-    >
-      <div className="flex flex-col h-full">
-        <div className="flex-1 min-h-0 overflow-y-auto space-y-5 pr-1">
-          {/* Member */}
-          <section className="space-y-2">
-            <h4 className="text-[11px] font-bold uppercase tracking-wider text-[#122222]/60 dark:text-white/60 flex items-center gap-2">
-              <UserCheck size={15} className="text-emerald" />
-              {t("circulation.selectedMember", "Selected Member")}
-            </h4>
-
-            {selectedMember ? (
-              <div className="flex items-center justify-between gap-3 border border-emerald/30 bg-emerald/5 rounded-xl p-3">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-9 h-9 rounded-full bg-emerald/10 text-emerald dark:bg-emerald-light/10 dark:text-emerald-light font-bold text-[13px] flex items-center justify-center shrink-0">
-                    {selectedMember.full_name?.charAt(0).toUpperCase() || "M"}
-                  </div>
-                  <div className="min-w-0">
-                    <div className="font-bold text-[13.5px] text-[#122222] dark:text-white truncate">{selectedMember.full_name}</div>
-                    <div className="text-[11.5px] font-mono text-[#122222]/50 dark:text-white/50">{selectedMember.member_number}</div>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setSelectedMember(null)}
-                  className="text-[12px] font-semibold text-[#122222]/60 dark:text-white/60 hover:underline cursor-pointer shrink-0"
-                >
-                  {t("loans.change", "Change")}
-                </button>
-              </div>
-            ) : (
-              <>
-                <div className="relative">
-                  <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#122222]/40 dark:text-white/40" />
-                  <input
-                    autoFocus
-                    value={memberTerm}
-                    onChange={(e) => setMemberTerm(e.target.value)}
-                    placeholder={t("loans.searchMember", "Search member by name or number...") as string}
-                    className="w-full bg-white dark:bg-[#1d2926] border border-black/10 dark:border-white/10 rounded-lg py-2 pl-9 pr-3 text-[13px] outline-none focus:border-emerald"
-                  />
-                </div>
-                <div className="max-h-52 overflow-y-auto border border-black/10 dark:border-white/10 rounded-xl divide-y divide-black/5 dark:divide-white/5">
-                  {membersQuery.isLoading ? (
-                    <div className="p-4 flex justify-center"><Spinner size={18} /></div>
-                  ) : (membersQuery.data ?? []).length === 0 ? (
-                    <p className="p-4 text-[12.5px] text-center text-[#122222]/50 dark:text-white/50">
-                      {t("loans.noMembers", "No members found.")}
-                    </p>
-                  ) : (
-                    (membersQuery.data ?? []).slice(0, 40).map((m) => (
-                      <button
-                        key={m.id}
-                        onClick={() => setSelectedMember(m)}
-                        className="w-full text-left p-2.5 hover:bg-emerald/5 flex items-center justify-between gap-3 cursor-pointer"
-                      >
-                        <span className="min-w-0">
-                          <span className="block font-semibold text-[13px] text-[#122222] dark:text-white truncate">{m.full_name}</span>
-                          <span className="block text-[11px] font-mono text-[#122222]/50 dark:text-white/50">{m.member_number}</span>
-                        </span>
-                        {m.status !== "active" && (
-                          <span className="text-[10px] font-bold uppercase text-red-500 bg-red-500/10 px-2 py-0.5 rounded shrink-0">
-                            {m.status}
-                          </span>
-                        )}
-                      </button>
-                    ))
-                  )}
-                </div>
-              </>
-            )}
-          </section>
-
-          {/* Copies */}
-          {selectedMember && (
-            <section className="space-y-2">
-              <h4 className="text-[11px] font-bold uppercase tracking-wider text-[#122222]/60 dark:text-white/60 flex items-center gap-2">
-                <BookOpen size={15} className="text-emerald" />
-                {t("loans.itemsToLend", "Items to lend")}
-              </h4>
-
-              {selectedCopies.length > 0 && (
-                <div className="space-y-1.5">
-                  {selectedCopies.map((c) => (
-                    <div key={c.id} className="flex items-center justify-between gap-3 border border-emerald/30 bg-emerald/5 rounded-xl p-2.5">
-                      <div className="min-w-0">
-                        <div className="font-semibold text-[13px] text-[#122222] dark:text-white truncate">{c.title}</div>
-                        <div className="text-[11px] font-mono text-emerald dark:text-emerald-light">{c.barcode}</div>
-                      </div>
-                      <button
-                        onClick={() => setSelectedCopies((prev) => prev.filter((x) => x.id !== c.id))}
-                        aria-label={t("loans.removeItem", "Remove item") as string}
-                        className="p-1 rounded-control hover:bg-black/10 dark:hover:bg-white/10 text-[#122222]/50 dark:text-white/50 cursor-pointer shrink-0"
-                      >
-                        <XIcon size={14} />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              <div className="relative">
-                <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#122222]/40 dark:text-white/40" />
-                <input
-                  value={copyTerm}
-                  onChange={(e) => setCopyTerm(e.target.value)}
-                  placeholder={t("loans.searchCopy", "Scan or search a copy barcode / title...") as string}
-                  className="w-full bg-white dark:bg-[#1d2926] border border-black/10 dark:border-white/10 rounded-lg py-2 pl-9 pr-3 text-[13px] outline-none focus:border-emerald"
-                />
-              </div>
-
-              <div className="max-h-48 overflow-y-auto border border-black/10 dark:border-white/10 rounded-xl divide-y divide-black/5 dark:divide-white/5">
-                {copiesQuery.isLoading ? (
-                  <div className="p-4 flex justify-center"><Spinner size={18} /></div>
-                ) : availableCopies.length === 0 ? (
-                  <p className="p-4 text-[12.5px] text-center text-[#122222]/50 dark:text-white/50">
-                    {t("loans.noAvailableCopies", "No available copies match.")}
-                  </p>
-                ) : (
-                  availableCopies.slice(0, 40).map((c) => (
-                    <button
-                      key={c.id}
-                      onClick={() => { setSelectedCopies((prev) => [...prev, c]); setCopyTerm(""); }}
-                      className="w-full text-left p-2.5 hover:bg-emerald/5 flex items-center justify-between gap-3 cursor-pointer"
-                    >
-                      <span className="min-w-0">
-                        <span className="block font-semibold text-[13px] text-[#122222] dark:text-white truncate">{c.title}</span>
-                        <span className="block text-[11px] font-mono text-[#122222]/50 dark:text-white/50">{c.barcode}</span>
-                      </span>
-                      <Plus size={14} className="text-emerald shrink-0" />
-                    </button>
-                  ))
-                )}
-              </div>
-
-              {/* Scope */}
-              <div className="flex items-center gap-2 pt-1">
-                <span className="text-[12px] font-semibold text-[#122222]/60 dark:text-white/60">
-                  {t("loans.scope", "Scope:")}
-                </span>
-                {(["external", "internal"] as ReservationScope[]).map((s) => (
-                  <button
-                    key={s}
-                    onClick={() => setScope(s)}
-                    className={`px-3 py-1.5 rounded-xl text-[12px] font-semibold flex items-center gap-1.5 cursor-pointer transition-colors ${
-                      scope === s
-                        ? "bg-emerald text-white"
-                        : "bg-white dark:bg-[#1d2926] text-[#122222]/70 dark:text-white/70 border border-black/10 dark:border-white/10 hover:bg-black/5 dark:hover:bg-white/5"
-                    }`}
-                  >
-                    {s === "internal" ? <Building2 size={12} /> : <Globe size={12} />}
-                    {s === "internal"
-                      ? t("reservations.scope.internal", "Internal")
-                      : t("reservations.scope.external", "External")}
-                  </button>
-                ))}
-              </div>
-            </section>
-          )}
-        </div>
-
-        <div className="pt-4 mt-4 border-t border-black/10 dark:border-white/10 flex items-center justify-end gap-2 shrink-0">
-          <Button type="button" variant="ghost" className="text-[12px] cursor-pointer" onClick={onClose}>
-            {t("cancel", "Cancel")}
-          </Button>
-          <Button
-            type="button"
-            className="text-[12px] flex items-center gap-1.5 cursor-pointer disabled:opacity-40"
-            disabled={!selectedMember || selectedCopies.length === 0 || checkoutMutation.isPending}
-            onClick={() => checkoutMutation.mutate()}
-          >
-            <CheckCircle2 size={14} />
-            {checkoutMutation.isPending
-              ? t("circulation.completingCheckout", "Completing...")
-              : t("loans.confirmCheckout", { count: selectedCopies.length, defaultValue: `Lend ${selectedCopies.length} item(s)` })}
           </Button>
         </div>
       </div>
