@@ -326,15 +326,20 @@ export async function getReservationsForMember(memberId: string): Promise<Reserv
   return unwrap(await supabase.from("reservation_details").select("*").eq("member_id", memberId).order("requested_at", { ascending: false })) as Reservation[];
 }
 
-/** Direct-desk checkout (no reservation involved). Loan duration is derived server-side from `scope` + library_settings. */
-export async function checkout(memberId: string, copyIds: string[], limit: number, scope: ReservationScope = "external"): Promise<void> {
-  if (copyIds.length === 0) return;
+/** Direct-desk checkout (no reservation involved). Loan duration is derived server-side from
+ *  `scope` + library_settings. Returns the created loans so the caller can act on them — the
+ *  new-loan wizard uses the returned due_at to decide whether an operator-picked date is
+ *  actually an override worth writing. */
+export async function checkout(memberId: string, copyIds: string[], limit: number, scope: ReservationScope = "external"): Promise<Loan[]> {
+  if (copyIds.length === 0) return [];
   const { count } = await supabase.from("loans").select("id", { count: "exact", head: true }).eq("member_id", memberId).is("returned_at", null);
   if ((count ?? 0) + copyIds.length > limit) throw new Error(`Loan limit of ${limit} would be exceeded.`);
 
+  const created: Loan[] = [];
   for (const copyId of copyIds) {
-    unwrap(await supabase.rpc("checkout", { p_copy_id: copyId, p_member_id: memberId, p_scope: scope }));
+    created.push(unwrap(await supabase.rpc("checkout", { p_copy_id: copyId, p_member_id: memberId, p_scope: scope })) as Loan);
   }
+  return created;
 }
 
 export async function returnCopies(copyIds: string[]): Promise<void> {
