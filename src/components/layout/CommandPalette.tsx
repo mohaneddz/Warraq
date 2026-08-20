@@ -35,6 +35,7 @@ export function CommandPalette() {
     { label: t("nav.catalog") || "Catalog", subtitle: t("commandPalette.subtitles.catalog"), route: "/catalog", icon: BookOpen },
     { label: t("nav.members") || "Members", subtitle: t("commandPalette.subtitles.members"), route: "/members", icon: Users },
     { label: t("nav.reservations") || "Reservations", subtitle: t("commandPalette.subtitles.reservations"), route: "/reservations", icon: CalendarClock },
+    { label: t("nav.loans") || "Loans", subtitle: t("commandPalette.subtitles.loans"), route: "/loans", icon: BookMarked },
     { label: t("nav.inventory") || "Inventory", subtitle: t("commandPalette.subtitles.inventory"), route: "/inventory", icon: Warehouse },
     { label: t("nav.reports") || "Reports", subtitle: t("commandPalette.subtitles.reports"), route: "/reports", icon: ClipboardList },
     { label: t("nav.activity") || "Activity", subtitle: t("commandPalette.subtitles.activity"), route: "/activity", icon: ClipboardList },
@@ -47,6 +48,7 @@ export function CommandPalette() {
     { label: t("commandPalette.actions.addBook"), subtitle: t("commandPalette.actions.addBookSub"), route: "/catalog?action=add-book", icon: Plus },
     { label: t("commandPalette.actions.addMember"), subtitle: t("commandPalette.actions.addMemberSub"), route: "/members?action=add-member", icon: Plus },
     { label: t("dashboard.newReservation") || "New Reservation", subtitle: t("dashboard.newReservationSub") || "Reserve item for member", route: "/reservations?action=new-reservation", icon: Plus },
+    { label: t("loans.newLoan") || "New Loan", subtitle: t("commandPalette.actions.newLoanSub") || "Check an item out to a member", route: "/loans?action=new-loan", icon: Plus },
     { label: t("dashboard.addUser") || "Add Staff User", subtitle: t("dashboard.addUserSub") || "Create user credentials", route: "/settings?tab=users&action=add-user", icon: Plus },
 
 

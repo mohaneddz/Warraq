@@ -1,4 +1,4 @@
-import { BookOpen, CalendarClock, ChartNoAxesCombined, ClipboardList, Cog, LayoutDashboard, Search, Bell, Minus, Square, Users, Warehouse, X, ChevronDown, Menu, Moon, Sun, Sparkles, RefreshCw, ArrowLeft, ArrowRight, Maximize, LogOut } from "lucide-react";
+import { BookMarked, BookOpen, CalendarClock, ChartNoAxesCombined, ClipboardList, Cog, LayoutDashboard, Search, Bell, Minus, Square, Users, Warehouse, X, ChevronDown, Menu, Moon, Sun, Sparkles, RefreshCw, ArrowLeft, ArrowRight, Maximize, LogOut } from "lucide-react";
 import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useEffect, useState, useRef } from "react";
 
@@ -23,6 +23,7 @@ const links = [
   ["/catalog", "Catalog", BookOpen],
   ["/members", "Members", Users],
   ["/reservations", "Reservations", CalendarClock],
+  ["/loans", "Loans", BookMarked],
   ["/inventory", "Inventory", Warehouse],
   ["/reports", "Reports", ChartNoAxesCombined],
   ["/activity", "Activity", ClipboardList],
