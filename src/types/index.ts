@@ -52,7 +52,31 @@ export interface Member {
 export interface Loan {
   id: string; copy_id: string; member_id: string; scope?: ReservationScope; borrowed_at: string; due_at: string;
   returned_at?: string | null; renewed_count: number; title?: string; item_type?: string; barcode?: string; member_name?: string;
+  issued_by?: string | null; received_by?: string | null;
+  condition_out?: string | null; condition_in?: string | null; notes?: string | null;
+  // Everything below comes from the enriched loan_details view (migration 0021).
+  book_id?: string;
+  subtitle?: string | null;
+  arabic_title?: string | null;
+  author?: string | null;
+  category?: string | null;
+  publisher?: string | null;
+  cover_path?: string | null;
+  isbn13?: string | null;
+  call_number?: string | null;
+  copy_accession?: string | null;
+  copy_condition?: string | null;
+  copy_shelf?: string | null;
+  member_number?: string | null;
+  member_email?: string | null;
+  member_phone?: string | null;
+  member_dept?: string | null;
+  member_role?: string | null;
+  member_avatar?: string | null;
 }
+
+/** Where a loan sits relative to its due date, once the configured grace period is applied. */
+export type LoanState = "active" | "dueSoon" | "overdue" | "returned";
 export interface Reservation {
   id: string;
   book_id: string;
