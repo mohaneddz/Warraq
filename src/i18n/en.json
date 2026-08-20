@@ -52,6 +52,7 @@
     "circulation": "Circulation",
     "members": "Members",
     "reservations": "Reservations",
+    "loans": "Loans",
     "inventory": "Inventory",
     "reports": "Reports",
     "activity": "Activity",
@@ -82,16 +83,46 @@
     "quote": "Knowledge is sought, it does not come to you",
     "quoteTranslation": "IMAM MALIK IBN ANAS",
     "dailyQuotes": [
-      { "text": "Knowledge is sought, it does not come to you", "source": "IMAM MALIK IBN ANAS" },
-      { "text": "A room without books is a body without a soul", "source": "CICERO" },
-      { "text": "The ink of the scholar is more sacred than the blood of the martyr", "source": "PROPHETIC TRADITION" },
-      { "text": "He who reads lives a thousand lives before he dies", "source": "GEORGE R. R. MARTIN" },
-      { "text": "There is no friend as loyal as a book", "source": "ERNEST HEMINGWAY" },
-      { "text": "Knowledge is a light God casts into the heart", "source": "IMAM AL-SHAFI'I" },
-      { "text": "Reading is a conversation with the noblest minds", "source": "RENÉ DESCARTES" },
-      { "text": "So many books, so little time", "source": "FRANK ZAPPA" },
-      { "text": "A library is a treasury of remedies for the soul", "source": "ANCIENT INSCRIPTION" },
-      { "text": "Whoever travels a path seeking knowledge, God eases his way to paradise", "source": "PROPHETIC TRADITION" }
+      {
+        "text": "Knowledge is sought, it does not come to you",
+        "source": "IMAM MALIK IBN ANAS"
+      },
+      {
+        "text": "A room without books is a body without a soul",
+        "source": "CICERO"
+      },
+      {
+        "text": "The ink of the scholar is more sacred than the blood of the martyr",
+        "source": "PROPHETIC TRADITION"
+      },
+      {
+        "text": "He who reads lives a thousand lives before he dies",
+        "source": "GEORGE R. R. MARTIN"
+      },
+      {
+        "text": "There is no friend as loyal as a book",
+        "source": "ERNEST HEMINGWAY"
+      },
+      {
+        "text": "Knowledge is a light God casts into the heart",
+        "source": "IMAM AL-SHAFI'I"
+      },
+      {
+        "text": "Reading is a conversation with the noblest minds",
+        "source": "RENÉ DESCARTES"
+      },
+      {
+        "text": "So many books, so little time",
+        "source": "FRANK ZAPPA"
+      },
+      {
+        "text": "A library is a treasury of remedies for the soul",
+        "source": "ANCIENT INSCRIPTION"
+      },
+      {
+        "text": "Whoever travels a path seeking knowledge, God eases his way to paradise",
+        "source": "PROPHETIC TRADITION"
+      }
     ],
     "metrics": {
       "titles": "Total Titles",
@@ -605,7 +636,6 @@
       "declined": "Reservation declined.",
       "banned": "Member banned from making further reservations.",
       "bulkAccepted": "Selected reservations accepted.",
-      "updated": "Reservation updated.",
       "pickedUp": "Reservation checked out to the member."
     },
     "markReady": "Mark Ready for Pickup",
@@ -638,6 +668,83 @@
     "scope": {
       "internal": "Internal: stays in library",
       "external": "External: taken home"
+    }
+  },
+  "loans": {
+    "title": "Loans",
+    "subtitle": "Every item currently out, overdue, or returned.",
+    "newLoan": "New Loan",
+    "searchPlaceholder": "Search title, member, barcode, shelf...",
+    "loading": "Loading loans…",
+    "borrowedDate": "Borrowed",
+    "sortBy": "Sort by",
+    "dueInDays": "Due in {{count}} day(s)",
+    "renewedTimes": "Renewed {{count}}×",
+    "returnItem": "Return Item",
+    "renewLoan": "Renew Loan",
+    "viewDetails": "View Loan Details",
+    "copyMember": "Copy Member Name",
+    "copiedMember": "Member name copied",
+    "copyBarcode": "Copy Barcode",
+    "copiedBarcode": "Barcode copied",
+    "noMatches": "No loans match these filters",
+    "noMatchesHelp": "Try a different search or clear the filter.",
+    "noLoans": "No loans yet",
+    "noLoansHelp": "Check an item out to a member to start tracking it here.",
+    "shelfLabel": "Shelf: {{shelf}}",
+    "unassignedShelf": "Unassigned shelf",
+    "borrowedOn": "Borrowed on:",
+    "dueOn": "Due on:",
+    "renewals": "Renewals:",
+    "editDueDate": "Edit due date",
+    "renewLimitReached": "Renewal limit reached",
+    "notes": "Notes",
+    "change": "Change",
+    "searchMember": "Search member by name or number...",
+    "noMembers": "No members found.",
+    "itemsToLend": "Items to lend",
+    "searchCopy": "Scan or search a copy barcode / title...",
+    "noAvailableCopies": "No available copies match.",
+    "removeItem": "Remove item",
+    "scope": "Scope:",
+    "confirmCheckout": "Lend {{count}} item(s)",
+    "detailsModal": {
+      "title": "Loan Details"
+    },
+    "filters": {
+      "all": "All"
+    },
+    "state": {
+      "active": "On Loan",
+      "dueSoon": "Due Soon",
+      "overdue": "Overdue",
+      "returned": "Returned"
+    },
+    "sort": {
+      "dueAsc": "Due date (soonest)",
+      "dueDesc": "Due date (latest)",
+      "borrowedDesc": "Borrowed (newest)",
+      "borrowedAsc": "Borrowed (oldest)",
+      "member": "Member name",
+      "title": "Title"
+    },
+    "bulk": {
+      "selectedCount": "{{count}} selected",
+      "return": "Return",
+      "renew": "Renew"
+    },
+    "alerts": {
+      "returned": "Item(s) returned.",
+      "returnFailed": "Failed to return item.",
+      "renewed": "Loan renewed.",
+      "renewFailed": "Failed to renew loan.",
+      "bulkRenewed": "{{count}} loan(s) renewed.",
+      "bulkRenewPartial": "{{count}} could not be renewed: {{reason}}",
+      "dueUpdated": "Due date updated.",
+      "dueUpdateFailed": "Failed to update due date.",
+      "confirmBulkReturn": "Return {{count}} item(s)?",
+      "confirmBulkRenew": "Renew {{count}} loan(s)?",
+      "checkoutFailed": "Checkout failed."
     }
   },
   "inventory": {
@@ -1566,6 +1673,7 @@
       "catalog": "Browse book inventory",
       "members": "Manage library members",
       "reservations": "Hold queue & reservations",
+      "loans": "Track borrowed and overdue items",
       "inventory": "Physical shelves audit",
       "reports": "Excel exports & metrics",
       "activity": "Database audit logs",
@@ -1610,7 +1718,8 @@
       "integrations": "Integrations & AI settings",
       "integrationsSub": "Configure LLMs & Groq keys",
       "secrets": "Secrets & API keys",
-      "secretsSub": "Manage developer tokens"
+      "secretsSub": "Manage developer tokens",
+      "newLoanSub": "Check an item out to a member"
     }
   },
   "languages": {
