@@ -1,13 +1,22 @@
 <#
 .SYNOPSIS
-    Packaging script for Warraq Library Management System (Windows 7, 10, 11).
+    Packaging script for Warraq Library Management System (Windows 10, 11).
 .DESCRIPTION
     Validates the codebase (TypeScript, Vitest, Rust) and packages the Tauri application
-    for specified target Windows versions with checksum generation and deployment guidance.
+    for specified target Windows versions with checksum generation.
+
+    Windows 7 is NOT a supported target. As of Rust 1.78 (May 2024), std raised its minimum
+    supported Windows version to Windows 10 - a binary built with any current toolchain will
+    fail to launch on Windows 7 (this is what the hospital hit last time). Verified 2026-08-21:
+    even pinning rustc back to 1.77.2 (the last Win7-capable release) does not fix it, because
+    the current Tauri 2.11 dependency tree pulls in transitive crates requiring `edition2024`,
+    which 1.77's cargo cannot even parse. Real Win7 support would mean downgrading Tauri and
+    every plugin (stronghold, autostart, global-shortcut, ...) to mid-2024-era releases - a
+    project of its own, not a packaging flag. If that's ever revisited, start there.
 .PARAMETER TargetOS
-    Target OS profile: 'win7', 'win10', 'win11', or 'all' (default: 'all').
+    Target OS profile: 'win10', 'win11', or 'all' (default: 'all').
 .PARAMETER Arch
-    Target architecture: 'x64', 'x86', or 'both' (default: 'both' for win7/all, 'x64' for win10/win11).
+    Target architecture: 'x64' or 'x86' (default: 'x64').
 .PARAMETER SkipVerification
     Skip pre-build code checks (typecheck, tests, rust check).
 .PARAMETER Clean
@@ -16,11 +25,11 @@
 
 [CmdletBinding()]
 param(
-    [ValidateSet('win7', 'win10', 'win11', 'all')]
+    [ValidateSet('win10', 'win11', 'all')]
     [string]$TargetOS = 'all',
 
-    [ValidateSet('x64', 'x86', 'both')]
-    [string]$Arch = 'default',
+    [ValidateSet('x64', 'x86')]
+    [string]$Arch = 'x64',
 
     [switch]$SkipVerification,
 
@@ -155,15 +164,6 @@ function Build-TauriTarget($targetOSName, $rustTargetTriple, $outputSubdir) {
 # Create target executions
 $targetsToBuild = @()
 
-if ($TargetOS -eq 'win7' -or $TargetOS -eq 'all') {
-    if ($Arch -eq 'x86' -or $Arch -eq 'both' -or $Arch -eq 'default') {
-        $targetsToBuild += @{ OS = 'Windows 7 (32-bit)'; Triple = 'i686-pc-windows-msvc'; Folder = 'win7' }
-    }
-    if ($Arch -eq 'x64' -or $Arch -eq 'both' -or $Arch -eq 'default') {
-        $targetsToBuild += @{ OS = 'Windows 7 (64-bit)'; Triple = 'x86_64-pc-windows-msvc'; Folder = 'win7' }
-    }
-}
-
 if ($TargetOS -eq 'win10' -or $TargetOS -eq 'all') {
     if ($Arch -eq 'x86') {
         $targetsToBuild += @{ OS = 'Windows 10 (32-bit)'; Triple = 'i686-pc-windows-msvc'; Folder = 'win10' }
@@ -207,45 +207,7 @@ foreach ($dir in $releaseSubdirs) {
     }
 }
 
-# Generate Windows 7 deployment prerequisite guide if win7 folder exists
-$win7Dir = Join-Path $DistRelease "win7"
-if (Test-Path $win7Dir) {
-    $win7Readme = Join-Path $win7Dir "README_WIN7_PREREQUISITES.txt"
-    $readmeText = @"
-===============================================================================
-               WARRAQ - WINDOWS 7 DEPLOYMENT & PREREQUISITES GUIDE
-===============================================================================
-
-Application: Warraq Library Management System (Mustapha Bacha Hospital Library)
-Target Platform: Windows 7 Service Pack 1 (32-bit / 64-bit)
-
-PREREQUISITE CHECKLIST FOR WINDOWS 7 MACHINES:
--------------------------------------------------------------------------------
-1. Windows 7 Service Pack 1 (KB976932):
-   - Windows 7 must have SP1 installed.
-
-2. Microsoft WebView2 Runtime (Evergreen Bootstrapper / Standalone):
-   - Tauri desktop apps require Microsoft WebView2.
-   - On Windows 7, install WebView2 Evergreen Bootstrapper or Standalone
-     runtime (v109 or earlier supported by Microsoft for Win7).
-
-3. Universal C Runtime (UCRT / KB2999226):
-   - Visual C++ 2015-2022 Redistributable (x86/x64) must be installed.
-
-4. Security Patches & TLS 1.2 Support (KB2533623 / KB3063858):
-   - Essential Windows 7 security updates for TLS 1.2 outbound HTTPS
-     connections to Supabase cloud database.
-
-RECOMMENDED INSTALLATION STEPS ON WIN7:
--------------------------------------------------------------------------------
-Step 1: Install VC++ 2015-2022 Redistributable (vc_redist.x86.exe / vc_redist.x64.exe).
-Step 2: Install Microsoft Edge WebView2 Evergreen Runtime.
-Step 3: Run the Warraq setup installer (Warraq_0.1.0_x86-setup.exe or Warraq_0.1.0_x64-setup.exe).
-===============================================================================
-"@
-    $readmeText | Set-Content -Path $win7Readme -Encoding UTF8
-    Write-Host "Generated Windows 7 deployment guide: $win7Readme" -ForegroundColor Gray
-}
+# Windows 7 is not a supported target (see script header) - no prerequisite guide is generated.
 
 Write-Host "`n============================================================" -ForegroundColor Cyan
 Write-Host "   Packaging completed successfully!" -ForegroundColor Green
