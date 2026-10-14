@@ -40,17 +40,30 @@ Warraq is a desktop system for the Mustapha Bacha Hospital library. It supports 
 
 ## Screenshots
 
-<img src="screenshots/home.png" alt="Warraq library dashboard" width="88%"/>
+<table>
+  <tr>
+    <td width="50%"><img src="screenshots/dashboard.webp" alt="Dashboard"/><br/><b>Dashboard</b><br/>Titles, copies, active loans, today's circulation, overdue queue and reservations ready for pickup.</td>
+    <td width="50%"><img src="screenshots/catalog.webp" alt="Catalog"/><br/><b>Catalog</b><br/>Books, theses and journals with saved views, availability per title and cover status.</td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="screenshots/members.webp" alt="Members"/><br/><b>Members</b><br/>Member cards by role and department, with search, saved views and bulk selection.</td>
+    <td width="50%"><img src="screenshots/reservations.webp" alt="Reservations"/><br/><b>Reservations</b><br/>Pending approvals, ready holds and the queue, with accept and decline actions.</td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="screenshots/loans.webp" alt="Loans"/><br/><b>Loans</b><br/>Every loan with on loan, due soon, overdue and returned filters, plus renew and return actions.</td>
+    <td width="50%"><img src="screenshots/inventory.webp" alt="Inventory"/><br/><b>Inventory</b><br/>Rooms, bookcases and shelf occupancy for auditing the physical collection.</td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="screenshots/reports.webp" alt="Reports"/><br/><b>Reports</b><br/>Circulation trend, top categories, holding status and hourly activity, with CSV and PDF export.</td>
+    <td width="50%"><img src="screenshots/activity.webp" alt="Activity logs"/><br/><b>Activity</b><br/>Audit trail of checkouts, returns and database writes, filterable by user, entity and action.</td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="screenshots/notifications.webp" alt="Notifications"/><br/><b>Notifications</b><br/>Overdue loans, due soon alerts and reservations ready for pickup.</td>
+    <td width="50%"><img src="screenshots/settings.webp" alt="Settings"/><br/><b>Settings</b><br/>Library identity, circulation rules, localization, backups, integrations and staff access.</td>
+  </tr>
+</table>
 
-**Dashboard:** A library overview with titles, copies, active loans, circulation rhythm, and recent borrowing activity.
-
----
-
-<img src="screenshots/catalog.png" alt="Warraq inventory and shelves view" width="88%"/>
-
-**Inventory:** Room, shelf, and copy-condition controls for physical collection operations.
-
----
+> The screenshots use generated demo data: invented members and loan history over the real catalog, so no member records are published.
 
 ## Project Structure
 
