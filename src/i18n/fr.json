@@ -344,6 +344,7 @@
       "enriching": "Enrichissement des métadonnées avec Groq AI...",
       "enriched": "Métadonnées remplies et enrichies avec Groq AI!",
       "autofilled": "Métadonnées du livre remplies automatiquement!",
+      "groqFailed": "Rempli depuis Google Books/Open Library uniquement. {{message}}",
       "groqTip": "Astuce: Configurez votre clé API Groq dans les paramètres pour obtenir des traductions automatiques en arabe, des descriptions détaillées et des tags ciblés.",
       "downloadingCover": "Téléchargement de l'image de couverture...",
       "coverDownloaded": "Couverture du livre téléchargée!",

@@ -29,8 +29,15 @@ export async function enrichBook(book: Book, opts: { groqApiKey?: string }): Pro
     // No match from Google Books/Open Library — Groq (if enabled) may still fill in fields below.
   }
 
+  let usedGroq = false;
   if (opts.groqApiKey) {
-    meta = await enrichMetadataWithGroq(query, meta || { title: book.title, language: book.language }, opts.groqApiKey);
+    try {
+      meta = await enrichMetadataWithGroq(query, meta || { title: book.title, language: book.language }, opts.groqApiKey);
+      usedGroq = true;
+    } catch (err: any) {
+      if (!meta) throw err;
+      notes.push(`Groq skipped: ${err.message}`);
+    }
   }
 
   if (!meta) {
@@ -45,12 +52,12 @@ export async function enrichBook(book: Book, opts: { groqApiKey?: string }): Pro
 
   if (!book.dewey_code && meta.dewey_code) {
     patch.dewey_code = meta.dewey_code;
-    notes.push(opts.groqApiKey ? "Dewey code is a Groq estimate; verify." : "Filled Dewey code from Open Library.");
+    notes.push(usedGroq ? "Dewey code is a Groq estimate; verify." : "Filled Dewey code from Open Library.");
   }
 
   if (!book.arabic_title && meta.arabic_title) {
     patch.arabic_title = meta.arabic_title;
-    notes.push(opts.groqApiKey ? "Filled Arabic title via Groq translation." : "Filled Arabic title.");
+    notes.push(usedGroq ? "Filled Arabic title via Groq translation." : "Filled Arabic title.");
   }
 
   if (!book.cover_path && !book.cover_url && meta.cover_url) {

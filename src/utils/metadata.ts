@@ -350,8 +350,9 @@ Specifically, you MUST return a valid JSON object with the following keys and va
 If Google/OpenLibrary returned nothing, use your knowledge about the book "${queryOrIsbn}" to fill in all the details.
 Return ONLY the JSON object. Do not include any explanations, introduction, markdown blocks, or other text outside the JSON.`;
 
+  let response: Response;
   try {
-    const response = await fetchWithTimeout("https://api.groq.com/openai/v1/chat/completions", {
+    response = await fetchWithTimeout("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${apiKey}`,
@@ -370,62 +371,63 @@ Return ONLY the JSON object. Do not include any explanations, introduction, mark
         temperature: 0.1
       })
     });
-
-    if (!response.ok) {
-      const errText = await response.text();
-      console.error("Groq API error response:", errText);
-      throw new Error(`Groq API returned status ${response.status}`);
-    }
-
-    const data = await response.json();
-    const content = data.choices?.[0]?.message?.content;
-    if (content) {
-      const parsed = JSON.parse(content);
-      const arabic_title = parsed.arabic_title || existingMetadata.arabic_title || "";
-      const subtitle = parsed.subtitle || existingMetadata.subtitle || "";
-      const description = parsed.description || existingMetadata.description || "";
-      const unresolvedFields: ExternalBookMetadata["unresolvedFields"] = [];
-      if (!arabic_title) unresolvedFields.push("arabic_title");
-      if (!subtitle) unresolvedFields.push("subtitle");
-      if (description.length < 30) unresolvedFields.push("description");
-      return {
-        title: parsed.title || existingMetadata.title || "",
-        subtitle,
-        arabic_title,
-        tags: parsed.tags || existingMetadata.tags || "",
-        author: parsed.author || existingMetadata.author || "",
-        publisher: parsed.publisher || existingMetadata.publisher || "",
-        category: parsed.category || existingMetadata.category || "",
-        language: parsed.language || existingMetadata.language || "English",
-        description,
-        publicationYear: parsed.publicationYear ? Number(parsed.publicationYear) : existingMetadata.publicationYear,
-        cover_url: existingMetadata.cover_url || null,
-        isbn10: parsed.isbn10 || existingMetadata.isbn10 || null,
-        isbn13: parsed.isbn13 || existingMetadata.isbn13 || null,
-        dewey_code: parsed.dewey_code || existingMetadata.dewey_code || null,
-        unresolvedFields
-      };
-    }
-  } catch (error) {
-    console.error("Failed to enrich metadata with Groq:", error);
+  } catch (err: any) {
+    throw new Error(err?.name === "AbortError" ? "Groq didn't respond in time." : "Couldn't reach Groq. Check your connection.");
   }
 
+  if (!response.ok) {
+    const errText = await response.text();
+    console.error("Groq API error response:", errText);
+    if (response.status === 401 || response.status === 403) {
+      throw new Error("Groq rejected the API key. Generate a new key at console.groq.com and paste it in Settings.");
+    }
+    if (response.status === 429) {
+      throw new Error("Groq rate limit reached. Wait a minute and try again.");
+    }
+    let detail = "";
+    try {
+      detail = JSON.parse(errText)?.error?.message || "";
+    } catch {
+      // Non-JSON error body; the status code alone will have to do.
+    }
+    throw new Error(`Groq API returned status ${response.status}${detail ? `: ${detail}` : ""}`);
+  }
+
+  const data = await response.json();
+  const content = data.choices?.[0]?.message?.content;
+  if (!content) {
+    throw new Error("Groq returned an empty response.");
+  }
+  let parsed: any;
+  try {
+    parsed = JSON.parse(content);
+  } catch {
+    throw new Error("Groq returned a response that isn't valid JSON.");
+  }
+
+  const arabic_title = parsed.arabic_title || existingMetadata.arabic_title || "";
+  const subtitle = parsed.subtitle || existingMetadata.subtitle || "";
+  const description = parsed.description || existingMetadata.description || "";
+  const unresolvedFields: ExternalBookMetadata["unresolvedFields"] = [];
+  if (!arabic_title) unresolvedFields.push("arabic_title");
+  if (!subtitle) unresolvedFields.push("subtitle");
+  if (description.length < 30) unresolvedFields.push("description");
   return {
-    title: existingMetadata.title || "",
-    subtitle: existingMetadata.subtitle || "",
-    arabic_title: existingMetadata.arabic_title || "",
-    tags: existingMetadata.tags || "",
-    author: existingMetadata.author || "",
-    publisher: existingMetadata.publisher || "",
-    category: existingMetadata.category || "",
-    language: existingMetadata.language || "English",
-    description: existingMetadata.description || "",
-    publicationYear: existingMetadata.publicationYear,
+    title: parsed.title || existingMetadata.title || "",
+    subtitle,
+    arabic_title,
+    tags: parsed.tags || existingMetadata.tags || "",
+    author: parsed.author || existingMetadata.author || "",
+    publisher: parsed.publisher || existingMetadata.publisher || "",
+    category: parsed.category || existingMetadata.category || "",
+    language: parsed.language || existingMetadata.language || "English",
+    description,
+    publicationYear: parsed.publicationYear ? Number(parsed.publicationYear) : existingMetadata.publicationYear,
     cover_url: existingMetadata.cover_url || null,
-    isbn10: existingMetadata.isbn10 || null,
-    isbn13: existingMetadata.isbn13 || null,
-    dewey_code: existingMetadata.dewey_code || null,
-    unresolvedFields: existingMetadata.unresolvedFields || []
+    isbn10: parsed.isbn10 || existingMetadata.isbn10 || null,
+    isbn13: parsed.isbn13 || existingMetadata.isbn13 || null,
+    dewey_code: parsed.dewey_code || existingMetadata.dewey_code || null,
+    unresolvedFields
   };
 }
 

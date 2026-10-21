@@ -508,7 +508,8 @@ export function CatalogPage() {
       queryError = err;
     }
 
-    const apiKey = useUiStore.getState().preferences.groqApiKey;
+    const { groqEnabled, groqApiKey } = useUiStore.getState().preferences;
+    const apiKey = groqEnabled ? groqApiKey.trim() : "";
 
     if (!meta && !apiKey) {
       toast.error(queryError?.message || t("catalog.alerts.notFound") || "Could not find any metadata matches for this query.", { id: toastId });
@@ -519,15 +520,23 @@ export function CatalogPage() {
     try {
       if (apiKey) {
         toast.loading(t("catalog.alerts.enriching") || "Enriching metadata with Groq AI...", { id: toastId });
-        meta = await enrichMetadataWithGroq(queryVal, meta || {}, apiKey);
-        toast.success(t("catalog.alerts.enriched") || "Book metadata auto-filled & enriched with Groq AI!", { id: toastId });
+        try {
+          meta = await enrichMetadataWithGroq(queryVal, meta || {}, apiKey);
+          toast.success(t("catalog.alerts.enriched") || "Book metadata auto-filled & enriched with Groq AI!", { id: toastId });
+        } catch (groqError: any) {
+          if (!meta) {
+            toast.error(groqError.message, { id: toastId });
+            return;
+          }
+          toast.warning(t("catalog.alerts.groqFailed", { message: groqError.message }) || `Filled from Google Books/Open Library only. ${groqError.message}`, { id: toastId });
+        }
       } else {
         toast.success(t("catalog.alerts.autofilled") || "Book metadata auto-filled!", { id: toastId });
       }
       setUnresolvedFields(meta?.unresolvedFields ?? []);
 
       if (meta) {
-        addForm.setValue("title", cleanText(meta.title));
+        if (meta.title) addForm.setValue("title", cleanText(meta.title));
         addForm.setValue("subtitle", meta.subtitle ? cleanText(meta.subtitle) : "");
         addForm.setValue("arabic_title", meta.arabic_title ? cleanText(meta.arabic_title) : "");
         addForm.setValue("tags", meta.tags ? cleanText(meta.tags) : "");

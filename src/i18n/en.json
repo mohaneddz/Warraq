@@ -344,6 +344,7 @@
       "enriching": "Enriching metadata with Groq AI...",
       "enriched": "Book metadata auto-filled & enriched with Groq AI!",
       "autofilled": "Book metadata auto-filled!",
+      "groqFailed": "Filled from Google Books/Open Library only. {{message}}",
       "groqTip": "Tip: Configure your Groq API Key in Settings to get auto-translated Arabic titles, detailed descriptions, and targeted tags.",
       "downloadingCover": "Downloading book cover image...",
       "coverDownloaded": "Book cover downloaded!",
