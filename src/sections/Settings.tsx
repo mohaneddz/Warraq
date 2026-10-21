@@ -15,6 +15,7 @@ import { useAuthStore } from "../store/authStore";
 import { changeOwnPassword, listUsers, createUser, updateUser, resetPassword, deleteUser } from "../data/auth";
 import { books as fetchAllBooks } from "../data/repositories/library";
 import { findEnrichableBooks, enrichAllBooks, type EnrichProgress } from "../utils/enrichment";
+import { GROQ_MODEL } from "../utils/metadata";
 import type { PublicUser, UserRole, UserStatus } from "../types";
 import { Button, Input, Modal } from "../components/ui/primitives";
 import { useTranslation } from "react-i18next";
@@ -1055,7 +1056,7 @@ function IntegrationsTab({ prefs, update }: TabProps) {
 
   const [showGroqKey, setShowGroqKey] = useState(false);
   const [testingGroq, setTestingGroq] = useState(false);
-  const [testGroqResult, setTestGroqResult] = useState<"ok" | "fail" | "invalid" | null>(null);
+  const [testGroqResult, setTestGroqResult] = useState<"ok" | "fail" | "invalid" | "noModel" | null>(null);
 
   const [enriching, setEnriching] = useState(false);
   const [enrichLog, setEnrichLog] = useState<EnrichProgress[]>([]);
@@ -1084,7 +1085,7 @@ function IntegrationsTab({ prefs, update }: TabProps) {
       }
       await enrichAllBooks(
         targets,
-        { groqApiKey: prefs.groqEnabled ? prefs.groqApiKey : undefined },
+        { groqApiKey: prefs.groqEnabled ? prefs.groqApiKey.trim() : undefined },
         (progress) => setEnrichLog((prev) => [...prev, progress]),
         () => enrichCancelRef.current
       );
@@ -1102,11 +1103,18 @@ function IntegrationsTab({ prefs, update }: TabProps) {
     setTestGroqResult(null);
     try {
       const res = await fetch("https://api.groq.com/openai/v1/models", {
-        headers: { Authorization: `Bearer ${prefs.groqApiKey}` },
+        headers: { Authorization: `Bearer ${prefs.groqApiKey.trim()}` },
       });
       // A 401/403 means the key itself is rejected (invalid/expired/revoked) — the common cause of
       // "Groq not working" — so surface that distinctly from a network/other error.
-      setTestGroqResult(res.ok ? "ok" : (res.status === 401 || res.status === 403) ? "invalid" : "fail");
+      if (!res.ok) {
+        setTestGroqResult((res.status === 401 || res.status === 403) ? "invalid" : "fail");
+        return;
+      }
+      // A valid key isn't enough: when Groq retired the model autofill used, this test kept
+      // passing while every lookup failed. Confirm the model enrichment calls is still served.
+      const { data } = await res.json();
+      setTestGroqResult(Array.isArray(data) && data.some((m: { id: string }) => m.id === GROQ_MODEL) ? "ok" : "noModel");
     } catch {
       setTestGroqResult("fail");
     } finally {
@@ -1124,11 +1132,11 @@ function IntegrationsTab({ prefs, update }: TabProps) {
       </h3>
       <div className="grid grid-cols-1 gap-5 mb-8">
         {/* Groq Card */}
-        <Card title={t("settings.integrations.groqTitle", "Groq Llama 3")} icon={<Cpu size={16} className="text-[#1a4d40] dark:text-[#1b9277]" />}>
+        <Card title={t("settings.integrations.groqTitle", "Groq")} icon={<Cpu size={16} className="text-[#1a4d40] dark:text-[#1b9277]" />}>
           <div className="flex items-center justify-between pb-3 mb-3 border-b border-black/5 dark:border-white/5">
             <div>
               <p className="font-bold text-[13px] text-[#122222] dark:text-white">{t("settings.integrations.groqToggleLabel", "Enable Groq Enrichment")}</p>
-              <p className="text-[11px] text-[#122222]/60 dark:text-white/60 mt-0.5">{t("settings.integrations.groqToggleDesc", "Activate fast Llama 3 metadata generation.")}</p>
+              <p className="text-[11px] text-[#122222]/60 dark:text-white/60 mt-0.5">{t("settings.integrations.groqToggleDesc", "Activate fast AI metadata generation.")}</p>
             </div>
             <Toggle checked={prefs.groqEnabled} onChange={v => update({ groqEnabled: v })} />
           </div>
@@ -1144,7 +1152,7 @@ function IntegrationsTab({ prefs, update }: TabProps) {
                     defaultValue={prefs.groqApiKey}
                     disabled={!prefs.groqEnabled}
                     placeholder={t("settings.integrations.groqPlaceholder")}
-                    onBlur={e => update({ groqApiKey: e.target.value })}
+                    onBlur={e => update({ groqApiKey: e.target.value.trim() })}
                     className={inputCls + " pr-10"}
                   />
                   <button onClick={() => setShowGroqKey(!showGroqKey)} disabled={!prefs.groqEnabled} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#122222]/40 dark:text-white/40 hover:text-[#122222] dark:hover:text-white transition-colors">
@@ -1162,6 +1170,7 @@ function IntegrationsTab({ prefs, update }: TabProps) {
               </div>
               {testGroqResult === "ok" && <p className="text-[12px] text-[#1a4d40] dark:text-[#1b9277] font-bold mt-2 flex items-center gap-1"><CheckCircle2 size={13} /> {t("common.confirm")}</p>}
               {testGroqResult === "invalid" && <p className="text-[12px] text-red-500 font-bold mt-2 flex items-center gap-1"><AlertTriangle size={13} /> {t("settings.integrations.groqInvalidKey", "Invalid or expired API key (401). Generate a new key at console.groq.com and paste it here.")}</p>}
+              {testGroqResult === "noModel" && <p className="text-[12px] text-red-500 font-bold mt-2 flex items-center gap-1"><AlertTriangle size={13} /> {t("settings.integrations.groqNoModel", { model: GROQ_MODEL })}</p>}
               {testGroqResult === "fail" && <p className="text-[12px] text-red-500 font-bold mt-2 flex items-center gap-1"><AlertTriangle size={13} /> {t("settings.integrations.groqTestFailed", "Couldn't reach Groq. Check your connection and try again.")}</p>}
             </Field>
             <p className="text-[11px] text-[#122222]/40 dark:text-white/40 mt-3 font-medium">
