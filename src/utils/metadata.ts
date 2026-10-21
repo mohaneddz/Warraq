@@ -297,6 +297,11 @@ export async function fetchBookMetadataByIsbn(isbn: string): Promise<ExternalBoo
   return fetchBookMetadata(isbn);
 }
 
+/** Groq shut down llama-3.1-8b-instant on 2026-08-16 (every call returned 400
+ * model_decommissioned); gpt-oss-20b is its listed replacement. Check
+ * https://console.groq.com/docs/deprecations before changing this. */
+export const GROQ_MODEL = "openai/gpt-oss-20b";
+
 export async function enrichMetadataWithGroq(
   queryOrIsbn: string,
   existingMetadata: Partial<ExternalBookMetadata>,
@@ -353,7 +358,7 @@ Return ONLY the JSON object. Do not include any explanations, introduction, mark
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: "llama-3.1-8b-instant",
+        model: GROQ_MODEL,
         messages: [
           {
             role: "user",
@@ -361,6 +366,7 @@ Return ONLY the JSON object. Do not include any explanations, introduction, mark
           }
         ],
         response_format: { type: "json_object" },
+        reasoning_effort: "low",
         temperature: 0.1
       })
     });
