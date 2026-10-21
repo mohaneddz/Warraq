@@ -1,3 +1,5 @@
+import { hasValidIsbnChecksum, normalizeIsbn } from "./isbn";
+
 /** Plain `fetch()` never times out on its own — a single unresponsive lookup (dead DNS, a
  * silently-hanging proxy, etc.) would otherwise stall the whole bulk-enrichment batch forever
  * on one book with no error and no way out. Aborts and rejects after `timeoutMs` instead. */
@@ -331,7 +333,7 @@ export async function enrichMetadataWithGroq(
 A book lookup for query or ISBN "${queryOrIsbn}" returned the following partial/existing information:
 ${JSON.stringify(existingMetadata, null, 2)}
 
-Your task is to identify the book and fill in any missing or empty fields, or correct/refine existing ones if they are clearly incorrect or incomplete.
+Your task is to identify the book and fill in any missing or empty fields. Existing non-empty values come from library databases; repeat them unchanged.
 Specifically, you MUST return a valid JSON object with the following keys and values:
 - "title": string (The official full title of the book)
 - "subtitle": string (The subtitle of the book, otherwise empty string)
@@ -405,28 +407,37 @@ Return ONLY the JSON object. Do not include any explanations, introduction, mark
     throw new Error("Groq returned a response that isn't valid JSON.");
   }
 
-  const arabic_title = parsed.arabic_title || existingMetadata.arabic_title || "";
-  const subtitle = parsed.subtitle || existingMetadata.subtitle || "";
-  const description = parsed.description || existingMetadata.description || "";
+  // Google Books/Open Library are the source of truth for bibliographic facts; Groq only fills
+  // what they left blank. Letting the model "correct" them swapped real ISBNs, authors and
+  // Dewey codes for plausible-looking guesses.
+  const groqIsbn = (value: unknown) => {
+    const clean = typeof value === "string" ? normalizeIsbn(value) : "";
+    return clean && hasValidIsbnChecksum(clean) ? clean : null;
+  };
+  const existingDescription = existingMetadata.description || "";
+  const arabic_title = existingMetadata.arabic_title || parsed.arabic_title || "";
+  const subtitle = existingMetadata.subtitle || parsed.subtitle || "";
+  const description = existingDescription.length >= 30 ? existingDescription : parsed.description || existingDescription;
   const unresolvedFields: ExternalBookMetadata["unresolvedFields"] = [];
   if (!arabic_title) unresolvedFields.push("arabic_title");
   if (!subtitle) unresolvedFields.push("subtitle");
   if (description.length < 30) unresolvedFields.push("description");
+  const parsedYear = Number(parsed.publicationYear);
   return {
-    title: parsed.title || existingMetadata.title || "",
+    title: existingMetadata.title || parsed.title || "",
     subtitle,
     arabic_title,
     tags: parsed.tags || existingMetadata.tags || "",
-    author: parsed.author || existingMetadata.author || "",
-    publisher: parsed.publisher || existingMetadata.publisher || "",
+    author: existingMetadata.author || parsed.author || "",
+    publisher: existingMetadata.publisher || parsed.publisher || "",
     category: parsed.category || existingMetadata.category || "",
-    language: parsed.language || existingMetadata.language || "English",
+    language: existingMetadata.language || parsed.language || "English",
     description,
-    publicationYear: parsed.publicationYear ? Number(parsed.publicationYear) : existingMetadata.publicationYear,
+    publicationYear: existingMetadata.publicationYear || (Number.isInteger(parsedYear) && parsedYear > 0 ? parsedYear : undefined),
     cover_url: existingMetadata.cover_url || null,
-    isbn10: parsed.isbn10 || existingMetadata.isbn10 || null,
-    isbn13: parsed.isbn13 || existingMetadata.isbn13 || null,
-    dewey_code: parsed.dewey_code || existingMetadata.dewey_code || null,
+    isbn10: existingMetadata.isbn10 || groqIsbn(parsed.isbn10),
+    isbn13: existingMetadata.isbn13 || groqIsbn(parsed.isbn13),
+    dewey_code: existingMetadata.dewey_code || parsed.dewey_code || null,
     unresolvedFields
   };
 }

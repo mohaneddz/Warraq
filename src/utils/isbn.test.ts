@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isValidIsbn, normalizeIsbn, formatIsbn } from "./isbn";
+import { isValidIsbn, normalizeIsbn, formatIsbn, hasValidIsbnChecksum } from "./isbn";
 
 describe("ISBN utilities", () => {
   it("normalizes separators and validates ISBN-13", () => {
@@ -10,6 +10,14 @@ describe("ISBN utilities", () => {
     expect(isValidIsbn("0-8044-2957-X")).toBe(true);
     expect(isValidIsbn("9780306406158")).toBe(true);
     expect(isValidIsbn("978030640615")).toBe(false);
+  });
+  it("rejects ISBNs whose check digit is wrong", () => {
+    expect(hasValidIsbnChecksum("978-0-306-40615-7")).toBe(true);
+    expect(hasValidIsbnChecksum("9780306406158")).toBe(false);
+    expect(hasValidIsbnChecksum("0-306-40615-2")).toBe(true);
+    expect(hasValidIsbnChecksum("0-8044-2957-X")).toBe(true);
+    expect(hasValidIsbnChecksum("0306406153")).toBe(false);
+    expect(hasValidIsbnChecksum("")).toBe(false);
   });
   it("formats ISBN-10 and ISBN-13 correctly with hyphens", () => {
     expect(formatIsbn("0306406152")).toBe("0-306-40615-2");

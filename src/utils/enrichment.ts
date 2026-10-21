@@ -29,6 +29,7 @@ export async function enrichBook(book: Book, opts: { groqApiKey?: string }): Pro
     // No match from Google Books/Open Library — Groq (if enabled) may still fill in fields below.
   }
 
+  const providerDewey = meta?.dewey_code;
   let usedGroq = false;
   if (opts.groqApiKey) {
     try {
@@ -52,7 +53,7 @@ export async function enrichBook(book: Book, opts: { groqApiKey?: string }): Pro
 
   if (!book.dewey_code && meta.dewey_code) {
     patch.dewey_code = meta.dewey_code;
-    notes.push(usedGroq ? "Dewey code is a Groq estimate; verify." : "Filled Dewey code from Open Library.");
+    notes.push(providerDewey ? "Filled Dewey code from Open Library." : "Dewey code is a Groq estimate; verify.");
   }
 
   if (!book.arabic_title && meta.arabic_title) {

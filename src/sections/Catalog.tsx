@@ -548,7 +548,7 @@ export function CatalogPage() {
 
         // Autofill retrieved ISBN if not already entered by the user
         const retrievedIsbn = meta.isbn13 || meta.isbn10 || "";
-        if (retrievedIsbn) {
+        if (retrievedIsbn && !addForm.getValues("isbn")?.trim()) {
           addForm.setValue("isbn", formatIsbn(retrievedIsbn));
         }
         if (meta.dewey_code && !addForm.getValues("dewey_code")) {

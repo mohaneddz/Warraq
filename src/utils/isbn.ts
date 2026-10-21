@@ -13,6 +13,27 @@ export function isValidIsbn(value: string) {
   return false;
 }
 
+/** Stricter than isValidIsbn: also verifies the check digit, which catches made-up ISBNs
+ * (e.g. ones an LLM invents) that merely have the right length. */
+export function hasValidIsbnChecksum(value: string) {
+  const isbn = normalizeIsbn(value);
+  if (!isValidIsbn(isbn)) return false;
+  if (isbn.length === 10) {
+    let sum = 0;
+    for (let i = 0; i < 10; i++) {
+      const digit = isbn[i] === "X" ? 10 : Number(isbn[i]);
+      if (digit === 10 && i !== 9) return false;
+      sum += digit * (10 - i);
+    }
+    return sum % 11 === 0;
+  }
+  let sum = 0;
+  for (let i = 0; i < 13; i++) {
+    sum += Number(isbn[i]) * (i % 2 === 0 ? 1 : 3);
+  }
+  return sum % 10 === 0;
+}
+
 export function cleanBarcode(value: string): string {
   return value.trim().toUpperCase();
 }
