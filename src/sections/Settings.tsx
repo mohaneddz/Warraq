@@ -15,7 +15,7 @@ import { useAuthStore } from "../store/authStore";
 import { changeOwnPassword, listUsers, createUser, updateUser, resetPassword, deleteUser } from "../data/auth";
 import { books as fetchAllBooks } from "../data/repositories/library";
 import { findEnrichableBooks, enrichAllBooks, type EnrichProgress } from "../utils/enrichment";
-import { GROQ_MODEL } from "../utils/metadata";
+import { GROQ_MODEL, resolveGroqModel } from "../utils/metadata";
 import type { PublicUser, UserRole, UserStatus } from "../types";
 import { Button, Input, Modal } from "../components/ui/primitives";
 import { useTranslation } from "react-i18next";
@@ -1085,7 +1085,7 @@ function IntegrationsTab({ prefs, update }: TabProps) {
       }
       await enrichAllBooks(
         targets,
-        { groqApiKey: prefs.groqEnabled ? prefs.groqApiKey.trim() : undefined },
+        { groqApiKey: prefs.groqEnabled ? prefs.groqApiKey.trim() : undefined, groqModel: prefs.groqModel },
         (progress) => setEnrichLog((prev) => [...prev, progress]),
         () => enrichCancelRef.current
       );
@@ -1114,7 +1114,7 @@ function IntegrationsTab({ prefs, update }: TabProps) {
       // A valid key isn't enough: when Groq retired the model autofill used, this test kept
       // passing while every lookup failed. Confirm the model enrichment calls is still served.
       const { data } = await res.json();
-      setTestGroqResult(Array.isArray(data) && data.some((m: { id: string }) => m.id === GROQ_MODEL) ? "ok" : "noModel");
+      setTestGroqResult(Array.isArray(data) && data.some((m: { id: string }) => m.id === resolveGroqModel(prefs.groqModel)) ? "ok" : "noModel");
     } catch {
       setTestGroqResult("fail");
     } finally {
@@ -1170,8 +1170,23 @@ function IntegrationsTab({ prefs, update }: TabProps) {
               </div>
               {testGroqResult === "ok" && <p className="text-[12px] text-[#1a4d40] dark:text-[#1b9277] font-bold mt-2 flex items-center gap-1"><CheckCircle2 size={13} /> {t("common.confirm")}</p>}
               {testGroqResult === "invalid" && <p className="text-[12px] text-red-500 font-bold mt-2 flex items-center gap-1"><AlertTriangle size={13} /> {t("settings.integrations.groqInvalidKey", "Invalid or expired API key (401). Generate a new key at console.groq.com and paste it here.")}</p>}
-              {testGroqResult === "noModel" && <p className="text-[12px] text-red-500 font-bold mt-2 flex items-center gap-1"><AlertTriangle size={13} /> {t("settings.integrations.groqNoModel", { model: GROQ_MODEL })}</p>}
+              {testGroqResult === "noModel" && <p className="text-[12px] text-red-500 font-bold mt-2 flex items-center gap-1"><AlertTriangle size={13} /> {t("settings.integrations.groqNoModel", { model: resolveGroqModel(prefs.groqModel) })}</p>}
               {testGroqResult === "fail" && <p className="text-[12px] text-red-500 font-bold mt-2 flex items-center gap-1"><AlertTriangle size={13} /> {t("settings.integrations.groqTestFailed", "Couldn't reach Groq. Check your connection and try again.")}</p>}
+            </Field>
+            <Field label={t("settings.integrations.groqModel", "Model")}>
+              <input
+                type="text"
+                defaultValue={prefs.groqModel}
+                disabled={!prefs.groqEnabled}
+                placeholder={GROQ_MODEL}
+                spellCheck={false}
+                autoComplete="off"
+                onBlur={e => update({ groqModel: e.target.value.trim() })}
+                className={inputCls}
+              />
+              <p className="text-[11px] text-[#122222]/50 dark:text-white/50 mt-2 font-normal leading-normal">
+                {t("settings.integrations.groqModelHelp", { model: GROQ_MODEL })}
+              </p>
             </Field>
             <p className="text-[11px] text-[#122222]/40 dark:text-white/40 mt-3 font-medium">
               {t("settings.integrations.groqHelp")}
