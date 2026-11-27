@@ -104,6 +104,7 @@ This file documents all the configuration settings available in the Warraq setti
 | **OpenLibrary API** | `openLibraryEnabled` | Boolean | `true` / `false` | Fallback lookup service for digital catalog auto-fill. |
 | **OpenAI API Key** | `openAIKey` | Password String | String | Key used for optional AI-assisted summaries and content extraction. |
 | **Groq API Key** | `groqApiKey` | Password String | String | Key used for fast local LLM actions and metadata filling. |
+| **Groq Model** | `groqModel` | Text | Model id, e.g. `openai/gpt-oss-20b` | Model used for autofill. Blank uses the built-in default, so a retired model can be swapped without an app update. |
 
 ---
 
