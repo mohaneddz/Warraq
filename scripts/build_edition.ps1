@@ -26,7 +26,10 @@
 param(
     [Parameter(Mandatory = $true)]
     [ValidateSet('public', 'client')]
-    [string]$Edition
+    [string]$Edition,
+
+    # Skip the build and only scan what is already in src-tauri\target and dist. Nothing is copied.
+    [switch]$ScanOnly
 )
 
 $ErrorActionPreference = 'Stop'
@@ -39,7 +42,8 @@ $dist = Join-Path $ProjectRoot 'dist'
 $bundleDir = Join-Path $ProjectRoot 'src-tauri\target\release\bundle\nsis'
 $outDir = Join-Path $ProjectRoot "release\$Edition"
 
-# Values worth hunting for. Short ones (a username) would match unrelated text, so they are skipped.
+# Values worth hunting for. Short ones (a username) would match unrelated text, so they are skipped;
+# anything named like a password or key is kept down to 8 characters.
 function Read-SecretValues {
     $envFile = Join-Path $ProjectRoot '.env'
     $found = [ordered]@{}
@@ -47,27 +51,32 @@ function Read-SecretValues {
     foreach ($line in Get-Content $envFile) {
         if ($line -match '^\s*#' -or $line -notmatch '^\s*([A-Za-z0-9_]+)\s*=\s*(.*?)\s*$') { continue }
         $name = $Matches[1]; $value = $Matches[2].Trim('"').Trim("'")
-        if ($value.Length -ge 12) { $found[$name] = $value }
+        $secretLike = $name -match 'PASSWORD|SECRET|KEY|TOKEN|STRING'
+        if ($value.Length -ge 12 -or ($secretLike -and $value.Length -ge 8)) { $found[$name] = $value }
     }
     return $found
 }
 
 function Test-ContainsValue([byte[]]$bytes, [string]$value) {
-    $text = [System.Text.Encoding]::Latin1.GetString($bytes)
+    $text = [System.Text.Encoding]::GetEncoding(28591).GetString($bytes)
     return $text.Contains($value)
 }
 
-Write-Host "Building Warraq $version, $Edition edition" -ForegroundColor Cyan
-
-$env:WARRAQ_EDITION = $Edition
-$tauriArgs = @('tauri', 'build', '--bundles', 'nsis')
-if ($Edition -eq 'client') { $tauriArgs += @('--features', 'client') }
-
-& pnpm @tauriArgs
-if ($LASTEXITCODE -ne 0) { throw "tauri build failed" }
-
 $installer = Join-Path $bundleDir "Warraq_${version}_x64-setup.exe"
-if (-not (Test-Path $installer)) { throw "Expected installer not found: $installer" }
+
+if ($ScanOnly) {
+    Write-Host "Scanning the existing build as the $Edition edition (no build, nothing copied)" -ForegroundColor Cyan
+} else {
+    Write-Host "Building Warraq $version, $Edition edition" -ForegroundColor Cyan
+
+    $env:WARRAQ_EDITION = $Edition
+    $tauriArgs = @('tauri', 'build', '--bundles', 'nsis')
+    if ($Edition -eq 'client') { $tauriArgs += @('--features', 'client') }
+
+    & pnpm @tauriArgs
+    if ($LASTEXITCODE -ne 0) { throw "tauri build failed" }
+    if (-not (Test-Path $installer)) { throw "Expected installer not found: $installer" }
+}
 
 # --- What went into the installer ---
 $secrets = Read-SecretValues
@@ -97,6 +106,8 @@ if ($Edition -eq 'public' -and $hits.Count -gt 0) {
 if ($Edition -eq 'client' -and $secrets.Contains('SECRET_KEY') -and -not $hits.ContainsKey('SECRET_KEY')) {
     throw "The CLIENT build is missing the baked-in SECRET_KEY, so it would not run without setup. Is --features client reaching cargo?"
 }
+
+if ($ScanOnly) { Write-Host "`nScan passed for the $Edition edition." -ForegroundColor Green; return }
 
 # --- Hand the installer over ---
 New-Item -ItemType Directory -Path $outDir -Force | Out-Null
