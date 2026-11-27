@@ -16,6 +16,8 @@ import { changeOwnPassword, listUsers, createUser, updateUser, resetPassword, de
 import { books as fetchAllBooks } from "../data/repositories/library";
 import { findEnrichableBooks, enrichAllBooks, type EnrichProgress } from "../utils/enrichment";
 import { GROQ_MODEL, resolveGroqModel } from "../utils/metadata";
+import { clearConnection, connectionSource, getConnection } from "../data/connection";
+import { SchemaPanel } from "../components/setup/SchemaPanel";
 import type { PublicUser, UserRole, UserStatus } from "../types";
 import { Button, Input, Modal } from "../components/ui/primitives";
 import { useTranslation } from "react-i18next";
@@ -926,6 +928,61 @@ function BackupTab() {
 // ═══════════════════════════════════════════════════════════════════════════════
 // 9. DATABASE TAB
 // ═══════════════════════════════════════════════════════════════════════════════
+/** Which Supabase project this install uses, with the way to switch it (public edition only). */
+function ConnectionCard() {
+  const { t } = useTranslation();
+  const source = connectionSource();
+  const connection = getConnection();
+  const [working, setWorking] = useState(false);
+
+  if (!connection) return null;
+
+  const handleChange = async () => {
+    if (!window.confirm(t("settings.database.changeConnectionConfirm", "Disconnect from this database and run the setup again? Your data stays in Supabase; this only changes which project Warraq uses."))) return;
+    setWorking(true);
+    try {
+      const { invoke } = await import("@tauri-apps/api/core");
+      await invoke("clear_connection");
+      clearConnection();
+      window.location.reload();
+    } catch (err) {
+      console.error("Could not clear the saved connection", err);
+      setWorking(false);
+    }
+  };
+
+  return (
+    <Card title={t("settings.database.connectionTitle", "Connection")} icon={<Server size={16} className="text-[#1a4d40]" />}>
+      <p className="text-[12px] leading-relaxed text-[#122222]/70 dark:text-white/70">
+        {source === "built-in"
+          ? t("settings.database.connectionBuiltIn", "This edition of Warraq is built for one database, so the connection can't be changed here.")
+          : t("settings.database.connectionSaved", "Warraq is using the Supabase project you set up on this computer.")}
+      </p>
+      {source === "saved" && (
+        <>
+          <div className="mt-4 border-t border-black/5 pt-4 dark:border-white/5">
+            <p className="mb-1 text-[13px] font-bold text-[#122222] dark:text-white">{t("settings.database.tablesTitle", "Database tables")}</p>
+            <p className="mb-3 text-[12px] leading-relaxed text-[#122222]/60 dark:text-white/60">
+              {t("settings.database.tablesHelp", "The script that creates Warraq's tables. Only run it on a new, empty project; running it again on one that already has them will fail.")}
+            </p>
+            <SchemaPanel connection={connection} />
+          </div>
+          <div className="mt-4 border-t border-black/5 pt-4 dark:border-white/5">
+            <button
+              type="button"
+              onClick={() => void handleChange()}
+              disabled={working}
+              className="rounded-lg border border-black/10 px-4 py-2 text-[13px] font-semibold text-[#122222] transition-colors hover:bg-black/5 disabled:opacity-50 dark:border-white/10 dark:text-white dark:hover:bg-white/5"
+            >
+              {t("settings.database.changeConnection", "Use a different database")}
+            </button>
+          </div>
+        </>
+      )}
+    </Card>
+  );
+}
+
 function DatabaseTab() {
   const { t } = useTranslation();
   const [showDanger, setShowDanger] = useState(false);
@@ -935,7 +992,7 @@ function DatabaseTab() {
 
   // Guard against VITE_SUPABASE_URL being undefined — a bare `.replace` here would throw and crash
   // the whole Database tab render.
-  const supabaseUrl = (import.meta.env.VITE_SUPABASE_URL as string | undefined) ?? "";
+  const supabaseUrl = getConnection()?.url ?? "";
   const stats = [
     { label: t("settings.database.infoName"), value: librarySettings.library_name },
     { label: t("settings.database.infoEngine"), value: "Supabase (Postgres)" },
@@ -996,6 +1053,8 @@ function DatabaseTab() {
           ))}
         </div>
       </Card>
+
+      <ConnectionCard />
 
       <Card title={t("settings.database.dangerTitle")} icon={<AlertTriangle size={16} className="text-red-500" />}>
         <p className="text-[12px] text-[#122222]/70 dark:text-white/70 mb-4 font-normal">

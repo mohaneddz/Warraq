@@ -1388,7 +1388,14 @@
       "factoryResetBtnRunning": "Resetting…",
       "factoryResetConfirm1": "⚠️ FACTORY RESET\n\nThis will PERMANENTLY DELETE all books, members, loans, reservations, and settings.\nThis cannot be undone.\n\nAre you absolutely sure?",
       "factoryResetConfirm2": "Last chance: type OK to confirm you want to wipe all data and start fresh.",
-      "factoryResetSuccess": "Factory reset complete. Warraq will now reload."
+      "factoryResetSuccess": "Factory reset complete. Warraq will now reload.",
+      "connectionTitle": "Connection",
+      "connectionBuiltIn": "This edition of Warraq is built for one database, so the connection can't be changed here.",
+      "connectionSaved": "Warraq is using the Supabase project you set up on this computer.",
+      "tablesTitle": "Database tables",
+      "tablesHelp": "The script that creates Warraq's tables. Only run it on a new, empty project; running it again on one that already has them will fail.",
+      "changeConnection": "Use a different database",
+      "changeConnectionConfirm": "Disconnect from this database and run the setup again? Your data stays in Supabase; this only changes which project Warraq uses."
     },
     "integrations": {
       "title": "Integrations & AI",
@@ -1718,5 +1725,70 @@
     "english": "English",
     "arabic": "Arabic",
     "french": "French"
+  },
+  "setup": {
+    "title": "First time setup",
+    "back": "Back",
+    "continue": "Continue",
+    "steps": {
+      "connect": "Connect",
+      "schema": "Tables",
+      "admin": "Administrator"
+    },
+    "connect": {
+      "title": "Connect your Supabase project",
+      "intro": "Warraq keeps your library in your own Supabase database. Create a free project at supabase.com, then copy the details below from Project Settings, API Keys.",
+      "projectUrl": "Project URL",
+      "projectUrlHint": "Looks like https://abcdefghijklmnopqrst.supabase.co. The 20 character project reference alone works too.",
+      "anonKey": "Publishable key",
+      "anonKeyHint": "Starts with sb_publishable_ or eyJ. It is safe to expose: the database rules protect your data, not this key.",
+      "serviceKey": "Secret key (service role)",
+      "serviceKeyHint": "Used only to create and manage staff accounts. It is kept on this computer, in Windows Credential Manager, and never reaches the app's screens.",
+      "openKeys": "Open this project's API keys page",
+      "test": "Test connection",
+      "testing": "Testing…"
+    },
+    "schema": {
+      "title": "Create the tables",
+      "intro": "A new project is empty, so Warraq needs its tables first. One script builds all of them. Run it once, on this project only.",
+      "step1": "Copy the script below, or save it as a file.",
+      "step2": "Open your project's SQL editor, paste the script and press Run.",
+      "step3": "Come back here and press Check.",
+      "copy": "Copy SQL",
+      "copied": "Copied",
+      "save": "Save as file",
+      "saved": "Saved to Downloads",
+      "openEditor": "Open SQL editor",
+      "check": "Check",
+      "checking": "Checking…",
+      "installed": "The tables are in place.",
+      "missing": "No tables found yet. Run the script in the SQL editor, then check again.",
+      "unknown": "Couldn't tell. Check your connection and try again."
+    },
+    "admin": {
+      "title": "Create the administrator account",
+      "intro": "This is the account you will sign in with. You can add librarians later in Settings, Users and Access.",
+      "username": "Username",
+      "password": "Password",
+      "passwordHint": "At least 8 characters.",
+      "confirm": "Confirm password",
+      "email": "Email (optional)",
+      "finish": "Finish setup",
+      "finishing": "Setting up…",
+      "skip": "This project already has an administrator. Skip this step."
+    },
+    "errors": {
+      "badUrl": "That doesn't look like a Supabase project URL. It should look like https://abcdefghijklmnopqrst.supabase.co",
+      "noAnonKey": "Paste the publishable key.",
+      "anonIsSecret": "That is the secret key. The publishable key goes in this box; the secret key goes in the one below.",
+      "noServiceKey": "Paste the secret (service role) key. Warraq needs it to create staff accounts.",
+      "serviceIsPublishable": "That is the publishable key. Paste the secret (service role) key here.",
+      "badKey": "Supabase rejected the publishable key. Copy it again from Project Settings, API Keys.",
+      "notFound": "No project exists at that address. Check the project URL.",
+      "unreachable": "Couldn't reach Supabase. Check your internet connection and the project URL.",
+      "badUsername": "The username needs at least 3 characters.",
+      "shortPassword": "The password needs at least 8 characters.",
+      "mismatch": "The two passwords don't match."
+    }
   }
 }

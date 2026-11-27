@@ -1388,7 +1388,14 @@
       "factoryResetBtnRunning": "Réinitialisation…",
       "factoryResetConfirm1": "⚠️ RÉINITIALISATION D'USINE\n\nCette action supprimera DÉFINITIVEMENT tous les livres, membres, prêts, réservations et paramètres.\nCette action est irréversible.\n\nÊtes-vous sûr ?",
       "factoryResetConfirm2": "Dernière chance : tapez OK pour confirmer la suppression complète.",
-      "factoryResetSuccess": "Réinitialisation réussie. L'application va redémarrer."
+      "factoryResetSuccess": "Réinitialisation réussie. L'application va redémarrer.",
+      "connectionTitle": "Connexion",
+      "connectionBuiltIn": "Cette édition de Warraq est conçue pour une seule base de données ; la connexion ne peut pas être modifiée ici.",
+      "connectionSaved": "Warraq utilise le projet Supabase que vous avez configuré sur cet ordinateur.",
+      "tablesTitle": "Tables de la base de données",
+      "tablesHelp": "Le script qui crée les tables de Warraq. À exécuter uniquement sur un projet neuf et vide ; le relancer sur un projet qui les contient déjà échouera.",
+      "changeConnection": "Utiliser une autre base de données",
+      "changeConnectionConfirm": "Se déconnecter de cette base et relancer la configuration ? Vos données restent dans Supabase ; cela change seulement le projet utilisé par Warraq."
     },
     "integrations": {
       "title": "Intégrations & IA",
@@ -1718,5 +1725,70 @@
     "english": "Anglais",
     "arabic": "Arabe",
     "french": "Français"
+  },
+  "setup": {
+    "title": "Première configuration",
+    "back": "Retour",
+    "continue": "Continuer",
+    "steps": {
+      "connect": "Connexion",
+      "schema": "Tables",
+      "admin": "Administrateur"
+    },
+    "connect": {
+      "title": "Connectez votre projet Supabase",
+      "intro": "Warraq conserve votre bibliothèque dans votre propre base Supabase. Créez un projet gratuit sur supabase.com, puis copiez les informations ci-dessous depuis Project Settings, API Keys.",
+      "projectUrl": "URL du projet",
+      "projectUrlHint": "Ressemble à https://abcdefghijklmnopqrst.supabase.co. La référence du projet (20 caractères) seule fonctionne aussi.",
+      "anonKey": "Clé publique (publishable)",
+      "anonKeyHint": "Commence par sb_publishable_ ou eyJ. Elle peut être exposée : ce sont les règles de la base qui protègent vos données, pas cette clé.",
+      "serviceKey": "Clé secrète (service role)",
+      "serviceKeyHint": "Utilisée uniquement pour créer et gérer les comptes du personnel. Elle reste sur cet ordinateur, dans le Gestionnaire d'informations d'identification Windows, et n'atteint jamais les écrans de l'application.",
+      "openKeys": "Ouvrir la page des clés API de ce projet",
+      "test": "Tester la connexion",
+      "testing": "Test en cours…"
+    },
+    "schema": {
+      "title": "Créer les tables",
+      "intro": "Un nouveau projet est vide : Warraq a d'abord besoin de ses tables. Un seul script les crée toutes. Exécutez-le une fois, sur ce projet uniquement.",
+      "step1": "Copiez le script ci-dessous, ou enregistrez-le dans un fichier.",
+      "step2": "Ouvrez l'éditeur SQL de votre projet, collez le script et appuyez sur Run.",
+      "step3": "Revenez ici et appuyez sur Vérifier.",
+      "copy": "Copier le SQL",
+      "copied": "Copié",
+      "save": "Enregistrer en fichier",
+      "saved": "Enregistré dans Téléchargements",
+      "openEditor": "Ouvrir l'éditeur SQL",
+      "check": "Vérifier",
+      "checking": "Vérification…",
+      "installed": "Les tables sont en place.",
+      "missing": "Aucune table trouvée pour l'instant. Exécutez le script dans l'éditeur SQL, puis vérifiez à nouveau.",
+      "unknown": "Impossible de savoir. Vérifiez votre connexion et réessayez."
+    },
+    "admin": {
+      "title": "Créer le compte administrateur",
+      "intro": "C'est le compte avec lequel vous vous connecterez. Vous pourrez ajouter des bibliothécaires plus tard dans Paramètres, Utilisateurs et accès.",
+      "username": "Nom d'utilisateur",
+      "password": "Mot de passe",
+      "passwordHint": "Au moins 8 caractères.",
+      "confirm": "Confirmer le mot de passe",
+      "email": "E-mail (facultatif)",
+      "finish": "Terminer la configuration",
+      "finishing": "Configuration…",
+      "skip": "Ce projet a déjà un administrateur. Passer cette étape."
+    },
+    "errors": {
+      "badUrl": "Cela ne ressemble pas à une URL de projet Supabase. Elle doit ressembler à https://abcdefghijklmnopqrst.supabase.co",
+      "noAnonKey": "Collez la clé publique.",
+      "anonIsSecret": "C'est la clé secrète. La clé publique va dans ce champ ; la clé secrète va dans celui du dessous.",
+      "noServiceKey": "Collez la clé secrète (service role). Warraq en a besoin pour créer les comptes du personnel.",
+      "serviceIsPublishable": "C'est la clé publique. Collez ici la clé secrète (service role).",
+      "badKey": "Supabase a refusé la clé publique. Copiez-la à nouveau depuis Project Settings, API Keys.",
+      "notFound": "Aucun projet n'existe à cette adresse. Vérifiez l'URL du projet.",
+      "unreachable": "Impossible de joindre Supabase. Vérifiez votre connexion internet et l'URL du projet.",
+      "badUsername": "Le nom d'utilisateur doit contenir au moins 3 caractères.",
+      "shortPassword": "Le mot de passe doit contenir au moins 8 caractères.",
+      "mismatch": "Les deux mots de passe ne correspondent pas."
+    }
   }
 }
