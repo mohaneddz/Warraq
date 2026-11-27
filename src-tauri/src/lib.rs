@@ -1,4 +1,5 @@
 mod admin;
+mod connection;
 
 use tauri::{Emitter, Manager, WindowEvent};
 use tauri::menu::{MenuBuilder, MenuItemBuilder};
@@ -85,6 +86,9 @@ pub fn run() {
     // real OS environment variables work either way.
     dotenvy::dotenv().ok();
 
+    // Public edition: the project saved by the first-run setup (see connection.rs).
+    connection::load();
+
     tauri::Builder::default()
         .plugin(tauri_plugin_store::Builder::default().build())
         .plugin(tauri_plugin_autostart::init(tauri_plugin_autostart::MacosLauncher::LaunchAgent, None))
@@ -118,6 +122,9 @@ pub fn run() {
             validate_provider_url,
             application_diagnostics,
             set_close_to_tray,
+            connection::save_connection,
+            connection::clear_connection,
+            connection::connection_status,
             admin::get_login_accounts,
             admin::admin_bootstrap_if_needed,
             admin::admin_create_staff,

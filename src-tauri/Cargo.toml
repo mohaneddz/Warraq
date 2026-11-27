@@ -15,6 +15,11 @@ license = "PolyForm-Noncommercial-1.0.0"
 name = "warraq_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
+[features]
+# The client edition. Bakes the build machine's .env (service-role key, admin login) into the
+# binary; see build.rs. Off by default so a plain build can never contain those values.
+client = []
+
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 dotenvy = "0.15"
@@ -39,6 +44,9 @@ reqwest = { version = "0.12", default-features = false, features = ["json", "rus
 url = "2"
 dotenvy = "0.15"
 
+[target.'cfg(windows)'.dependencies]
+# Keeps the service-role key saved by the first-run setup out of the webview's reach.
+keyring = { version = "3", features = ["windows-native"] }
 
 # Read the optimization guideline for more details: https://tauri.app/concept/size/#cargo-configuration
 [profile.release]

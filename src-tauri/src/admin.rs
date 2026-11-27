@@ -15,10 +15,19 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 
 /// Reads a runtime env var (real OS env or a .env dropped next to the exe, loaded via
-/// dotenvy in lib.rs), falling back to the value baked into the binary at build time from
-/// the build machine's .env (see build.rs) so a distributed install works out of the box.
+/// dotenvy in lib.rs), then the value baked into the binary at build time (client edition only,
+/// see build.rs), then whatever the first-run setup saved (public edition, see connection.rs).
 fn env_or_embedded(key: &str, embedded: Option<&'static str>) -> Option<String> {
-    std::env::var(key).ok().or_else(|| embedded.map(String::from)).filter(|v| !v.is_empty())
+    std::env::var(key)
+        .ok()
+        .or_else(|| embedded.map(String::from))
+        .or_else(|| match key {
+            "PROJECT_ID" => crate::connection::saved_project_id(),
+            "PUBLISHABLE_KEY" => crate::connection::saved_publishable_key(),
+            "SECRET_KEY" => crate::connection::saved_service_key(),
+            _ => None,
+        })
+        .filter(|v| !v.is_empty())
 }
 
 fn supabase_url() -> Result<String, String> {
@@ -234,13 +243,20 @@ async fn find_auth_user_by_email(
     Ok(None)
 }
 
-/// Creates the one administrator account from WARRAQ_ADMIN_USERNAME / WARRAQ_ADMIN_PASSWORD
-/// (and optional WARRAQ_ADMIN_EMAIL) the first time the app runs against an empty
+/// Creates the one administrator account the first time the app runs against an empty
 /// `profiles` table. Returns Ok(true) if an admin was just created, Ok(false) if one
 /// already exists. Uses the service-role key directly (there is no admin yet to hold a
 /// token), exactly like the previous SQLite bootstrap only ever ran once.
+///
+/// The credentials come from the first-run setup (`username`, `password`, `email`); when the
+/// caller passes none, WARRAQ_ADMIN_USERNAME / WARRAQ_ADMIN_PASSWORD / WARRAQ_ADMIN_EMAIL from
+/// the environment (or the client edition's build) are used instead.
 #[tauri::command]
-pub async fn admin_bootstrap_if_needed() -> Result<bool, String> {
+pub async fn admin_bootstrap_if_needed(
+    username: Option<String>,
+    password: Option<String>,
+    email: Option<String>,
+) -> Result<bool, String> {
     let url = supabase_url()?;
     let service = service_key()?;
     let client = reqwest::Client::new();
@@ -252,20 +268,37 @@ pub async fn admin_bootstrap_if_needed() -> Result<bool, String> {
         .send()
         .await
         .map_err(|e| e.to_string())?;
+    if !existing.status().is_success() {
+        let status = existing.status();
+        let body = existing.text().await.unwrap_or_default();
+        return Err(match status.as_u16() {
+            401 | 403 => "Supabase rejected the secret (service role) key. Copy it again from Project Settings, API Keys.".to_string(),
+            404 => "The Warraq tables are missing from this project. Run the schema script in the Supabase SQL editor first.".to_string(),
+            _ => format!("Supabase answered {status}: {body}"),
+        });
+    }
     let rows: Vec<serde_json::Value> = existing.json().await.map_err(|e| e.to_string())?;
     if !rows.is_empty() {
         return Ok(false);
     }
 
-    let username = env_or_embedded("WARRAQ_ADMIN_USERNAME", option_env!("WARRAQ_ADMIN_USERNAME")).ok_or_else(|| {
-        "No administrator account exists yet and WARRAQ_ADMIN_USERNAME is not set. Add WARRAQ_ADMIN_USERNAME and WARRAQ_ADMIN_PASSWORD to a .env file next to the application (or the environment) and restart Warraq.".to_string()
-    })?;
-    let password = env_or_embedded("WARRAQ_ADMIN_PASSWORD", option_env!("WARRAQ_ADMIN_PASSWORD")).ok_or_else(|| {
-        "No administrator account exists yet and WARRAQ_ADMIN_PASSWORD is not set. Add WARRAQ_ADMIN_USERNAME and WARRAQ_ADMIN_PASSWORD to a .env file next to the application (or the environment) and restart Warraq.".to_string()
-    })?;
+    let username = username
+        .filter(|v| !v.trim().is_empty())
+        .or_else(|| env_or_embedded("WARRAQ_ADMIN_USERNAME", option_env!("WARRAQ_ADMIN_USERNAME")))
+        .ok_or_else(|| {
+            "No administrator account exists yet. Choose a username and password to create one.".to_string()
+        })?;
+    let password = password
+        .filter(|v| !v.is_empty())
+        .or_else(|| env_or_embedded("WARRAQ_ADMIN_PASSWORD", option_env!("WARRAQ_ADMIN_PASSWORD")))
+        .ok_or_else(|| {
+            "No administrator account exists yet. Choose a username and password to create one.".to_string()
+        })?;
     let username = validate_username(&username)?;
     validate_password(&password)?;
-    let email_env = env_or_embedded("WARRAQ_ADMIN_EMAIL", option_env!("WARRAQ_ADMIN_EMAIL"));
+    let email_env = email
+        .filter(|v| !v.trim().is_empty())
+        .or_else(|| env_or_embedded("WARRAQ_ADMIN_EMAIL", option_env!("WARRAQ_ADMIN_EMAIL")));
     let email = identity_email(&username, email_env.as_deref());
 
     let user_id = match create_auth_user(&client, &url, &service, &email, &password).await {
