@@ -30,6 +30,9 @@ where c.room_id = s.room_id and c.number = 1;
 alter table shelves drop constraint shelves_room_code_unique;
 drop index if exists idx_shelves_room_id;
 alter table shelves alter column column_id set not null;
+-- shelf_overview selects shelves.room_id, so it has to go before the column does; it is
+-- recreated below on top of columns.
+drop view if exists shelf_overview;
 alter table shelves drop column room_id;
 
 alter table shelves add constraint shelves_column_code_unique unique (column_id, code);
@@ -37,7 +40,6 @@ create index idx_shelves_column_id on shelves(column_id);
 
 drop function if exists provision_room_shelves(uuid);
 
-drop view shelf_overview;
 create view shelf_overview with (security_invoker = true) as
 select s.*, c.room_id as room_id, c.number as column_number, r.name as room,
   (select count(*) from copies where shelf_id = s.id and status != 'archived') as copy_count

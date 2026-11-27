@@ -18,20 +18,14 @@ const TESTS = "supabase/tests";
 const STUBS = join(TESTS, "supabase_stubs.sql");
 const PORT = String(55000 + Math.floor(Math.random() * 1000));
 
-// These fail on a fresh database, so they are applied without stopping until they are fixed:
-//   0011 returns `role user_role`, but profiles.role is staff_role and nothing creates user_role.
-//   0012 drops shelves.room_id before dropping the shelf_overview view that depends on it.
-// Neither touches circulation, so the tests below are unaffected.
-const KNOWN_BROKEN = new Set(["0011_login_accounts.sql", "0012_shelf_columns.sql"]);
-
 const dataDir = mkdtempSync(join(tmpdir(), "warraq_sql_"));
 
 function run(cmd, args, { quiet = false } = {}) {
   return execFileSync(cmd, args, { stdio: quiet ? ["ignore", "ignore", "inherit"] : "inherit" });
 }
 
-function psql(file, { stopOnError = true } = {}) {
-  run("psql", ["-p", PORT, "-U", "postgres", "-d", "warraq", "-q", "-X",
+function psql(file, { stopOnError = true, db = "warraq" } = {}) {
+  run("psql", ["-p", PORT, "-U", "postgres", "-d", db, "-q", "-X",
     "-v", `ON_ERROR_STOP=${stopOnError ? 1 : 0}`, "-f", file]);
 }
 
@@ -45,12 +39,7 @@ try {
 
   psql(STUBS);
   for (const file of readdirSync(MIGRATIONS).filter((f) => f.endsWith(".sql")).sort()) {
-    if (KNOWN_BROKEN.has(file)) {
-      console.warn(`warning: ${file} is known not to apply; errors from it are ignored`);
-      psql(join(MIGRATIONS, file), { stopOnError: false });
-    } else {
-      psql(join(MIGRATIONS, file));
-    }
+    psql(join(MIGRATIONS, file));
   }
 
   const tests = readdirSync(TESTS).filter((f) => f.endsWith(".sql") && join(TESTS, f) !== STUBS).sort();
@@ -59,6 +48,13 @@ try {
     psql(join(TESTS, file));
   }
   console.log(`\n${tests.length} SQL test file(s) passed`);
+  // The script new installs paste into their own Supabase project has to build the same schema on
+  // an empty database in one go. The stubs' roles already exist cluster wide, so errors from
+  // re-running them are expected and ignored; the schema script itself must apply with none.
+  run("psql", ["-p", PORT, "-U", "postgres", "-q", "-c", "create database warraq_bundle"]);
+  psql(STUBS, { stopOnError: false, db: "warraq_bundle" });
+  psql("src/assets/schema.sql", { db: "warraq_bundle" });
+  console.log("bundled schema.sql applied cleanly to an empty database");
 } catch {
   failed = true;
 } finally {
