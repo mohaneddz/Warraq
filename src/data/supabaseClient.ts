@@ -1,12 +1,12 @@
 import { createClient } from "@supabase/supabase-js";
+import { getConnection } from "./connection";
 
-const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
-const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
+const connection = getConnection();
 
-if (!url || !anonKey) {
-  throw new Error(
-    "Missing VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY. Add them to .env and restart the dev server / rebuild."
-  );
+if (!connection) {
+  // main.tsx shows the first-run setup instead of loading the app when nothing is configured, so
+  // reaching this means something imported the client too early.
+  throw new Error("Warraq is not connected to a database yet. Finish the first-run setup before using the data layer.");
 }
 
 /**
@@ -15,7 +15,7 @@ if (!url || !anonKey) {
  * this key secret. The service-role key never appears in frontend code; it only lives in
  * src-tauri/src/admin.rs.
  */
-export const supabase = createClient(url, anonKey, {
+export const supabase = createClient(connection.url, connection.anonKey, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
