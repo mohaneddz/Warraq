@@ -10,6 +10,10 @@ const EMBEDDED_ENV_KEYS: [&str; 6] = [
 /// Bakes the Supabase/bootstrap values from the build machine's .env into the binary as
 /// compile-time env vars, so an installed build works without a .env next to the exe.
 /// admin.rs still checks the real runtime environment first, so this is only a fallback.
+///
+/// Only the client edition does this (`--features client`). Those values include the service-role
+/// key and the administrator login, so a build meant for other people must never carry them:
+/// without the feature nothing is read from .env at all.
 fn embed_dotenv_values() {
     println!("cargo:rerun-if-changed=../.env");
     if let Ok(iter) = dotenvy::from_filename_iter("../.env") {
@@ -22,6 +26,8 @@ fn embed_dotenv_values() {
 }
 
 fn main() {
-    embed_dotenv_values();
+    if std::env::var_os("CARGO_FEATURE_CLIENT").is_some() {
+        embed_dotenv_values();
+    }
     tauri_build::build()
 }
