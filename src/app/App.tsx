@@ -3,6 +3,7 @@ import { HashRouter, Navigate, Route, Routes, useNavigate } from "react-router-d
 import { ErrorBoundary } from "react-error-boundary";
 import { useTranslation } from "react-i18next";
 import { initializeDatabase } from "../data/database";
+import { clearConnection, connectionSource } from "../data/connection";
 import { bootstrapAdminIfNeeded, currentSession } from "../data/auth";
 import { useAuthStore } from "../store/authStore";
 import { Providers } from "./providers";
@@ -38,7 +39,7 @@ function Failure({ error }: { error: unknown }) {
     <main className="grid min-h-screen place-items-center bg-[#111d1a] p-6 text-[#f9f8f4]">
       <div className="max-w-lg rounded-2xl bg-[#f9f8f4] p-6 text-[#122222]">
         <h1 className="font-display text-2xl font-bold">Warraq could not start</h1>
-        <p className="mt-3 text-sm">Warraq could not reach its Supabase database. Check your internet connection, confirm the VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY settings, and try again.</p>
+        <p className="mt-3 text-sm">Warraq could not reach its Supabase database. Check your internet connection and that the project is running (free Supabase projects pause when they are unused; restore it from the Supabase dashboard), then try again.</p>
         <pre className="mt-4 overflow-auto rounded-lg bg-black/5 p-3 text-xs font-mono">{String(error)}</pre>
         <div className="flex items-center gap-3 mt-5">
           <button
@@ -53,6 +54,24 @@ function Failure({ error }: { error: unknown }) {
           >
             {copied ? "Copied!" : "Copy Error"}
           </button>
+          {connectionSource() === "saved" && (
+            <button
+              className="rounded-xl bg-black/5 hover:bg-black/10 px-4 py-2.5 text-sm font-bold text-[#122222] transition-colors cursor-pointer"
+              onClick={async () => {
+                if (!window.confirm("Disconnect from this database and run the setup again? Your data stays in Supabase.")) return;
+                try {
+                  const { invoke } = await import("@tauri-apps/api/core");
+                  await invoke("clear_connection");
+                } catch {
+                  // Clearing the stored key is best effort; the setup overwrites it anyway.
+                }
+                clearConnection();
+                location.reload();
+              }}
+            >
+              Use a different database
+            </button>
+          )}
         </div>
       </div>
     </main>

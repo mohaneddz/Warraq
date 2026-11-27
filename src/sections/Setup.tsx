@@ -68,6 +68,13 @@ export function SetupPage() {
 
   const ref = projectRefFrom(projectInput);
 
+  // The Rust side answers in English; the two failures a person can fix here get translated.
+  const friendlyError = (message: string) => {
+    if (message.includes("rejected the secret")) return t("setup.errors.serviceRejected", "Supabase rejected the secret (service role) key. Copy it again from Project Settings, API Keys.");
+    if (message.includes("tables are missing")) return t("setup.errors.noTables", "The Warraq tables are missing from this project. Go back and run the script in the SQL editor first.");
+    return message;
+  };
+
   const handleConnect = async (event: React.FormEvent) => {
     event.preventDefault();
     setError(null);
@@ -111,7 +118,9 @@ export function SetupPage() {
       saveConnection(connection);
       window.location.reload();
     } catch (err) {
-      setError(String(err));
+      // Don't leave a half finished setup behind: the key was saved before the admin step ran.
+      void invoke("clear_connection").catch(() => {});
+      setError(friendlyError(String(err)));
       setFinishing(false);
     }
   };
@@ -227,7 +236,7 @@ export function SetupPage() {
             <Field label={t("setup.admin.username", "Username")}>
               <Input value={username} onChange={(event) => setUsername(event.target.value)} autoComplete="off" dir="ltr" />
             </Field>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 items-start gap-3">
               <Field label={t("setup.admin.password", "Password")} hint={t("setup.admin.passwordHint", "At least 8 characters.")}>
                 <Input type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="new-password" dir="ltr" />
               </Field>

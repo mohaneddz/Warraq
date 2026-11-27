@@ -1788,7 +1788,9 @@
       "unreachable": "Impossible de joindre Supabase. Vérifiez votre connexion internet et l'URL du projet.",
       "badUsername": "Le nom d'utilisateur doit contenir au moins 3 caractères.",
       "shortPassword": "Le mot de passe doit contenir au moins 8 caractères.",
-      "mismatch": "Les deux mots de passe ne correspondent pas."
+      "mismatch": "Les deux mots de passe ne correspondent pas.",
+      "serviceRejected": "Supabase a refusé la clé secrète (service role). Copiez-la à nouveau depuis Project Settings, API Keys.",
+      "noTables": "Les tables de Warraq sont absentes de ce projet. Revenez en arrière et exécutez d'abord le script dans l'éditeur SQL."
     }
   }
 }
