@@ -11,6 +11,7 @@ const defaults: Preferences = {
   openLibraryEnabled: true,
   groqEnabled: false,
   groqApiKey: "",
+  groqModel: "",
   closeToTray: true,
   launchOnBoot: false,
   autosaveEnabled: true,

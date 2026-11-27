@@ -508,7 +508,7 @@ export function CatalogPage() {
       queryError = err;
     }
 
-    const { groqEnabled, groqApiKey } = useUiStore.getState().preferences;
+    const { groqEnabled, groqApiKey, groqModel } = useUiStore.getState().preferences;
     const apiKey = groqEnabled ? groqApiKey.trim() : "";
 
     if (!meta && !apiKey) {
@@ -521,7 +521,7 @@ export function CatalogPage() {
       if (apiKey) {
         toast.loading(t("catalog.alerts.enriching") || "Enriching metadata with Groq AI...", { id: toastId });
         try {
-          meta = await enrichMetadataWithGroq(queryVal, meta || {}, apiKey);
+          meta = await enrichMetadataWithGroq(queryVal, meta || {}, apiKey, groqModel);
           toast.success(t("catalog.alerts.enriched") || "Book metadata auto-filled & enriched with Groq AI!", { id: toastId });
         } catch (groqError: any) {
           if (!meta) {

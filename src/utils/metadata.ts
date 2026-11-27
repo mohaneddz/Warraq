@@ -304,11 +304,19 @@ export async function fetchBookMetadataByIsbn(isbn: string): Promise<ExternalBoo
  * https://console.groq.com/docs/deprecations before changing this. */
 export const GROQ_MODEL = "openai/gpt-oss-20b";
 
+/** The model Settings → Integrations lets the user override. Blank means "use the built-in
+ * default", so shipping a new default in an update still reaches everyone who never customised it. */
+export function resolveGroqModel(override?: string): string {
+  return override?.trim() || GROQ_MODEL;
+}
+
 export async function enrichMetadataWithGroq(
   queryOrIsbn: string,
   existingMetadata: Partial<ExternalBookMetadata>,
-  apiKey: string
+  apiKey: string,
+  model?: string
 ): Promise<ExternalBookMetadata> {
+  const groqModel = resolveGroqModel(model);
   if (!apiKey) {
     return {
       title: existingMetadata.title || "",
@@ -361,7 +369,7 @@ Return ONLY the JSON object. Do not include any explanations, introduction, mark
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: GROQ_MODEL,
+        model: groqModel,
         messages: [
           {
             role: "user",
@@ -369,7 +377,8 @@ Return ONLY the JSON object. Do not include any explanations, introduction, mark
           }
         ],
         response_format: { type: "json_object" },
-        reasoning_effort: "low",
+        // Only the gpt-oss family accepts reasoning_effort; other models answer 400 if it is sent.
+        ...(groqModel.startsWith("openai/gpt-oss") ? { reasoning_effort: "low" } : {}),
         temperature: 0.1
       })
     });

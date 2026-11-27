@@ -17,7 +17,7 @@ export function findEnrichableBooks(allBooks: Book[]): Book[] {
 
 /** Looks up one book against Google Books/Open Library (and Groq, if a key is configured) and
  * returns only the fields that were previously blank — existing data is never overwritten. */
-export async function enrichBook(book: Book, opts: { groqApiKey?: string }): Promise<{ patch: Partial<Omit<Book, "author">>; notes: string[] }> {
+export async function enrichBook(book: Book, opts: { groqApiKey?: string; groqModel?: string }): Promise<{ patch: Partial<Omit<Book, "author">>; notes: string[] }> {
   const notes: string[] = [];
   const patch: Partial<Omit<Book, "author">> = {};
   const query = book.isbn13 || book.isbn10 || [book.title, book.author].filter(Boolean).join(" ");
@@ -33,7 +33,7 @@ export async function enrichBook(book: Book, opts: { groqApiKey?: string }): Pro
   let usedGroq = false;
   if (opts.groqApiKey) {
     try {
-      meta = await enrichMetadataWithGroq(query, meta || { title: book.title, language: book.language }, opts.groqApiKey);
+      meta = await enrichMetadataWithGroq(query, meta || { title: book.title, language: book.language }, opts.groqApiKey, opts.groqModel);
       usedGroq = true;
     } catch (err: any) {
       if (!meta) throw err;
@@ -74,7 +74,7 @@ export async function enrichBook(book: Book, opts: { groqApiKey?: string }): Pro
  * cancellation via `isCancelled`. */
 export async function enrichAllBooks(
   targetBooks: Book[],
-  opts: { groqApiKey?: string },
+  opts: { groqApiKey?: string; groqModel?: string },
   onProgress: (p: EnrichProgress) => void,
   isCancelled: () => boolean
 ): Promise<void> {

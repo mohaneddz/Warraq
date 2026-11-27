@@ -188,6 +188,8 @@ export interface Preferences {
   openLibraryEnabled: boolean;
   groqEnabled: boolean;
   groqApiKey: string;
+  /** Groq model id used for autofill. Blank falls back to the built-in default. */
+  groqModel: string;
   closeToTray: boolean;
   launchOnBoot: boolean;
   autosaveEnabled: boolean;
